@@ -18,3 +18,9 @@ id = "01d14fee71b2465d906fdccbf4eac4bb"
 GITHUB_CLIENT_ID = "Ov23liyyjBUluoOWdC81"
 COOKIE_DOMAIN = ".sinanlab.com"
 SITE_ORIGIN = "https://compute.sinanlab.com"
+
+# 手机号登录（阿里云短信）。四项都配好后 /login 页自动出现"手机"入口：
+#   Secrets（面板）：SMS_ACCESS_KEY_ID、SMS_ACCESS_KEY_SECRET
+#   vars（下面两行取消注释填入）：签名名称与模板 CODE（模板须含 ${code} 变量）
+# SMS_SIGN_NAME = "司南实验室"
+# SMS_TEMPLATE_CODE = "SMS_xxxxxxxxx"

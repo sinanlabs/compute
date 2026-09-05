@@ -275,7 +275,7 @@ function drawHist(cv){var m=cv.dataset.m,v=cv.dataset.v;var note=document.getEle
   function line(arr,color,dash){if(!arr.length)return;ctx.beginPath();ctx.setLineDash(dash||[]);ctx.strokeStyle=color;ctx.lineWidth=2;arr.forEach(function(pt,i){var x=X(pt[0]),y=Y(pt[1]);if(i===0)ctx.moveTo(x,y);else{ctx.lineTo(x,Y(arr[i-1][1]));ctx.lineTo(x,y);}});var last=arr[arr.length-1];ctx.lineTo(W-12,Y(last[1]));ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.arc(W-12,Y(last[1]),3.5,0,6.283);ctx.fillStyle=color;ctx.fill();}
   line(F,"#6E56F5",[4,4]);line(S,"#0F1222");
   ctx.fillStyle="#9AA0B8";ctx.fillText(new Date(t0).toISOString().slice(5,10),40,Hh-4);ctx.fillText("今天",W-36,Hh-4);
-  note.innerHTML='黑线 = 该站实付 · 紫虚线 = 最低公开参考价 · 记录 '+S.length+' 个变价点'+(full?'（全部历史）':'（最近 7 天，<a href="/api/auth/github/start?return_to='+encodeURIComponent(location.pathname)+'" style="color:var(--p-ink)">登录</a>看全部）');}
+  note.innerHTML='黑线 = 该站实付 · 紫虚线 = 最低公开参考价 · 记录 '+S.length+' 个变价点'+(full?'（全部历史）':'（最近 7 天，<a href="/login?return_to='+encodeURIComponent(location.pathname)+'" style="color:var(--p-ink)">登录</a>看全部）');}
  if(HISTC[m]){paint(HISTC[m]);return;}
  fetch(full?"/api/history/"+m:"/history/"+m+".json",{credentials:"include"}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){HISTC[m]=j;paint(j);}).catch(function(){if(full){fetch("/history/"+m+".json").then(function(r){return r.json();}).then(function(j){HISTC[m]=j;paint(j);}).catch(function(){note.textContent="暂无走势数据。";});}else{note.textContent="暂无走势数据。";}});}
 var _openD=openD;openD=function(eye,title,html){_openD(eye,title,html);var cv=document.querySelector("#dbody canvas.hist");if(cv)drawHist(cv);};
@@ -285,18 +285,18 @@ document.addEventListener("click",function(e){var h=e.target.closest?e.target.cl
 q.addEventListener("keydown",function(e){if(e.key!=="Enter")return;var v=q.value.trim().toLowerCase();if(!v)return;var s=D.site_index.filter(function(x){return x.d.indexOf(v)>=0||(x.n||"").toLowerCase().indexOf(v)>=0;})[0];if(s){location.href="/s/"+s.d;return;}var m=(D.model_index||[]).filter(function(x){return x.name.toLowerCase().indexOf(v)>=0||x.id.indexOf(v)>=0;})[0];if(m){location.href="/#m="+m.id;if(location.pathname==="/"||location.pathname==="/index.html")location.reload();return;}openD("没找到",q.value,"<p>既不是收录的站，也不是有报价的模型。试试域名（如 toapis.cn）或模型名（如 DeepSeek V4）。</p>");});})();
 /* ========== 登录 · 关注 · 公告 ========== */
 (function(){var box=document.getElementById("auth");if(!box)return;var ME=null;
-function loginUrl(watch){return "/api/auth/github/start?return_to="+encodeURIComponent(location.pathname+location.search)+(watch?"&watch="+encodeURIComponent(watch):"");}
+function loginUrl(watch){return "/login?return_to="+encodeURIComponent(location.pathname+location.search)+(watch?"&watch="+encodeURIComponent(watch):"");}
 function render(){if(ME&&ME.user){box.innerHTML='<div class="menu"><a href="/me" style="display:flex;align-items:center;gap:8px">'+(ME.user.avatar_url?'<img src="'+esc(ME.user.avatar_url)+'" alt="">':'')+'<span style="font-size:13px">'+esc(ME.user.handle||"我")+'</span></a><div class="dd"><a href="/me">我的关注</a><a href="/api/auth/logout?return_to='+encodeURIComponent(location.pathname)+'">退出登录</a></div></div>';}
- else if(ME&&ME.login){box.innerHTML='<a class="lang" href="'+loginUrl("")+'">GitHub 登录</a>';}
+ else if(ME&&ME.login){box.innerHTML='<a class="lang" href="'+loginUrl("")+'">登录 / 注册</a>';}
  else{box.innerHTML='<span class="lang" title="账号系统接入中" style="opacity:.55;cursor:default">登录 · 即将开放</span>';}
  document.querySelectorAll(".watch").forEach(function(b){if(!b.dataset.key)return;var on=!!(ME&&ME.user&&(ME.watches||[]).some(function(w){return w.kind===b.dataset.kind&&w.key===b.dataset.key;}));b.classList.toggle("on",on);b.textContent=on?"已关注 ✓":(b.dataset.kind==="site"?"关注这个站":"关注这个模型");});
  var al=document.getElementById("alerts");if(al){if(!ME||!ME.user){al.textContent="登录后可以开启邮件提醒。";}else{fetch("/api/prefs",{credentials:"include"}).then(function(r){return r.json();}).then(function(p){if(!p.mail_ready){al.textContent="邮件服务接入中。";return;}if(!p.has_email){al.textContent="你的 GitHub 没有可验证的邮箱，暂时无法开启邮件提醒。";return;}var q=new URLSearchParams(location.search).get("alerts");al.innerHTML='<label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="emailon" style="margin-top:3px" '+(p.email_on?'checked':'')+'> <span>'+(q==="off"?"已通过邮件里的链接关闭提醒。勾上可重新开启。":"邮件提醒：关注对象有变动时发到我的 GitHub 邮箱（每天最多一封）")+'</span></label>';document.getElementById("emailon").addEventListener("change",function(e){fetch("/api/prefs",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({email_on:e.target.checked?1:0})}).then(function(r){return r.json();}).then(function(x){al.querySelector("span").textContent=x.ok?(x.email_on?"已开启邮件提醒 ✓ 关注对象有变动时发到你的 GitHub 邮箱":"已关闭邮件提醒"):"保存失败，请刷新重试";});});}).catch(function(){al.textContent="读取设置失败，请刷新。";});}}
- var ml=document.getElementById("melist");if(ml){if(!ME||!ME.user){ml.innerHTML='<h2 class="sec">还没登录</h2><p class="lead">登录后这里是你关注的站和模型。不设密码，GitHub 一键登录。</p>'+(ME&&ME.login?'<a class="btn p" style="margin-top:14px" href="'+loginUrl("")+'">用 GitHub 登录 →</a>':'<div class="callout" style="margin-top:12px">账号系统接入中，开放后即可登录。</div>');}
+ var ml=document.getElementById("melist");if(ml){if(!ME||!ME.user){ml.innerHTML='<h2 class="sec">还没登录</h2><p class="lead">登录后这里是你关注的站和模型。不设密码：GitHub 一键、邮箱验证码或手机验证码。</p>'+(ME&&ME.login?'<a class="btn p" style="margin-top:14px" href="'+loginUrl("")+'">登录 / 注册 →</a>':'<div class="callout" style="margin-top:12px">账号系统接入中，开放后即可登录。</div>');}
   else{var ws=ME.watches||[];ml.innerHTML='<h2 class="sec">关注 · '+ws.length+'</h2>'+(ws.length?ws.map(function(w){return '<div class="row"><span class="pill none">'+(w.kind==="site"?"站":"模型")+'</span><a class="dom" href="'+(w.kind==="site"?"/s/"+esc(w.key):"/#m="+esc(w.key))+'">'+esc(w.key)+'</a><button class="evb x watch on" data-kind="'+esc(w.kind)+'" data-key="'+esc(w.key)+'">取消关注</button></div>';}).join(""):'<div class="callout" style="margin-top:12px">还没有关注任何站或模型。到站点页或模型账本点“关注”。</div>');ml.querySelectorAll(".watch").forEach(function(b){b.textContent="取消关注";});}}}
 window.__renderAuth=render;
 fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).then(function(m){ME=m;window.__ME=m;render();}).catch(function(){ME={user:null,login:false};render();});
 document.addEventListener("click",function(e){var b=e.target.closest?e.target.closest(".watch"):null;if(!b||!b.dataset.key)return;e.preventDefault();var kind=b.dataset.kind,key=b.dataset.key;
- if(!ME||!ME.user){if(ME&&ME.login){openD("登录后帮你记住它",key,'<p style="font-size:14px;line-height:1.7">登录后这个'+(kind==="site"?"站":"模型")+'会出现在你的关注列表，价格、可达率或探针结果变化时提醒你。不设密码，GitHub 一键登录。</p><a class="btn p" style="margin-top:14px" href="'+loginUrl(kind+":"+key)+'">用 GitHub 登录并关注 →</a><p class="disc">只读取你的 GitHub 公开资料与邮箱，不会代你做任何操作；所有价格数据不登录也全部可见。</p>');}else{openD("账号系统接入中",key,"<p>开放后这里可以一键关注并收到变化提醒。所有价格数据不登录也全部可见。</p>");}return;}
+ if(!ME||!ME.user){if(ME&&ME.login){openD("登录后帮你记住它",key,'<p style="font-size:14px;line-height:1.7">登录后这个'+(kind==="site"?"站":"模型")+'会出现在你的关注列表，价格、可达率或探针结果变化时提醒你。不设密码：GitHub、邮箱或手机验证码都行。</p><a class="btn p" style="margin-top:14px" href="'+loginUrl(kind+":"+key)+'">登录并关注 →</a><p class="disc">GitHub 登录只读取公开资料与邮箱；邮箱 / 手机只存哈希用于识别；所有价格数据不登录也全部可见。</p>');}else{openD("账号系统接入中",key,"<p>开放后这里可以一键关注并收到变化提醒。所有价格数据不登录也全部可见。</p>");}return;}
  var on=b.classList.contains("on");fetch("/api/watch",{method:on?"DELETE":"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind:kind,key:key})}).then(function(r){return r.json();}).then(function(){if(on){ME.watches=(ME.watches||[]).filter(function(w){return !(w.kind===kind&&w.key===key);});}else{(ME.watches=ME.watches||[]).push({kind:kind,key:key});}render();});});
 fetch("/api/flags").then(function(r){return r.json();}).then(function(f){if(f&&f.MAINTENANCE_BANNER){var d=document.createElement("div");d.className="banner";d.textContent=f.MAINTENANCE_BANNER;var top=document.querySelector(".main .top");top.parentNode.insertBefore(d,top.nextSibling);}}).catch(function(){});})();
 /* ========== 首页账本 ========== */
@@ -956,6 +956,36 @@ def load_rank_weeks():
 
 
 # ------------------------------------------------------------------ 自测：用你的 Key 测一个站（Key 不出浏览器）
+def build_login():
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">登录 / 注册 · 不设密码</div><h1 style="font-size:26px;margin-top:6px">登录司南实验室</h1><p class="lead">一个账号通用于 Compute 与 Robo。三种方式任选，都不设密码；所有价格与索引数据不登录也全部可见，登录只解锁关注、提醒、自测与历史。</p></div>
+<section class="card pad rise" id="lg" style="--i:1;max-width:560px">
+<div class="seg" id="lgseg" style="margin-bottom:16px"><span class="ind"></span><button aria-pressed="true" data-m="github">GitHub</button><button aria-pressed="false" data-m="email">邮箱</button><button aria-pressed="false" data-m="phone">手机</button></div>
+<div id="lg-github"><p class="lead">用 GitHub 账号一键登录。只读取公开资料与邮箱，不会代你做任何操作。</p><a class="btn p" id="gh" style="margin-top:14px" href="/api/auth/github/start">用 GitHub 登录 →</a></div>
+<div id="lg-email" style="display:none"><p class="lead">输入邮箱，我们发一个 6 位验证码，10 分钟内有效。邮箱只用于登录识别与你自己开启的提醒。</p>
+<div class="lgrow"><input id="em" type="email" autocomplete="email" placeholder="you@example.com"><button class="btn p" id="em-send">发送验证码</button></div>
+<div class="lgrow" id="em-step2" style="display:none"><input id="em-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 位验证码"><button class="btn p" id="em-ok">登录</button></div><p class="sub" id="em-msg" style="margin-top:8px"></p></div>
+<div id="lg-phone" style="display:none"><p class="lead">输入中国大陆手机号，我们发一条短信验证码，10 分钟内有效。手机号只存哈希。</p>
+<div id="ph-off" class="callout">手机号登录即将开放（短信通道接入中）。现在可以先用 GitHub 或邮箱。</div>
+<div id="ph-on" style="display:none"><div class="lgrow"><span class="sub" style="align-self:center">+86</span><input id="ph" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="11" placeholder="手机号"><button class="btn p" id="ph-send">发送验证码</button></div>
+<div class="lgrow" id="ph-step2" style="display:none"><input id="ph-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 位验证码"><button class="btn p" id="ph-ok">登录</button></div><p class="sub" id="ph-msg" style="margin-top:8px"></p></div></div>
+<p class="disc" style="margin-top:18px">登录即表示同意 <a href="https://sinanlab.com/privacy">隐私政策</a>。我们不会通过邮件或短信索要密码；本站不设密码。</p></section>
+<style>.lgrow{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.lgrow input{flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit;font-size:14px;background:var(--card)}</style>
+<script>(function(){var q=new URLSearchParams(location.search),rt=q.get("return_to")||"/me",watch=q.get("watch")||"";
+document.getElementById("gh").href="/api/auth/github/start?return_to="+encodeURIComponent(rt)+(watch?"&watch="+encodeURIComponent(watch):"");
+var seg=document.getElementById("lgseg");seg.querySelectorAll("button").forEach(function(b){b.addEventListener("click",function(){seg.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});["github","email","phone"].forEach(function(m){document.getElementById("lg-"+m).style.display=m===b.dataset.m?"":"none";});});});
+var pre=q.get("m");if(pre){var pb=seg.querySelector('[data-m="'+pre+'"]');if(pb)pb.click();}
+fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).then(function(m){if(m&&m.user){location.replace(rt);return;}var me=m&&m.methods||{};if(me.phone){document.getElementById("ph-off").style.display="none";document.getElementById("ph-on").style.display="";}if(!me.email){document.getElementById("lg-email").innerHTML='<div class="callout">邮箱登录暂不可用，请先用 GitHub。</div>';}}).catch(function(){});
+var ERR={bad_email:"邮箱格式不对",bad_phone:"手机号格式不对（首期只支持中国大陆手机号）",too_many_requests:"发得太频繁了，10 分钟后再试",send_failed:"发送失败，请稍后再试",expired:"验证码已过期，请重新发送",wrong_code:"验证码不对",too_many_tries:"错误次数太多，请重新发送验证码",signup_closed:"暂未开放新用户注册",banned:"该账号不可用",email_login_unavailable:"邮箱登录暂不可用",phone_login_unavailable:"手机登录暂不可用"};
+function flow(ch,inp,send,step2,codeEl,ok,msg){var token=null;var M=document.getElementById(msg);
+ document.getElementById(send).addEventListener("click",function(){var v=document.getElementById(inp).value.trim();if(!v)return;M.textContent="发送中…";var body={};body[ch]=v;
+  fetch("/api/auth/"+ch+"/start",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(j){if(j.ok){token=j.token;document.getElementById(step2).style.display="";M.textContent="验证码已发到 "+j.masked+"，10 分钟内有效。";document.getElementById(codeEl).focus();}else{M.textContent=ERR[j.error]||"出错了："+(j.error||"");}}).catch(function(){M.textContent="网络错误，请重试。";});});
+ document.getElementById(ok).addEventListener("click",function(){var c=document.getElementById(codeEl).value.trim();if(!token||c.length!==6){M.textContent="请输入 6 位验证码。";return;}M.textContent="校验中…";
+  fetch("/api/auth/"+ch+"/verify",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:token,code:c,return_to:rt,watch:watch})}).then(function(r){return r.json();}).then(function(j){if(j.ok){M.textContent="登录成功，正在跳转…";location.replace(j.return_to||rt);}else{M.textContent=(ERR[j.error]||"出错了")+(j.left?"，还可以试 "+j.left+" 次":"");}}).catch(function(){M.textContent="网络错误，请重试。";});});
+ document.getElementById(codeEl).addEventListener("keydown",function(e){if(e.key==="Enter")document.getElementById(ok).click();});}
+flow("email","em","em-send","em-step2","em-code","em-ok","em-msg");flow("phone","ph","ph-send","ph-step2","ph-code","ph-ok","ph-msg");})();</script>
+<script id="d" type="application/json">{{data}}</script>""", data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+    return shell("登录 / 注册 · Sinan Compute", "用 GitHub、邮箱验证码或手机验证码登录司南实验室，不设密码。", "/login", body, page="login", crumbs=[("登录",)], extra_head='<meta name="robots" content="noindex">')
+
 def build_check():
     body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">自测 · 登录后可用</div><h1 style="font-size:26px;margin-top:6px">测试模型真伪</h1><p class="lead">填一个中转站地址和你在该站的 Key，浏览器直接向该站发 8 条固定探针请求（每条只要 4 个输出 token，一次自测通常不到一分钱），把返回的 token 计数、回显模型名、首字节延迟，和我们从多个渠道得到的参考计数逐位比对。<b>Key 只在你的浏览器里，不上传、不落库、不经过我们的服务器。</b></p><p class="callout">当前提供一致性检测，不能单凭测试结果判定模型真伪。</p></div>
 <div id="gate" class="card pad rise" style="--i:1"><div class="callout">正在读取登录状态…</div></div>
@@ -972,7 +1002,7 @@ def build_check():
 var D0=JSON.parse(document.getElementById("d").textContent);var gate=document.getElementById("gate"),form=document.getElementById("form");
 var dl=document.getElementById("qlist");D0.site_index.forEach(function(x){var o=document.createElement("option");o.value=x.d;dl.appendChild(o);});
 fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).catch(function(){return {};}).then(function(me){
- if(!me||!me.user){gate.innerHTML='<h2 class="sec">登录后可用</h2><p class="lead">自测需要登录（GitHub 一键，不设密码），用来防滥用和让你可以把结果回流给我们。你的 Key 始终只在你自己的浏览器里。</p><a class="btn p" style="margin-top:12px" href="/api/auth/github/start?return_to=/check">用 GitHub 登录 →</a>';return;}
+ if(!me||!me.user){gate.innerHTML='<h2 class="sec">登录后可用</h2><p class="lead">自测需要登录（GitHub / 邮箱 / 手机验证码，不设密码），用来防滥用和让你可以把结果回流给我们。你的 Key 始终只在你自己的浏览器里。</p><a class="btn p" style="margin-top:12px" href="/login?return_to=/check">登录 / 注册 →</a>';return;}
  gate.style.display="none";form.style.display="block";
  var TR=null;fetch("/assets/tokref.json").then(function(r){return r.json();}).then(function(t){TR=t;var box=document.getElementById("ck-models");
   D0.models.forEach(function(m){var has=TR.models[m.id]&&TR.models[m.id].ref;var lab=document.createElement("label");lab.className="chip";lab.style.cssText="display:inline-flex;gap:6px;align-items:center;cursor:pointer";lab.innerHTML='<input type="checkbox" value="'+m.id+'" '+(has?'checked':'')+'> <span>'+m.name+'</span>'+(has?'<small class="sub">参考 '+TR.models[m.id].peers+' 渠道'+(TR.models[m.id].weak?'（弱）':'')+'</small>':'<small class="sub">无参考</small>');box.appendChild(lab);});
@@ -1063,7 +1093,7 @@ def main():
         os.makedirs(os.path.join(DIST, "weekly"), exist_ok=True)
         for w in weeks: W("weekly/%s.html" % w["week"], build_weekly(w, weeks))
         W("weekly.html", build_weekly_index(weeks))
-    W("check.html", build_check())
+    W("check.html", build_check()); W("login.html", build_login())
     if os.path.exists(os.path.join(HERE, "tokref.json")): shutil.copy(os.path.join(HERE, "tokref.json"), os.path.join(DIST, "assets", "tokref.json"))
     rank_snapshots = []
     if D.get("rank"):
