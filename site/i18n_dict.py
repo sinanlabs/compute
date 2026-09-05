@@ -344,6 +344,8 @@ HTML = {
 "：某站媒体行比率中位": ": if a site's median media-row ratio is", "{n} → 整站「计价方式待核」不出比率；实付": "{n} → the whole site becomes \"pricing basis unverified\" with no ratios; rows with effective price", "${n} 的行视为占位价跳过。": "${n} are treated as placeholders and skipped.",
 "画像口径与模型表一致：": "Profile bands match the model table: ", "{n}% 超低价 · {n}–{n}% 低于批量折扣 · {n}–{n}% 与公开价接近 · ≥{n}% 高于公开价": "{n}% ultra-low · {n}–{n}% below bulk discount · {n}–{n}% near public price · ≥{n}% above public price",
 # ---------- 一致性探针 ----------
+"能力抽样 答对 {n}/{n}": "Capability sample {n}/{n} correct", "能力抽样 答对 {n}/{n} · 多渠道中位 {n}": "Capability sample {n}/{n} correct · peer median {n}", "能力抽样 答对 {n}/{n} · 中位样本不足": "Capability sample {n}/{n} correct · too few peers for a median",
+"能力抽样": "Capability sample", "{n} 个模型 · 低于中位 {n}": "{n} models · {n} below median", "30 道机器判分小题，本站答对数与同模型其他渠道中位数比": "30 machine-graded short tasks; this site's correct count vs. the median of other channels for the same model", "尚未用 Key 抽样": "Not yet sampled with a key",
 "探针 · 计数一致 {n}/{n}": "Probe · counts consistent {n}/{n}", "探针 · 计数与同模型其他渠道不一致 {n}/{n}": "Probe · counts differ from peers {n}/{n}",
 "探针 · 已测 {n}/{n}，共识样本不足": "Probe · {n}/{n} ok, too few peers", "探针 · 只成功 {n}/{n}": "Probe · only {n}/{n} ok", "探针 · 请求失败 {n}/{n}": "Probe · failed {n}/{n}",
 "探针 · 计数一致 {n}/{n} · 回显模型名不同": "Probe · counts consistent {n}/{n} · echo differs", "探针 · 计数与同模型其他渠道不一致 {n}/{n} · 回显模型名不同": "Probe · counts differ from peers {n}/{n} · echo differs",
@@ -446,6 +448,10 @@ HTML = {
 
 # app.js 字面量子串（按长度降序替换；短词放最后兜底）
 JS = {
+    "能力抽样 答对 ": "Capability sample correct ", " · 多渠道中位 ": " · peer median ", " · 中位样本不足": " · too few peers for a median",
+    "（弱）": " (weak)",
+    " · 弱参考": " · weak reference",
+    "标\"弱参考\"的模型，参考计数只来自 2 个渠道的一致结果，可信度低于 3 个以上渠道。": "Models marked \"weak reference\" have a reference derived from only 2 agreeing channels; it is less reliable than one backed by 3 or more.",
 "此为算术比值，不构成对该渠道的任何指控，也不排除存在本站未收录的更低公开来源。": DISC,
 "<p>开放后这里可以一键关注并收到变化提醒。所有价格数据不登录也全部可见。</p>": "<p>Once open, you can watch this in one click and get change alerts. All price data is visible without signing in.</p>",
 "<p>既不是收录的站，也不是有报价的模型。试试域名（如 toapis.cn）或模型名（如 DeepSeek V4）。</p>": "<p>Neither an indexed site nor a model with quotes. Try a domain (e.g. toapis.cn) or a model name (e.g. DeepSeek V4).</p>",

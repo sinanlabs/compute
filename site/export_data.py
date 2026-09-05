@@ -171,6 +171,32 @@ def probe_summary(db, days=7, n_probes=12, min_peers=3):
                             "peers": npeer, "offset": offset, "ts": d["ts"]}
     return out
 
+def t2_summary(db, PB, days=7, min_peers=3):
+    """T2 能力抽样：每个 站×模型 取最近一轮（同一 task_idx 取最新一条）的答对数；同模型 ≥min_peers 个渠道时给中位数。
+    并入 PB[(site, model)]["cap"] = {score, n, median, peers, status}，status ∈ in_line（≥中位-2）/ below / no_ref。"""
+    try:
+        rows = db.execute("SELECT site, model, task_idx, ok, status, ts FROM probe_t2 WHERE ts >= datetime('now','-%d days') ORDER BY id" % days).fetchall()
+    except Exception:
+        return
+    latest = {}
+    for r in rows: latest[(r["site"], r["model"], r["task_idx"])] = r
+    agg = {}
+    for (site, m, i), r in latest.items():
+        d = agg.setdefault((site, m), {"score": 0, "n": 0, "ok_req": 0, "ts": r["ts"][:10]})
+        d["n"] += 1; d["score"] += r["ok"] or 0; d["ok_req"] += 1 if r["status"] == 200 else 0; d["ts"] = max(d["ts"], r["ts"][:10])
+    by_model = {}
+    for (site, m), d in agg.items():
+        if d["ok_req"] >= 24: by_model.setdefault(m, []).append(d["score"])
+    import statistics
+    for (site, m), d in agg.items():
+        if d["ok_req"] < 24: continue   # 请求成功太少，不出分
+        peers = len(by_model.get(m, []))
+        med = int(statistics.median(by_model[m])) if peers >= min_peers else None
+        status = "no_ref" if med is None else ("in_line" if d["score"] >= med - 2 else "below")
+        cap = {"score": d["score"], "n": d["n"], "median": med, "peers": peers, "status": status, "ts": d["ts"]}
+        if (site, m) in PB: PB[(site, m)]["cap"] = cap
+        else: PB[(site, m)] = {"status": "cap_only", "ok": 0, "n": 0, "echo": None, "peers": 0, "offset": 0, "ts": d["ts"], "cap": cap}
+
 def price_changes(db, days=7):
     out = []
     for r in db.execute("""SELECT n.vendor, n.model, n.unit, o.price AS old_p, n.price AS new_p, n.valid_from, n.vendor_kind
@@ -183,7 +209,7 @@ def price_changes(db, days=7):
 def main():
     global FX
     db = D.connect(); FX = fx(db)
-    F = floors(db); R = relay_rows(db); AV = availability(db); SF = status_facts(db); PB = probe_summary(db)
+    F = floors(db); R = relay_rows(db); AV = availability(db); SF = status_facts(db); PB = probe_summary(db); t2_summary(db, PB)
     try: REG = {r["domain"]: (r["register_state"], r["register_msg"], r["register_checked"]) for r in db.execute("SELECT domain, register_state, register_msg, register_checked FROM relay_candidate WHERE level>=1")}
     except Exception: REG = {}
     CLOSED = {d_ for d_, v in REG.items() if v[0] == "closed"}
@@ -362,7 +388,7 @@ def main():
              "clusters": {k: sum(1 for s_ in sites if s_["cluster"] and s_["cluster"]["code"] == k) for k in ("ultra", "cheap", "near", "high", "held")},
              "reachable": sum(1 for s_ in sites if (s_["avail"] or {}).get("uptime", 0) and s_["avail"]["uptime"] >= 50),
              "reg_closed": len(CLOSED), "reg_open": sum(1 for v in REG.values() if v[0] == "open"),
-             "probed_sites": sum(1 for s_ in sites if s_["probe"]), "probed_pairs": len(PB), "probe_consistent": sum(1 for v in PB.values() if v["status"] == "consistent"), "probe_divergent": sum(1 for v in PB.values() if v["status"] == "divergent")}
+             "probed_sites": sum(1 for s_ in sites if s_["probe"]), "probed_pairs": len(PB), "probe_consistent": sum(1 for v in PB.values() if v["status"] == "consistent"), "cap_pairs": sum(1 for v in PB.values() if v.get("cap")), "cap_below": sum(1 for v in PB.values() if (v.get("cap") or {}).get("status") == "below"), "probe_divergent": sum(1 for v in PB.values() if v["status"] == "divergent")}
     data = {"generated_at": D.now8(), "fx": {"rate": FX[0], "as_of": FX[1], "sid": FX[2]}, "models": models, "groups": groups,
             "vendor_name": VENDOR_NAME, "sites": sites, "stats": stats, "changes": changes[:40], "new_sites": new_sites,
             "snaps": {str(k): v for k, v in snaps.items() if v}, "label_help": LABEL_HELP, "probe_node": "美国西部探测节点", "rank": rank,

@@ -310,7 +310,8 @@ function monthly(i,o){var u=usage();if(i==null||o==null)return null;return i*u.i
 function rowHtml(r,m,i,idx){var mc=monthly(r.in,r.out);var up=r.uptime==null?'<span class="up">—</span>':'<span class="up '+(r.uptime>=90?"good":r.uptime<50?"bad":"")+'">'+r.uptime.toFixed(0)+'%</span>';var held=r.held;
  return '<tr style="--i:'+idx+'"><td><a class="dom" href="/s/'+esc(r.vendor)+'">'+esc(r.vendor)+'</a>'+(r.reg==="closed"?'<span class="pill" style="background:#FDECEC;color:#B42318;margin-left:6px;font-size:10.5px;padding:1px 7px">注册已关</span>':'')+(r.name?'<div class="sub">'+esc(r.name)+'</div>':'')+'</td><td class="num"><span class="big">'+fmt(r.out)+'</span><span class="asf">抓取 '+r.as_of.slice(5,16).replace("T"," ")+'</span></td><td class="num">'+fmt(r.in)+'</td><td class="num">'+(mc==null?"—":"$"+mc.toFixed(mc<10?2:0))+'</td><td style="padding-left:18px">'+(held?'<span class="pill held">计价方式待核 · 不出比率</span>':'<span class="gcell">'+gauge(r.ratio,r.band)+'<span class="r '+r.band+'">'+pct(r.ratio)+'</span></span>')+'</td><td>'+(held?'—':'<span class="pill '+r.band+'">'+LABEL[r.band]+'</span><button class="help" data-help="'+r.band+'" aria-label="解释">?</button>'+probeHtml(r.probe))+'</td><td>'+up+'</td><td class="num"><button class="evb" data-m="'+esc(m.id)+'" data-i="'+i+'">证据 ↗</button></td></tr>';}
 var PROBE_TXT={consistent:"探针 · 计数一致 ",divergent:"探针 · 计数与同模型其他渠道不一致 ",no_consensus:"探针 · 已测 ",partial:"探针 · 只成功 ",failed:"探针 · 请求失败 "};
-function probeHtml(pb){if(!pb)return "";var t=(PROBE_TXT[pb.status]||"探针 ")+pb.ok+"/"+pb.n+(pb.status==="no_consensus"?"，共识样本不足":"")+(pb.offset?" · 含固定前缀约 "+pb.offset+" token":"")+(pb.echo===false?" · 回显模型名不同":"");return '<div class="probe '+pb.status+'" title="'+esc(D.probe_help||"")+'">'+t+'<span class="pd"> · '+pb.ts.slice(5)+'</span></div>';}
+function capHtml(c){if(!c)return "";return '<div class="probe '+({in_line:"consistent",below:"divergent"}[c.status]||"failed")+'">'+"能力抽样 答对 "+c.score+"/"+c.n+(c.median!=null?" · 多渠道中位 "+c.median:" · 中位样本不足")+'</div>';}
+function probeHtml(pb){if(!pb)return "";if(pb.status==="cap_only")return capHtml(pb.cap);var t=(PROBE_TXT[pb.status]||"探针 ")+pb.ok+"/"+pb.n+(pb.status==="no_consensus"?"，共识样本不足":"")+(pb.offset?" · 含固定前缀约 "+pb.offset+" token":"")+(pb.echo===false?" · 回显模型名不同":"");return '<div class="probe '+pb.status+'" title="'+esc(D.probe_help||"")+'">'+t+'<span class="pd"> · '+pb.ts.slice(5)+'</span></div>'+capHtml(pb.cap);}
 function render(){document.querySelectorAll(".chip[data-id]").forEach(function(c){c.setAttribute("aria-pressed",c.dataset.id===cur?"true":"false");});
  var m=D.models.filter(function(x){return x.id===cur;})[0];if(!m){ensureLedger(render);return;}var tb=document.querySelector("#tbl tbody");var f=m.floor;var fmc=monthly(f.in,f.out);var idx=0;
  tb.innerHTML='<tr class="floor" style="--i:0"><td><div class="dom">'+esc(f.vendor)+'</div><div class="sub">'+(f.cny?"官方定价页 · 人民币折算":"公开市场 · 供应商标价")+'</div></td><td class="num"><span class="big">'+fmt(f.out)+'</span><span class="asf">参考价</span></td><td class="num">'+fmt(f.in)+'</td><td class="num">'+(fmc==null?"—":"$"+fmc.toFixed(fmc<10?2:0))+'</td><td style="padding-left:18px"><span class="gcell">'+gauge(1,"premium")+'<span class="r" style="color:var(--p)">100%</span></span></td><td><span class="pill ref">参考基准</span></td><td>—</td><td class="num"><button class="evb" data-f="'+esc(m.id)+'">证据 ↗</button></td></tr>';
@@ -559,7 +560,14 @@ def probe_html(pb):
     txt = PROBE_TXT.get(pb["status"], "探针") % (pb["ok"], pb["n"])
     if pb.get("offset"): txt += " · 含固定前缀约 %d token" % pb["offset"]
     if pb.get("echo") is False: txt += " · 回显模型名不同"
-    return '<div class="probe %s" title="%s">%s<span class="pd"> · %s</span></div>' % (pb["status"], esc(D.get("probe_help", "")), txt, pb["ts"][5:])
+    if pb["status"] == "cap_only": txt = ""
+    cap = pb.get("cap"); ch = ""
+    if cap:
+        ct = "能力抽样 答对 %d/%d" % (cap["score"], cap["n"])
+        ct += (" · 多渠道中位 %d" % cap["median"]) if cap["median"] is not None else " · 中位样本不足"
+        ch = '<div class="probe %s">%s</div>' % ({"in_line": "consistent", "below": "divergent"}.get(cap["status"], "failed"), ct)
+    if not txt: return ch
+    return '<div class="probe %s" title="%s">%s<span class="pd"> · %s</span></div>%s' % (pb["status"], esc(D.get("probe_help", "")), txt, pb["ts"][5:], ch)
 
 def ssr_rows_all(m, rows):
     out = []
@@ -649,6 +657,8 @@ def build_site(s):
         ("充值比例", price, "面板 price 字段：每 $1 名义额度收多少元", "t"),
         ("一致性探针", ("%d / %d 一致" % (s["probe"]["consistent"], s["probe"]["pairs"])) if s.get("probe") else "—",
          ("用本站 Key 测 %d 个模型的 token 计数，与同模型其他渠道比对 · %s" % (s["probe"]["pairs"], s["probe"]["ts"])) if s.get("probe") else "尚未用 Key 探测；只有拿到该站 Key 才能测", "" if s.get("probe") else "t"),
+        ("能力抽样", ("%d 个模型 · 低于中位 %d" % (len([r for r in s["models"] if (r.get("probe") or {}).get("cap")]), len([r for r in s["models"] if ((r.get("probe") or {}).get("cap") or {}).get("status") == "below"]))) if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "—",
+         "30 道机器判分小题，本站答对数与同模型其他渠道中位数比" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "尚未用 Key 抽样", "" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "t"),
         ("登录方式", "、".join(f.get("login") or []) or "未暴露", ("需人机验证" if f.get("turnstile") else "无人机验证") + ("，有签到" if f.get("checkin") else ""), "t"),
         ("新用户注册", {"open": "开放", "closed": "已关闭", "unknown": "未能判定"}.get((s.get("register") or {}).get("state"), "未能判定"),
          {"open": "注册接口可用（可能需要邮箱验证或人机验证）", "closed": "站方已关闭新用户注册，新用户无法使用 · %s" % ((s.get("register") or {}).get("checked") or ""), "unknown": "非标准面板或未暴露注册接口，请到站上确认"}.get((s.get("register") or {}).get("state"), "未能判定"),
@@ -935,7 +945,7 @@ def build_check():
 <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap"><button class="btn p" id="ck-run">开始测试</button><span class="sub" id="ck-status"></span></div>
 <datalist id="qlist"></datalist>
 </section>
-<section class="card rise" id="ck-out" style="--i:2;margin-top:16px;display:none"><div class="pad" style="padding-bottom:6px"><h2 class="sec">结果</h2><p class="lead" id="ck-lead"></p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th>回显模型名</th><th class="num">成功</th><th class="num">首字节 p50</th><th>计数比对</th><th>判定</th></tr></thead><tbody id="ck-rows"></tbody></table></div><div class="pad" style="padding-top:8px"><button class="btn o" id="ck-report">把结果（不含 Key）提交给司南，帮助扩大检测覆盖</button> <span class="sub" id="ck-rep-status"></span><p class="disc" style="margin-top:10px">判定只有四种：一致 / 含固定前缀 / 不一致 / 无参考。"不一致"表示该渠道对同一输入返回的 token 计数与多渠道共识不同，成因很多（上游分流、系统提示注入、量化、缓存），本站不推测。这是一致性测量，不是真伪判定。</p></div></section>
+<section class="card rise" id="ck-out" style="--i:2;margin-top:16px;display:none"><div class="pad" style="padding-bottom:6px"><h2 class="sec">结果</h2><p class="lead" id="ck-lead"></p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th>回显模型名</th><th class="num">成功</th><th class="num">首字节 p50</th><th>计数比对</th><th>判定</th></tr></thead><tbody id="ck-rows"></tbody></table></div><div class="pad" style="padding-top:8px"><button class="btn o" id="ck-report">把结果（不含 Key）提交给司南，帮助扩大检测覆盖</button> <span class="sub" id="ck-rep-status"></span><p class="disc" style="margin-top:10px">判定只有四种：一致 / 含固定前缀 / 不一致 / 无参考。标"弱参考"的模型，参考计数只来自 2 个渠道的一致结果，可信度低于 3 个以上渠道。"不一致"表示该渠道对同一输入返回的 token 计数与多渠道共识不同，成因很多（上游分流、系统提示注入、量化、缓存），本站不推测。这是一致性测量，不是真伪判定。</p></div></section>
 <script id="d" type="application/json">{{data}}</script>
 <script>(function(){
 var D0=JSON.parse(document.getElementById("d").textContent);var gate=document.getElementById("gate"),form=document.getElementById("form");
@@ -944,7 +954,7 @@ fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).cat
  if(!me||!me.user){gate.innerHTML='<h2 class="sec">登录后可用</h2><p class="lead">自测需要登录（GitHub 一键，不设密码），用来防滥用和让你可以把结果回流给我们。你的 Key 始终只在你自己的浏览器里。</p><a class="btn p" style="margin-top:12px" href="/api/auth/github/start?return_to=/check">用 GitHub 登录 →</a>';return;}
  gate.style.display="none";form.style.display="block";
  var TR=null;fetch("/assets/tokref.json").then(function(r){return r.json();}).then(function(t){TR=t;var box=document.getElementById("ck-models");
-  D0.models.forEach(function(m){var has=TR.models[m.id]&&TR.models[m.id].ref;var lab=document.createElement("label");lab.className="chip";lab.style.cssText="display:inline-flex;gap:6px;align-items:center;cursor:pointer";lab.innerHTML='<input type="checkbox" value="'+m.id+'" '+(has?'checked':'')+'> <span>'+m.name+'</span>'+(has?'<small class="sub">参考 '+TR.models[m.id].peers+' 渠道</small>':'<small class="sub">无参考</small>');box.appendChild(lab);});
+  D0.models.forEach(function(m){var has=TR.models[m.id]&&TR.models[m.id].ref;var lab=document.createElement("label");lab.className="chip";lab.style.cssText="display:inline-flex;gap:6px;align-items:center;cursor:pointer";lab.innerHTML='<input type="checkbox" value="'+m.id+'" '+(has?'checked':'')+'> <span>'+m.name+'</span>'+(has?'<small class="sub">参考 '+TR.models[m.id].peers+' 渠道'+(TR.models[m.id].weak?'（弱）':'')+'</small>':'<small class="sub">无参考</small>');box.appendChild(lab);});
  });
  var fmt=function(v){return v==null?"—":(v<1?v.toFixed(3):v<100?v.toFixed(2):v.toFixed(0));};
  document.getElementById("ck-run").addEventListener("click",async function(){
@@ -957,10 +967,11 @@ fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).cat
    var counts=[],tt=[],echo="",ok=0,err="";
    for(var i=0;i<TR.probes.length;i++){var t0=performance.now();try{var r=await fetch("https://"+base+"/v1/chat/completions",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},body:JSON.stringify({model:m,messages:[{role:"user",content:TR.probes[i]}],max_tokens:4})});tt.push(performance.now()-t0);
      if(!r.ok){err="HTTP "+r.status;counts.push(null);continue;}var j=await r.json();echo=j.model||echo;var u=(j.usage||{}).prompt_tokens;counts.push(u==null?null:u);if(u!=null)ok++;}catch(e){counts.push(null);tt.push(null);err=e.name==="TypeError"?"浏览器被该站拒绝跨域（CORS）或网络错误":String(e);}}
-   var ref=(TR.models[m]||{}).ref,verdict="no_ref",vt="无参考",detail="";
+   var ref=(TR.models[m]||{}).ref,weak=!!(TR.models[m]||{}).weak,verdict="no_ref",vt="无参考",detail="";
    if(!ok){verdict="failed";vt="请求失败";detail=err;}
    else if(ref){var ds=[];for(var k=0;k<ref.length;k++){if(counts[k]!=null&&ref[k]!=null)ds.push(counts[k]-ref[k]);}var uniq=ds.filter(function(v,i,a){return a.indexOf(v)===i;});
      if(uniq.length===1&&uniq[0]===0){verdict="consistent";vt="一致";}else if(uniq.length===1){verdict="prefix";vt="含固定前缀约 "+uniq[0]+" token";}else{verdict="divergent";vt="不一致";}
+     if(weak)vt+=" · 弱参考";
      detail=counts.map(function(c,k){return (c==null?"—":c)+"/"+(ref[k]==null?"—":ref[k]);}).join(" ");}
    else detail=counts.map(function(c){return c==null?"—":c;}).join(" ");
    var sorted=tt.filter(function(x){return x!=null;}).sort(function(a,b){return a-b;});var p50=sorted.length?Math.round(sorted[Math.floor(sorted.length/2)]):null;
