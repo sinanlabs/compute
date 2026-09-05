@@ -940,7 +940,7 @@ def build_check():
 <script>(function(){
 var D0=JSON.parse(document.getElementById("d").textContent);var gate=document.getElementById("gate"),form=document.getElementById("form");
 var dl=document.getElementById("qlist");D0.site_index.forEach(function(x){var o=document.createElement("option");o.value=x.d;dl.appendChild(o);});
-fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).then(function(me){
+fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).catch(function(){return {};}).then(function(me){
  if(!me||!me.user){gate.innerHTML='<h2 class="sec">登录后可用</h2><p class="lead">自测需要登录（GitHub 一键，不设密码），用来防滥用和让你可以把结果回流给我们。你的 Key 始终只在你自己的浏览器里。</p><a class="btn p" style="margin-top:12px" href="/api/auth/github/start?return_to=/check">用 GitHub 登录 →</a>';return;}
  gate.style.display="none";form.style.display="block";
  var TR=null;fetch("/assets/tokref.json").then(function(r){return r.json();}).then(function(t){TR=t;var box=document.getElementById("ck-models");
