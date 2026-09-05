@@ -63,8 +63,12 @@ a{color:inherit;text-decoration:none}button{font:inherit;color:inherit}::selecti
 .app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
 .rail{position:sticky;top:0;height:100vh;background:var(--card);border-right:1px solid var(--hair);padding:22px 16px;display:flex;flex-direction:column;gap:6px;overflow:auto}
 .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 22px}
-.brand .mark{width:34px;height:34px;border-radius:11px;background:linear-gradient(145deg,#8B77FF,#4B36D6);box-shadow:0 8px 18px -8px rgba(75,54,214,.7),inset 0 1px 0 rgba(255,255,255,.35);position:relative;flex:none}
-.brand .mark:after{content:"";position:absolute;inset:9px 12px;border-radius:2px 2px 8px 8px;background:linear-gradient(#fff,#E9E6FF);transform:rotate(-28deg);box-shadow:0 2px 4px rgba(0,0,0,.25)}
+.brand .mark{width:36px;height:36px;border-radius:10px;background:#07070B url(/brand/sinanlab-mark.svg) center/28px 28px no-repeat;box-shadow:0 8px 18px -10px rgba(7,7,11,.6);flex:none}
+.brandband{background:#07070B;border-radius:18px;padding:26px 32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:44px}.brandband img{width:480px;max-width:100%;height:auto;display:block}.brandband span{color:#B8A4FA;font-size:13px;letter-spacing:.08em;margin-left:auto}
+.rkmini{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}.rkmini .card{padding:16px 18px}.rkmini h4{margin:0;font-size:13.5px}.rkmini .q{font-size:11.5px;color:var(--ink-3);margin-top:3px;line-height:1.5;min-height:34px}.rkmini ol{list-style:none;margin:12px 0 0;padding:0}.rkmini li{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-top:1px solid var(--hair);font-size:13px}.rkmini li .no{font-family:var(--mono);font-size:11px;color:var(--ink-3);width:18px}.rkmini li a{font-weight:600}.rkmini li .val{margin-left:auto;font-family:var(--mono);font-size:12px}
+.det{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}.det .card{padding:18px 20px}.det .k{font-size:12px;color:var(--ink-3);letter-spacing:.04em}.det .v{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:6px}.det .v small{font-size:12px;color:var(--ink-3);font-weight:400;margin-left:4px}.det p{font-size:12.5px;color:var(--ink-2);line-height:1.6;margin:8px 0 0}
+.prods{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}.prods a.card{padding:18px 20px;display:block}.prods b{display:block;font-size:15px}.prods p{margin:6px 0 0;font-size:12.5px;color:var(--ink-3);line-height:1.55}
+@media (max-width:860px){.rkmini,.det,.prods{grid-template-columns:1fr 1fr}}@media (max-width:560px){.rkmini,.det,.prods{grid-template-columns:1fr}}
 .brand b{font-size:17px;font-weight:700;letter-spacing:-.01em;display:block}.brand small{display:block;font-size:10.5px;color:var(--ink-3);font-weight:500;letter-spacing:.04em;margin-top:1px}
 .sect{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding:14px 10px 6px;font-weight:600}
 .nav{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:12px;color:var(--ink-2);font-weight:500;transition:background .25s var(--ease),color .25s var(--ease),transform .25s var(--ease);white-space:nowrap}
@@ -90,10 +94,10 @@ h1,h2,h3{margin:0;letter-spacing:-.01em}h2.sec{font-size:20px;font-weight:700}
 .lead{color:var(--ink-2);font-size:13.5px;margin:6px 0 0;max-width:760px}
 .sub{font-size:11.5px;color:var(--ink-3);margin-top:2px}
 /* hero */
-.hero{min-height:500px;border-radius:24px;overflow:hidden;position:relative;background:radial-gradient(600px 300px at 12% 0%,rgba(110,86,245,.28),transparent 60%),#040611;color:#fff;box-shadow:0 2px 6px rgba(20,22,50,.1),0 30px 60px -24px rgba(10,10,40,.7);isolation:isolate}
+.hero{min-height:500px;border-radius:24px;overflow:hidden;position:relative;background:radial-gradient(600px 300px at 12% 0%,rgba(110,86,245,.28),transparent 60%),#07070B;color:#fff;box-shadow:0 2px 6px rgba(20,22,50,.1),0 30px 60px -24px rgba(10,10,40,.7);isolation:isolate}
 .hero canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .hero .stars{pointer-events:none}.hero #gl{cursor:grab;z-index:1}.hero #gl:active{cursor:grabbing}
-.hero .scrim{position:absolute;inset:0;background:linear-gradient(100deg,rgba(4,6,17,.72) 0%,rgba(4,6,17,.35) 42%,rgba(4,6,17,0) 68%);pointer-events:none}
+.hero .scrim{position:absolute;inset:0;background:linear-gradient(100deg,rgba(7,7,11,.72) 0%,rgba(7,7,11,.35) 42%,rgba(7,7,11,0) 68%);pointer-events:none}
 .hero .txt{position:relative;z-index:2;max-width:600px;padding:44px 48px 48px}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.85}
 .hero h1{margin:14px 0 0;font-size:44px;line-height:1.12;letter-spacing:-.02em;font-weight:700;text-wrap:balance}
@@ -230,7 +234,7 @@ footer.ft{border-top:1px solid var(--hair);margin-top:60px}footer.ft .in{display
 .rise{animation:rise .8s var(--ease) both;animation-delay:calc(var(--i,0)*70ms)}@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.985)}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.fams{grid-template-columns:1fr 1fr}.facts{grid-template-columns:1fr 1fr}}
-@media (max-width:860px){.app{grid-template-columns:1fr}.rail{position:static;height:auto;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:4px;padding:10px 12px;align-items:center}.rail .sect,.rail .robo{display:none}.rail .brand{padding:4px 8px;flex:none}.rail .brand small{display:none}.nav{padding:8px 10px;font-size:13px;flex:none}.nav .badge{display:none}.main{padding:16px}.hero{min-height:560px}.hero .txt{padding:26px 24px 30px;max-width:none}.hero h1{font-size:32px}.hero .scrim{background:linear-gradient(180deg,rgba(4,6,17,.75) 0%,rgba(4,6,17,.3) 50%,transparent 75%)}.hero .tag{display:none}.fams{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.asof{display:none}.bento{grid-template-columns:1fr 1fr}.facts{grid-template-columns:1fr 1fr}.sitehead h1{font-size:22px}}
+@media (max-width:860px){.app{grid-template-columns:1fr}.rail{position:static;height:auto;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:4px;padding:10px 12px;align-items:center}.rail .sect,.rail .robo{display:none}.rail .brand{padding:4px 8px;flex:none}.rail .brand small{display:none}.nav{padding:8px 10px;font-size:13px;flex:none}.nav .badge{display:none}.main{padding:16px}.hero{min-height:560px}.hero .txt{padding:26px 24px 30px;max-width:none}.hero h1{font-size:32px}.hero .scrim{background:linear-gradient(180deg,rgba(7,7,11,.75) 0%,rgba(7,7,11,.3) 50%,transparent 75%)}.hero .tag{display:none}.fams{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.asof{display:none}.bento{grid-template-columns:1fr 1fr}.facts{grid-template-columns:1fr 1fr}.sitehead h1{font-size:22px}}
 """
 
 # ------------------------------------------------------------------ JS（公共）
@@ -452,12 +456,12 @@ def shell(title, desc, path, body, active="", page="", crumbs=None, extra_head="
     nav2 = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl)
                    for k, h, lbl in [("method", "/method", "口径与定义"), ("data", "/method#data", "开放数据")])
     crumb = '<div class="crumb"><a href="https://sinanlab.com">← 司南实验室</a>%s</div>' % "".join(" › " + ('<a href="%s">%s</a>' % (c[1], esc(c[0])) if len(c) > 1 and c[1] else esc(c[0])) for c in (crumbs or []))
-    head = tpl(u"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{title}}</title><meta name="description" content="{{desc}}"><link rel="canonical" href="{{canonical}}"><meta property="og:site_name" content="Sinan Compute"><meta property="og:type" content="website"><meta property="og:title" content="{{title}}"><meta property="og:description" content="{{desc}}"><meta property="og:url" content="{{canonical}}"><meta property="og:image" content="{{og}}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{{og}}">{{ld}}<meta name="theme-color" content="#040611"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="sitemap" href="/sitemap.xml"><link rel="stylesheet" href="/assets/app.css?v={{v}}">{{extra}}</head><body data-page="{{page}}">""",
+    head = tpl(u"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{title}}</title><meta name="description" content="{{desc}}"><link rel="canonical" href="{{canonical}}"><meta property="og:site_name" content="Sinan Compute"><meta property="og:type" content="website"><meta property="og:title" content="{{title}}"><meta property="og:description" content="{{desc}}"><meta property="og:url" content="{{canonical}}"><meta property="og:image" content="{{og}}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{{og}}">{{ld}}<meta name="theme-color" content="#07070B"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="sitemap" href="/sitemap.xml"><link rel="stylesheet" href="/assets/app.css?v={{v}}">{{extra}}</head><body data-page="{{page}}">""",
                title=esc(title), desc=esc(desc), canonical=canonical, v=_asset_v(), extra=extra_head, page=page, og=BASE + og_image,
                ld=("".join('<script type="application/ld+json">%s</script>' % json.dumps(x, ensure_ascii=False).replace("</", "<\\/") for x in (jsonld or []))))
     search = '<label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9AA0B8" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="查一个站（toapis.cn）或一个模型（DeepSeek V4），回车" list="qlist"><datalist id="qlist"></datalist><kbd>/</kbd></label>'
     asof = '<div class="asof"><i></i><span>数据 %s · USD/CNY %.2f</span></div>' % (D["generated_at"][:16].replace("T", " "), D["fx"]["rate"])
-    footer = u"""<footer class="ft"><div class="in"><span>© 2026 Sinan Lab · 司南实验室</span><a href="https://sinanlab.com/constitution">为什么可信</a><a href="https://sinanlab.com/disclosure">收入透明</a><a href="https://github.com/sinanlabs/compute" rel="noopener">GitHub</a><a href="https://sinanlab.com/privacy">隐私政策</a><a href="https://sinanlab.com/disclaimer">免责声明</a><a href="/method">方法论</a><a href="/method#data">数据下载</a><a href="https://sinanlab.com/">母站 sinanlab.com</a><a href="mailto:hello@sinanlab.com">hello@sinanlab.com</a><span style="margin-left:auto">每个数字可追溯来源 · 不收任何被测渠道的钱</span></div></footer>"""
+    footer = u"""<div class="brandband"><img src="/brand/sinanlab-lockup.png" srcset="/brand/sinanlab-lockup@2x.png 2x" width="480" height="123" alt="SinanLab · 司南实验室" loading="lazy"><span>方向清晰，判断有据。</span></div><footer class="ft"><div class="in"><span>© 2026 Sinan Lab · 司南实验室</span><a href="https://sinanlab.com/constitution">为什么可信</a><a href="https://sinanlab.com/disclosure">收入透明</a><a href="https://github.com/sinanlabs/compute" rel="noopener">GitHub</a><a href="https://sinanlab.com/privacy">隐私政策</a><a href="https://sinanlab.com/disclaimer">免责声明</a><a href="/method">方法论</a><a href="/method#data">数据下载</a><a href="https://sinanlab.com/">母站 sinanlab.com</a><a href="mailto:hello@sinanlab.com">hello@sinanlab.com</a><span style="margin-left:auto">每个数字可追溯来源 · 不收任何被测渠道的钱</span></div></footer>"""
     drawer = u"""<div class="scrim" id="scrim"></div><aside class="drawer" id="drawer" role="dialog" aria-modal="true"><button class="x" id="dx" aria-label="关闭">×</button><div class="eyebrow" id="deye" style="color:var(--p)">证据链</div><h3 id="dtitle"></h3><div id="dbody"></div></aside>"""
     rail = tpl(u"""<aside class="rail"><a class="brand" href="/"><span class="mark"></span><div><b>Sinan Compute</b><small>司南·算力 · SINAN LAB</small></div></a><div class="sect">测量</div>{{nav}}<div class="sect">底层</div>{{nav2}}<a class="robo" href="https://robo.sinanlab.com"><span class="gl"></span><b>Sinan Robo</b><p>开源具身模型的可审计索引</p></a></aside>""", nav=nav, nav2=nav2)
     return head + '<div class="app">' + rail + '<div class="main"><div class="top">' + (search if page != "index" else search) + asof + '<div class="auth" id="auth"></div></div>' + (crumb if crumbs else "") + body + footer + '</div></div>' + drawer + '<script src="/assets/app.js?v=%s" defer></script>%s</body></html>' % (GEN_DATE.replace("-", ""), scripts)
@@ -511,6 +515,20 @@ def build_index():
         body = ('<div class="dist">%s</div><div class="legend">%s</div>' % ("".join('<i class="c-%s" style="flex:%d"></i>' % (c, C[c]) for c in ("ultra", "cheap", "near", "high", "held")),
                  "".join('<span style="--c:%s">%s %d</span>' % (col, nm, C[c]) for c, nm, col in (("ultra", "超低价", "var(--crit)"), ("cheap", "低于折扣", "var(--warn)"), ("near", "接近", "var(--good)"), ("high", "高于", "var(--p)"), ("held", "待核", "var(--hair-2)"))))) if kind == "dist" else '<div class="n">%s</div>' % n
         kpi_html += '<div class="card kpi rise" style="--i:%s"><div class="k"><i>%s</i>%s</div><div class="v"><span data-count="%d">%d</span>%s</div>%s</div>' % (2 + i * 0.5, ico, k, v, v, ('<small>%s</small>' % suf) if suf else "", body)
+    # 榜单预览：四张榜各取前三
+    RK = D.get("rank") or {}
+    def mini(title, q, rows, val):
+        lis = "".join('<li><span class="no">%02d</span><a href="/s/%s">%s</a><span class="val">%s</span></li>' % (i + 1, esc(r["domain"]), esc(r.get("name") or r["domain"]), val(r)) for i, r in enumerate(rows[:3]))
+        return '<div class="card"><h4>%s</h4><div class="q">%s</div><ol>%s</ol></div>' % (title, q, lis or '<li><span class="sub">样本不足，本期空缺</span></li>')
+    rkmini = (mini("响应榜", "可达率 ≥99% 的站里首字节延迟最低", RK.get("fast", []), lambda r: "%dms" % r["p50"]) +
+              mini("价格优势榜", "最新代模型说得通区间内实付中位数最低", RK.get("price", []), lambda r: "%d%%" % round(r["median"] * 100)) +
+              mini("多模态价格优势榜", "图像 / 视频报价说得通区间内实付中位数最低", (RK.get("media") or {}).get("price", []), lambda r: "%d%%" % round(r["median"] * 100)) +
+              mini("双旗舰榜", "同时在说得通区间卖 GPT-6 Astra 与 Claude Fable 5.1，按两者实付之和", RK.get("dual", []), lambda r: "$%s" % fmt(r["sum"])))
+    # 检测三层
+    det = ('<div class="card"><div class="k">T0 · 24h 可达</div><div class="v">%d<small>/ %d 站</small></div><p>过去 24 小时从美国西部探测节点能连上的站；每站每天多次探测，记首字节延迟。</p></div>'
+           '<div class="card"><div class="k">T1 · 一致性探针</div><div class="v">%d<small>组 站×模型</small></div><p>用我们的 Key 向同一模型发固定探针串，比对 token 计数：%d 组与其他渠道一致，%d 组不一致，其余样本不足。</p></div>'
+           '<div class="card"><div class="k">T2 · 能力抽样</div><div class="v">%d<small>组 站×模型</small></div><p>30 道机器判分小题，本站答对数与同模型多渠道中位数比；%d 组低于中位。</p></div>'
+           % (st["reachable"], st["confirmed"], st.get("probed_pairs", 0), st.get("probe_consistent", 0), st.get("probe_divergent", 0), st.get("cap_pairs", 0), st.get("cap_below", 0)))
     # 首页 HTML 只内联默认模型（约 30 KB）；40 个模型的全量账本放 assets/ledger.json，浏览器空闲时或点到别的模型时再取
     dml = [m for m in D["models"] if m["id"] == default]
     sids = {D["fx"]["sid"]}
@@ -522,11 +540,12 @@ def build_index():
              "site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}
     body = tpl(u"""
 <section class="hero rise" style="--i:1"><canvas class="stars" id="stars"></canvas><canvas id="gl"></canvas><div class="scrim"></div>
-<div class="txt"><div class="eyebrow">官方价 · 公开市场 · 中转站实付 · 逐条算成比率</div><h1>看清算力，<br>才好买算力。</h1>
-<p>我们把 <span class="mono">{{n}}</span> 个中转站的实付价，对着官方与公开市场价逐条算成比率。每个数字都能点开看抓取快照。不收任何被测渠道的钱，也不替你判断。</p>
-<div class="cta"><a class="btn w" href="#ledger">查一个模型</a><a class="btn g" href="/sites">查一个中转站</a></div></div>
+<div class="txt"><div class="eyebrow">实付比率 · 司南榜每周出刊 · 一致性检测 · 用你的 Key 自测</div><h1>看清算力，<br>才好买算力。</h1>
+<p>我们把 <span class="mono">{{n}}</span> 个中转站的实付价，对着官方与公开市场价逐条算成比率；再用自己的 Key 做可达、一致性、能力三层检测，每周出一期司南榜。每个数字都能点开看来源。不收任何被测渠道的钱，也不替你判断。</p>
+<div class="cta"><a class="btn w" href="#ledger">查一个模型</a><a class="btn g" href="/rank">看司南榜</a><a class="btn g" href="/check">用我的 Key 自测</a></div></div>
 <div class="stat"><b data-count="{{quotes_raw}}">{{quotes}}</b><small>条实付报价 · 24h 内</small></div><div class="tag">地球影像 NASA BLUE MARBLE · BLACK MARBLE<br>实时大气散射 · 拖动转动地球</div></section>
 <div class="kpis">{{kpis}}</div>
+<section class="rise" id="rank" style="--i:3.5;margin-top:22px"><div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><div><div class="eyebrow" style="color:var(--p)">司南榜 · {{week}}</div><h2 class="sec" style="margin-top:4px">本周司南榜</h2><p class="lead" style="margin-top:4px">每张榜只回答一个可测量的问题，按测量值排序，每周一出刊；不含任何商业变量，不构成推荐。</p></div><a class="btn o" href="/rank" style="margin-left:auto">看全部 12 张榜 →</a></div><div class="rkmini">{{rkmini}}</div></section>
 <section class="card ledger rise" id="ledger" style="--i:4">
 <div class="lh"><div><h2 class="sec">模型实付账本</h2><p class="lead">先点一个模型，下面的表就换成它。输出价按 $/百万 token；中转价已按人民币充值通道折成实付；参考价取官方与公开市场的最低价。</p></div>
 <button class="btn o watch" id="mwatch" data-kind="model" data-key="" style="height:36px;margin-left:auto">关注这个模型</button><div class="calc" style="margin-left:0">按你的用量估月费：输入 <input id="c-in" value="5"> 百万 · 输出 <input id="c-out" value="1"> 百万 <button class="pre" data-i="1" data-o="0.2">个人</button><button class="pre" data-i="5" data-o="1">小团队</button><button class="pre" data-i="50" data-o="10">生产</button></div></div>
@@ -537,15 +556,17 @@ def build_index():
 <div class="terms"><span><b>几成</b> = 实付 ÷ 最低公开渠道价，100% 就是和公开价一样</span><span><b>怎么看</b> = 这个几成落在哪个算术区间，点 ? 看解释</span><span><b>24h 可达</b> = 过去 24 小时从美国西部探测节点能连上该站的比例</span></div>
 <div class="tfoot" id="tfoot"><span>{{disc}}</span></div>
 <div class="mlinks"><span class="vn">每个模型的独立页</span>{{mlinks}}</div></section>
-<div class="grid2"><div class="bento rise" id="bento" style="--i:5">{{tiles}}</div>
+<section class="rise" id="detect" style="--i:4.5;margin-top:22px"><div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><div><div class="eyebrow" style="color:var(--p)">检测 · 三层 · 全部可复现</div><h2 class="sec" style="margin-top:4px">不只比价，还测得到什么</h2><p class="lead" style="margin-top:4px">用我们自己的 Key 每天测；判定只有一致 / 不一致 / 样本不足，这是一致性测量，不是真伪判定。</p></div><a class="btn p" href="/check" style="margin-left:auto">用我的 Key 测一个站 →</a></div><div class="det">{{det}}</div></section>
+<div class="grid2" style="margin-top:22px"><div class="bento rise" id="bento" style="--i:5">{{tiles}}</div>
 <section class="card feed rise" style="--i:6"><h3>今日变动</h3>{{feed}}</section></div>
 <section class="card pad rise" style="margin-top:18px;--i:7;display:flex;flex-wrap:wrap;gap:14px;align-items:center"><div><h2 class="sec">图像 · 视频</h2><p class="lead">Seedance、Veo、Kling、Hailuo 等按秒 / 按张的实付价，与官方价放一起。</p></div><a class="btn p" href="/media" style="margin-left:auto">看图像与视频账本 →</a></section>
+<section class="rise" style="--i:8;margin-top:22px"><div class="eyebrow" style="color:var(--p)">SinanLab · 司南实验室</div><h2 class="sec" style="margin-top:4px">三个站，一把尺</h2><div class="prods"><a class="card" href="/"><b>Sinan Compute · 司南·算力</b><p>模型 API 中转站的实付价、可达率、一致性与能力检测，每周司南榜。</p></a><a class="card" href="https://robo.sinanlab.com"><b>Sinan Robo · 司南·机脑</b><p>开源具身模型（VLA）的许可证、权重、可上机器人本体，做成可审计的索引与榜单。</p></a><a class="card" href="https://sinanlab.com/"><b>母站 sinanlab.com</b><p>为什么可信、收入透明、隐私政策，以及两个站的订阅与账号。</p></a></div></section>
 <noscript><div class="notice" style="margin-top:18px">本页的模型切换、证据抽屏需要 JavaScript。上面的表格是默认模型 {{dmname}} 的静态版本；全部站点见 <a href="/sites">站点总表</a>。</div></noscript>
 <script id="d" type="application/json">{{data}}</script>""",
-        n=st["confirmed"], quotes=format(st["quotes"], ","), quotes_raw=st["quotes"], kpis=kpi_html, mlinks="".join('<a href="/m/%s">%s</a>' % (esc(m["id"]), esc(m["name"])) for m in D["models"]), chips="".join(chips), rows=ssr_ledger_rows(dm), disc=DISCLAIMER, tiles=tiles_html, feed=feed_html, dmname=esc(dm["name"]), data=jsdata(light))
+        n=st["confirmed"], quotes=format(st["quotes"], ","), quotes_raw=st["quotes"], kpis=kpi_html, week=esc(RK.get("week", "")), rkmini=rkmini, det=det, mlinks="".join('<a href="/m/%s">%s</a>' % (esc(m["id"]), esc(m["name"])) for m in D["models"]), chips="".join(chips), rows=ssr_ledger_rows(dm), disc=DISCLAIMER, tiles=tiles_html, feed=feed_html, dmname=esc(dm["name"]), data=jsdata(light))
     desc = "司南实验室出品。%d 个中转站的模型 API 实付价对着官方与公开市场价逐条算成比率，%s 条报价，每个数字可追溯抓取快照。不收任何被测渠道的钱。" % (st["confirmed"], format(st["quotes"], ","))
     ld = [{"@context": "https://schema.org", "@type": "WebSite", "name": "Sinan Compute", "alternateName": "司南·算力", "url": BASE + "/", "inLanguage": "zh-CN",
-           "publisher": {"@type": "Organization", "name": "Sinan Lab", "alternateName": "司南实验室", "url": "https://sinanlab.com", "logo": BASE + "/favicon.svg", "email": "hello@sinanlab.com"},
+           "publisher": {"@type": "Organization", "name": "Sinan Lab", "alternateName": "司南实验室", "url": "https://sinanlab.com", "logo": BASE + "/brand/sinanlab-mark.png", "email": "hello@sinanlab.com"},
            "potentialAction": {"@type": "SearchAction", "target": {"@type": "EntryPoint", "urlTemplate": BASE + "/sites#q={search_term_string}"}, "query-input": "required name=search_term_string"}},
           {"@context": "https://schema.org", "@type": "Dataset", "name": "Sinan Compute 中转站实付价数据集", "description": desc, "url": BASE + "/method#data", "license": "https://creativecommons.org/licenses/by/4.0/",
            "creator": {"@type": "Organization", "name": "Sinan Lab"}, "distribution": [{"@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": BASE + "/data_v2.json"}, {"@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": BASE + "/media.json"}], "dateModified": GEN_DATE}]
@@ -1001,17 +1022,22 @@ def badge_svg(s):
             '<text x="328" y="27" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#64768A">%s</text></svg>'
             % (esc(s["domain"]), esc(s["domain"]), up, 170, 12 * len(pic) + 20, color, 180, color, esc(pic), GEN_DATE[5:]))
 
+MARK_SVG = ('<path d="M26.5 9.4A23 23 0 0 0 26.5 54.6M37.5 9.4A23 23 0 0 1 37.5 54.6" fill="none" stroke="#F5F5F7" stroke-width="2" stroke-linecap="round"/>'
+            '<path d="M32 10L35.2 32H28.8Z" fill="#B8A4FA"/><path d="M32 54L28.8 32H35.2Z" fill="#F5F5F7"/><circle cx="32" cy="32" r="1.6" fill="#07070B"/>')
+FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#07070B"/>%s</svg>' % MARK_SVG
+
 def rank_badge_svg(s):
-    """期号徽章：只显示期号、榜名、名次、测量值，点回榜页。"""
+    """期号徽章（VI：墨黑 #07070B 底、冷白 #F5F5F7 字、淡紫 #B8A4FA 小面积点缀、简化罗盘）。只显示期号、榜名、名次、测量值。"""
     b = s["rank_badge"]; label = "%s #%02d" % (b["board_name"], b["pos"])
-    return ('<svg xmlns="http://www.w3.org/2000/svg" width="340" height="64" viewBox="0 0 340 64" role="img" aria-label="司南榜 %s %s %s">'
-            '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1B1650"/><stop offset="1" stop-color="#3A2AA8"/></linearGradient></defs>'
-            '<rect width="340" height="64" rx="14" fill="url(#g)"/><rect x="12" y="14" width="36" height="36" rx="10" fill="#6E56F5"/><path d="M22 24h16v6a8 8 0 0 1-16 0z" fill="#fff"/><path d="M26 40h8M30 36v4" stroke="#fff" stroke-width="2"/>'
-            '<text x="60" y="27" font-family="-apple-system,Segoe UI,PingFang SC,Noto Sans SC,sans-serif" font-size="12" fill="#B9ADFF">司南榜 · %s · 测量榜单</text>'
-            '<text x="60" y="48" font-family="-apple-system,Segoe UI,PingFang SC,Noto Sans SC,sans-serif" font-size="15" font-weight="700" fill="#fff">%s</text>'
-            '<text x="328" y="27" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#B9ADFF">%s</text>'
-            '<text x="328" y="48" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#fff">%s</text></svg>'
-            % (esc(b["week"]), esc(label), esc(s["domain"]), esc(b["week"]), esc(label), esc(s["domain"]), esc(b["value"])))
+    font = "Inter,-apple-system,Segoe UI,PingFang SC,Source Han Sans SC,Noto Sans SC,sans-serif"
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="72" viewBox="0 0 360 72" role="img" aria-label="司南榜 %s %s %s">'
+            '<rect width="360" height="72" rx="14" fill="#07070B"/><rect x=".5" y=".5" width="359" height="71" rx="13.5" fill="none" stroke="#F5F5F7" stroke-opacity=".14"/>'
+            '<g transform="translate(14 14) scale(.6875)">%s</g><line x1="68" y1="18" x2="68" y2="54" stroke="#B8A4FA" stroke-width="1"/>'
+            '<text x="80" y="29" font-family="%s" font-size="11" fill="#B8A4FA" letter-spacing=".3">司南榜 · %s</text>'
+            '<text x="80" y="51" font-family="%s" font-size="16" font-weight="600" fill="#F5F5F7">%s</text>'
+            '<text x="346" y="29" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#B8A4FA">%s</text>'
+            '<text x="346" y="51" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="13" fill="#F5F5F7">%s</text></svg>'
+            % (esc(b["week"]), esc(label), esc(s["domain"]), MARK_SVG, font, esc(b["week"]), font, esc(label), esc(s["domain"]), esc(b["value"])))
 
 def build_404():
     body = '<div class="card pad rise" style="--i:0;max-width:640px"><div class="eyebrow" style="color:var(--p)">404</div><h1 style="font-size:28px;margin-top:8px">没有这个页面。</h1><p class="lead">地址可能拼错了，或者这个站还没被收录。试试上面的搜索框，或者：</p><div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"><a class="btn p" href="/">回首页</a><a class="btn o" href="/sites">中转站总表</a><a class="btn o" href="/media">图像 · 视频</a></div></div><script id="d" type="application/json">%s</script>' % jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]})
@@ -1076,12 +1102,15 @@ def main():
     for f in ("data_v2.json", "media.json", "go_links.json"):
         if os.path.exists(os.path.join(HERE, f)): shutil.copy(os.path.join(HERE, f), os.path.join(DIST, f))
     if os.path.exists(os.path.join(HERE, "static")):   # 站长平台验证文件等原样放根目录
-        for f in os.listdir(os.path.join(HERE, "static")): shutil.copy(os.path.join(HERE, "static", f), os.path.join(DIST, f))
+        for f in os.listdir(os.path.join(HERE, "static")):
+            src_ = os.path.join(HERE, "static", f); dst_ = os.path.join(DIST, f)
+            if os.path.isdir(src_): shutil.copytree(src_, dst_, dirs_exist_ok=True)
+            else: shutil.copy(src_, dst_)
     W("assets/ledger.json", jsdata({"models": D["models"], "snaps": D["snaps"]}))
     W("robots.txt", "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n" % BASE)
     urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly")] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
     W("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join('  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq></url>\n' % (BASE, u, GEN_DATE, c) for u, c in urls) + "</urlset>\n")
-    W("favicon.svg", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="#4B36D6"/><circle cx="20" cy="20" r="14" fill="none" stroke="#B9ADFF" stroke-width="1.5" opacity=".6"/><path d="M20 9 L24.5 20 L20 31 Z" fill="#fff"/><path d="M20 9 L15.5 20 L20 31 Z" fill="#B9ADFF"/><circle cx="20" cy="20" r="2.2" fill="#4B36D6" stroke="#fff" stroke-width="1.4"/></svg>')
+    W("favicon.svg", FAVICON)
     W("_headers", "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/assets/*\n  Cache-Control: public, max-age=604800\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n/img/*\n  Cache-Control: public, max-age=2592000\n")
     print("dist/ 生成完成：index · sites · media · method · 404 · 站点页 %d · 大小 index %d KB" % (n, os.path.getsize(os.path.join(DIST, "index.html")) // 1024))
 
