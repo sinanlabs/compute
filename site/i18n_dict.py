@@ -360,17 +360,15 @@ HTML = {
 "Sinan Robo · 司南·机脑": "Sinan Robo", "开源具身模型（VLA）的许可证、权重、可上机器人本体，做成可审计的索引与榜单。": "Licences, weights and target robot bodies of open embodied models (VLA), as an auditable index with rankings.",
 "母站 sinanlab.com": "Home · sinanlab.com", "为什么可信、收入透明、隐私政策，以及两个站的订阅与账号。": "Why trust us, revenue disclosure, privacy policy, and subscriptions and accounts for both sites.",
 "方向清晰，判断有据。": "Clear direction, grounded judgement.", "SinanLab · 司南实验室": "SinanLab",
-# ---------- 登录页（GitHub / 邮箱 / 手机） ----------
-"登录 / 注册 · Sinan Compute": "Sign in / sign up · Sinan Compute", "登录即表示同意": "By signing in you agree to the", "用 GitHub、邮箱验证码或手机验证码登录司南实验室，不设密码。": "Sign in to SinanLab with GitHub, an email code or an SMS code. No passwords.",
-"用邮箱或手机验证码登录时，我们只保存邮箱地址（用于发验证码与你自己开启的提醒）或手机号的哈希值；验证码本身只存哈希，10 分钟后自动销毁。": "When you sign in with an email or SMS code, we store only the email address (to send codes and the alerts you switch on) or a hash of the phone number; the code itself is stored only as a hash and destroyed after 10 minutes.",
-"登录 / 注册 · 不设密码": "Sign in / sign up · no passwords", "登录司南实验室": "Sign in to SinanLab", "一个账号通用于 Compute 与 Robo。三种方式任选，都不设密码；所有价格与索引数据不登录也全部可见，登录只解锁关注、提醒、自测与历史。": "One account for Compute and Robo. Pick any of three methods, none needs a password. All price and index data is public without signing in; signing in only unlocks watches, alerts, self-tests and history.",
-"邮箱": "Email", "手机": "Phone", "用 GitHub 账号一键登录。只读取公开资料与邮箱，不会代你做任何操作。": "One-click sign-in with GitHub. We only read your public profile and email and never act on your behalf.", "用 GitHub 登录 →": "Sign in with GitHub →",
-"输入邮箱，我们发一个 6 位验证码，10 分钟内有效。邮箱只用于登录识别与你自己开启的提醒。": "Enter your email and we send a 6-digit code valid for 10 minutes. The address is used only to recognise you and for alerts you switch on yourself.",
-"发送验证码": "Send code", "登录": "Sign in", "输入中国大陆手机号，我们发一条短信验证码，10 分钟内有效。手机号只存哈希。": "Enter a mainland-China mobile number and we text a code valid for 10 minutes. Only a hash of the number is stored.",
-"手机号登录即将开放（短信通道接入中）。现在可以先用 GitHub 或邮箱。": "Phone sign-in is coming soon (SMS channel being connected). Use GitHub or email for now.",
-"登录即表示同意 ": "By signing in you agree to the ", "隐私政策": "privacy policy", "。我们不会通过邮件或短信索要密码；本站不设密码。": ". We never ask for a password by email or SMS; this site has no passwords.",
-"登录 / 注册": "Sign in / sign up", "登录 / 注册 →": "Sign in / sign up →", "登录并关注 →": "Sign in and watch →", "登录后这里是你关注的站和模型。不设密码：GitHub 一键、邮箱验证码或手机验证码。": "Once signed in, your watched sites and models appear here. No passwords: GitHub, email code or SMS code.",
-"自测需要登录（GitHub / 邮箱 / 手机验证码，不设密码），用来防滥用和让你可以把结果回流给我们。你的 Key 始终只在你自己的浏览器里。": "The self-test requires sign-in (GitHub, email or SMS code; no passwords) to prevent abuse and let you send results back to us. Your key never leaves your browser.",
+# ---------- 登录页（邮箱 / Google / GitHub） ----------
+"不设密码": "No passwords", "登录": "Sign in", "注册": "Sign up", "登录 · Sinan Compute": "Sign in · Sinan Compute", "登录司南实验室": "Sign in to SinanLab", "用邮箱验证码、Google 或 GitHub 账号登录司南实验室，不设密码。": "Sign in to SinanLab with an email code, Google or GitHub. No passwords.",
+"一个账号通用于 Compute 与 Robo。用邮箱注册或登录，也可以直接用 Google、GitHub 账号。所有价格与索引数据不登录也全部可见，登录只解锁关注、提醒、自测与历史。": "One account for Compute and Robo. Sign up or sign in with your email, or use a Google or GitHub account. All price and index data is public without signing in; signing in only unlocks watches, alerts, self-tests and history.",
+"邮箱登录": "Email sign-in", "输入邮箱，我们发一个 6 位验证码，10 分钟内有效。第一次用会自动创建账号。": "Enter your email and we send a 6-digit code valid for 10 minutes. The first sign-in creates your account.",
+"发送验证码": "Send code", "确认": "Confirm", "或用第三方账号": "or continue with", "登录即表示同意 ": "By signing in you agree to the ", "登录即表示同意": "By signing in you agree to the", "隐私政策": "privacy policy",
+"。我们不会通过邮件索要密码；本站不设密码。第三方登录只读取公开资料与邮箱，不会代你做任何操作。": ". We never ask for a password by email; this site has no passwords. Third-party sign-in reads only your public profile and email and never acts on your behalf.",
+"登录 →": "Sign in →", "登录并关注 →": "Sign in and watch →", "登录后这里是你关注的站和模型。不设密码：邮箱验证码，或用 Google / GitHub 账号。": "Once signed in, your watched sites and models appear here. No passwords: an email code, or a Google / GitHub account.",
+"自测需要登录（邮箱验证码或 Google / GitHub 账号，不设密码），用来防滥用和让你可以把结果回流给我们。你的 Key 始终只在你自己的浏览器里。": "The self-test requires sign-in (email code or a Google / GitHub account; no passwords) to prevent abuse and let you send results back to us. Your key never leaves your browser.",
+"用邮箱验证码登录时，我们只保存邮箱地址（用于发验证码与你自己开启的提醒）；验证码本身只存哈希，10 分钟后自动销毁。用 Google 登录时，我们保存 Google 账号编号、显示名、头像地址与已验证的邮箱。": "When you sign in with an email code, we store only the email address (to send codes and the alerts you switch on); the code itself is stored only as a hash and destroyed after 10 minutes. When you sign in with Google, we store the Google account id, display name, avatar URL and verified email.",
 # ---------- 一致性探针 ----------
 "能力抽样 答对 {n}/{n}": "Capability sample {n}/{n} correct", "能力抽样 答对 {n}/{n} · 多渠道中位 {n}": "Capability sample {n}/{n} correct · peer median {n}", "能力抽样 答对 {n}/{n} · 中位样本不足": "Capability sample {n}/{n} correct · too few peers for a median",
 "能力抽样": "Capability sample", "{n} 个模型 · 低于中位 {n}": "{n} models · {n} below median", "30 道机器判分小题，本站答对数与同模型其他渠道中位数比": "30 machine-graded short tasks; this site's correct count vs. the median of other channels for the same model", "尚未用 Key 抽样": "Not yet sampled with a key",
@@ -479,9 +477,9 @@ HTML = {
 
 # app.js 字面量子串（按长度降序替换；短词放最后兜底）
 JS = {
-    "登录 / 注册": "Sign in / sign up", "登录 / 注册 →": "Sign in / sign up →", "登录并关注 →": "Sign in and watch →", "会出现在你的关注列表，价格、可达率或探针结果变化时提醒你。不设密码：GitHub、邮箱或手机验证码都行。": " will appear in your watch list, and you get alerted when price, reachability or probe results change. No passwords: GitHub, email or SMS code.",
-    "GitHub 登录只读取公开资料与邮箱；邮箱 / 手机只存哈希用于识别；所有价格数据不登录也全部可见。": "GitHub sign-in reads only your public profile and email; email / phone are stored only as hashes; all price data is visible without signing in.",
-    "登录后这里是你关注的站和模型。不设密码：GitHub 一键、邮箱验证码或手机验证码。": "Once signed in, your watched sites and models appear here. No passwords: GitHub, email code or SMS code.",
+    "登录": "Sign in", "注册": "Sign up", "登录 →": "Sign in →", "登录并关注 →": "Sign in and watch →", "会出现在你的关注列表，价格、可达率或探针结果变化时提醒你。不设密码：邮箱验证码，或用 Google / GitHub 账号。": " will appear in your watch list, and you get alerted when price, reachability or probe results change. No passwords: an email code, or a Google / GitHub account.",
+    "Google / GitHub 登录只读取公开资料与邮箱；邮箱只用于登录识别与你自己开启的提醒；所有价格数据不登录也全部可见。": "Google / GitHub sign-in reads only your public profile and email; your email is used only to recognise you and for alerts you switch on; all price data is visible without signing in.",
+    "登录后这里是你关注的站和模型。不设密码：邮箱验证码，或用 Google / GitHub 账号。": "Once signed in, your watched sites and models appear here. No passwords: an email code, or a Google / GitHub account.",
     "能力抽样 答对 ": "Capability sample correct ", " · 多渠道中位 ": " · peer median ", " · 中位样本不足": " · too few peers for a median",
     "（弱）": " (weak)",
     " · 弱参考": " · weak reference",

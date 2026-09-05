@@ -18,6 +18,9 @@ id = "01d14fee71b2465d906fdccbf4eac4bb"
 GITHUB_CLIENT_ID = "Ov23liyyjBUluoOWdC81"
 COOKIE_DOMAIN = ".sinanlab.com"
 SITE_ORIGIN = "https://compute.sinanlab.com"
+# Google 登录：Google Cloud 控制台建 OAuth 客户端（Web 应用），授权回调 https://compute.sinanlab.com/api/auth/google/callback；
+# Client ID 填下面（取消注释），Client Secret 放面板 Secrets：GOOGLE_CLIENT_SECRET。两者齐了登录页自动出现 Google 按钮。
+# GOOGLE_CLIENT_ID = "xxxx.apps.googleusercontent.com"
 
 # 手机号登录（阿里云短信）。四项都配好后 /login 页自动出现"手机"入口：
 #   Secrets（面板）：SMS_ACCESS_KEY_ID、SMS_ACCESS_KEY_SECRET
