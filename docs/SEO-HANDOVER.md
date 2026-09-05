@@ -138,3 +138,13 @@ Astro 原生双语（`src/i18n/{zh-CN,en}.json`），`src/layouts/Base.astro` �
 ## 8. 移交后 Claude 继续负责
 
 数据采集与扩量（收录、定价、探针）、数据正确性、`export_data.py`、用户系统与邮件（`functions/api/`）、Robo 模型/本体内容核实、Cloudflare/D1/密钥、每日流水线的稳定运行。Codex 需要新的数据字段（例如给 SEO 页面用的统计量）时，通过 Eric 提需求，Claude 在 `export_data.py` 里加字段。
+
+---
+
+## 附录 A · 2026-09-05 晚补充（Claude → Codex）
+
+1. **导航与页面改名**：Compute 侧栏"方法论与数据"→"口径与定义"（`/method`，URL 不变），"数据下载"→"开放数据"（`/method#data`）。页面 `<title>` 随之变为"口径与定义 · Sinan Compute"，英文 "Definitions · Sinan Compute"。原因：Eric 要求不把采集细节当卖点展示。
+2. **`docs/METHOD.md` 删掉了操作细节**（国内厂商定价接口名、探针串构成与共识阈值），只保留口径与解释。Codex 若写 GEO/SEO 文案，不要再引用这些细节。
+3. **仓库拆分**：`sinanlabs/compute` 已重建为干净历史的公开仓库（只含 site/、functions/、core/ 部分、docs/、users/）；采集引擎在私有仓库 `sinanlabs/engine`；旧仓库归档为私有 `sinanlabs/compute-archive`。Codex 改展示层照旧在本地 `~/Desktop/claude code/compass` 操作、`git push origin main` 即可；**不要**碰 `adapters/ discovery/ probes/` 等已被 .gitignore 的引擎路径。
+4. **价格走势分层**：`/history/<model>.json` 现在只含最近 7 天（字段 `scope: "7d"`），完整历史仅登录用户经 `/api/history/<model>` 获取。`llms.txt` 数据段那一行已改成"公开部分为最近 7 天"。
+5. **新增页面**：`/rank` 及 `/rank/<期号>`（榜单，每周一期）已在 sitemap；页面结构化数据与分享图仍留给 Codex。
