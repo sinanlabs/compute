@@ -52,8 +52,30 @@ def weekly_payload(today):
         if len(best) >= 10: break
     return {"week": wk, "from": days[0], "to": days[-1], "n_changes": len(ch), "up": ups, "down": downs, "n_new": n_new, "best": best, "url": "%s/weekly/%s" % (BASE, wk)}
 
+def audit_payload():
+    """数据核查日报：有新待核 / 新孤点 / 榜首待核 / 新未知字段才发。"""
+    ap = os.path.join(ROOT, "data", "audit", "latest.json")
+    if not os.path.exists(ap): return None
+    A = json.load(io.open(ap, encoding="utf-8"))
+    D = json.load(io.open(os.path.join(HERE, "data_v2.json"), encoding="utf-8"))
+    ba = (D.get("rank") or {}).get("audit") or []
+    # 未知字段只报“今天新出现的”：与昨天的报告比
+    prev = sorted(f for f in os.listdir(os.path.join(ROOT, "data", "audit")) if f.endswith(".json") and f != "latest.json")
+    seen = set()
+    if len(prev) >= 2:
+        try: seen = {f["field"] for f in json.load(io.open(os.path.join(ROOT, "data", "audit", prev[-2]), encoding="utf-8")).get("unknown_fields", [])}
+        except Exception: pass
+    new_fields = [f for f in A.get("unknown_fields", []) if f["field"] not in seen and f["sites"] >= 3]
+    if not (A.get("unit_hint_new") or A.get("lone_outlier_new") or ba or new_fields): return None
+    summary = "扫 %d 站 · 单位改判作废旧行 %d · 单位提示新增待核 %d · 价格孤点新增待核 %d · 榜首差距待核 %d · 新出现字段 %d · 未放行待核共 %d" % (
+        A.get("sites_scanned", 0), A.get("unit_switch_retired", 0), A.get("unit_hint_new", 0), A.get("lone_outlier_new", 0), len(ba), len(new_fields), A.get("open_holds", 0))
+    return {"date": A.get("date", "")[:10], "summary": summary, "unknown_fields": new_fields, "lone_outliers": A.get("lone_outliers", []), "board_audit": ba, "open_holds": A.get("open_holds", 0)}
+
 def main():
     arg = sys.argv[1] if len(sys.argv) > 1 else "auto"
+    if arg == "audit":
+        p = audit_payload()
+        return run("audit", p) if p else print("数据核查：今天没有新情况，不发")
     today = dt.datetime.now(BJ).date()
     if arg == "test": return run("test", {})
     if arg in ("auto", "daily"):

@@ -68,6 +68,23 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
+  if (b.kind === "audit") {
+    // 数据核查日报：只发给管理员。payload = { date, summary, unknown_fields:[{field,sites,example}], lone_outliers:[...], board_audit:[...], open_holds }
+    const admins = (await env.DB.prepare("SELECT email, handle FROM users WHERE role='admin' AND email IS NOT NULL").all()).results || [];
+    const uf = (P.unknown_fields || []).slice(0, 12).map((f) => [esc(f.field), String(f.sites), esc((f.example || []).join(", "))]);
+    const lo = (P.lone_outliers || []).slice(0, 12).map((x) => [esc(x.site), esc(x.family), esc(x.name), "$" + x.value, "$" + x.second, "$" + x.median]);
+    const ba = (P.board_audit || []).slice(0, 12).map((x) => [esc(x.site), esc(x.board + "/" + x.family), esc(x.name), "$" + x.value, "$" + x.second]);
+    const body = `<p style="font-size:14px;line-height:1.7">${esc(P.summary || "")}</p>`
+      + (ba.length ? `<h3 style="font-size:14px;margin:18px 0 6px">榜首差距待核</h3>` + table(["站", "榜", "型号", "榜首", "第二"], ba) : "")
+      + (lo.length ? `<h3 style="font-size:14px;margin:18px 0 6px">价格孤点待核</h3>` + table(["站", "族", "型号", "该站", "第二", "族中位"], lo) : "")
+      + (uf.length ? `<h3 style="font-size:14px;margin:18px 0 6px">解析器不认识的字段</h3>` + table(["字段", "站数", "例"], uf) : "")
+      + `<p style="font-size:12px;color:#9AA0B8;margin-top:16px">放行：python3 core/quality_audit.py --clear ID 备注 · 未放行待核共 ${Number(P.open_holds || 0)} 条</p>`;
+    for (const a of admins) {
+      await send(a.email, { subject: `数据核查 ${P.date || ""} · 待核 ${Number(P.open_holds || 0)} · 新孤点 ${lo.length} · 榜首待核 ${ba.length}`, tags: ["audit"],
+        text: P.summary || "", html: layout({ title: "数据核查日报", intro: `${P.date || ""} 夜间流水线核查结果。`, body, footer: "只发管理员，不对外。" }) });
+    }
+  }
+
   if (b.kind === "weekly") {
     const url = P.url || `${site}/weekly/${P.week || ""}`;
     const best = Array.isArray(P.best) ? P.best.slice(0, 10) : [];
