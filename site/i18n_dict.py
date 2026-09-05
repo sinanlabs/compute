@@ -387,6 +387,9 @@ HTML = {
 "名次带样本量与门槛，能复算。已关闭新用户注册的站不进任何榜单（每日探测注册接口）。": "Every rank carries its sample size and threshold, so it can be recomputed. Sites that have closed new-user registration are excluded from all boards (registration endpoint probed daily).",
 
 # ---------- 自测 ----------
+"测试模型真伪": "Model authenticity check",
+"测试模型真伪 · Sinan Compute": "Model authenticity check · Sinan Compute",
+"当前提供一致性检测，不能单凭测试结果判定模型真伪。": "This checks consistency; the results alone cannot determine model authenticity.",
 "用我的 Key 测": "Test with my key", "自测 · 登录后可用": "Self-test · sign in required", "用你的 Key 测一个站": "Test a relay site with your own key",
 "用我的 Key 测一个站 · Sinan Compute": "Test a relay site with my key · Sinan Compute",
 "登录后用你自己的 Key 在浏览器里测一个中转站：8 条固定探针，比对 token 计数、回显模型名与延迟。Key 不上传。": "Sign in and test a relay site from your own browser with your own key: 8 fixed probes, comparing token counts, echoed model name and latency. The key never leaves your browser.",

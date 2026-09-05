@@ -448,7 +448,7 @@ def shell(title, desc, path, body, active="", page="", crumbs=None, extra_head="
     st = D["stats"]
     canonical = BASE + path
     nav = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl, ('<span class="badge">%s</span>' % b) if b else "")
-                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("check", "/check", "用我的 Key 测", "")])
+                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("check", "/check", "测试模型真伪", "")])
     nav2 = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl)
                    for k, h, lbl in [("method", "/method", "口径与定义"), ("data", "/method#data", "开放数据")])
     crumb = '<div class="crumb"><a href="https://sinanlab.com">← 司南实验室</a>%s</div>' % "".join(" › " + ('<a href="%s">%s</a>' % (c[1], esc(c[0])) if len(c) > 1 and c[1] else esc(c[0])) for c in (crumbs or []))
@@ -936,7 +936,7 @@ def load_rank_weeks():
 
 # ------------------------------------------------------------------ 自测：用你的 Key 测一个站（Key 不出浏览器）
 def build_check():
-    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">自测 · 登录后可用</div><h1 style="font-size:26px;margin-top:6px">用你的 Key 测一个站</h1><p class="lead">填一个中转站地址和你在该站的 Key，浏览器直接向该站发 8 条固定探针请求（每条只要 4 个输出 token，一次自测通常不到一分钱），把返回的 token 计数、回显模型名、首字节延迟，和我们从多个渠道得到的参考计数逐位比对。<b>Key 只在你的浏览器里，不上传、不落库、不经过我们的服务器。</b></p></div>
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">自测 · 登录后可用</div><h1 style="font-size:26px;margin-top:6px">测试模型真伪</h1><p class="lead">填一个中转站地址和你在该站的 Key，浏览器直接向该站发 8 条固定探针请求（每条只要 4 个输出 token，一次自测通常不到一分钱），把返回的 token 计数、回显模型名、首字节延迟，和我们从多个渠道得到的参考计数逐位比对。<b>Key 只在你的浏览器里，不上传、不落库、不经过我们的服务器。</b></p><p class="callout">当前提供一致性检测，不能单凭测试结果判定模型真伪。</p></div>
 <div id="gate" class="card pad rise" style="--i:1"><div class="callout">正在读取登录状态…</div></div>
 <section class="card pad rise" id="form" style="--i:1;display:none">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label style="display:block"><span class="sub">中转站地址（域名或 https://…）</span><input id="ck-base" list="qlist" placeholder="例如 toapis.cn" style="width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit"></label>
@@ -981,7 +981,7 @@ fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).cat
   st.textContent="完成。";});
  document.getElementById("ck-report").addEventListener("click",function(){var s=document.getElementById("ck-rep-status");if(!window.__CK||!window.__CK.length){s.textContent="先测一次。";return;}s.textContent="提交中…";Promise.all(window.__CK.map(function(x){return fetch("/api/check/report",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(x)});})).then(function(){s.textContent="已提交 "+window.__CK.length+" 条，谢谢。结果进入待审核队列，审核后计入该站的检测覆盖。";}).catch(function(){s.textContent="提交失败，稍后再试。";});});
 });})();</script>""", data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "models": [{"id": m["id"], "name": m["name"]} for m in D["models"] if m["is_latest"]]}))
-    return shell("用我的 Key 测一个站 · Sinan Compute", "登录后用你自己的 Key 在浏览器里测一个中转站：8 条固定探针，比对 token 计数、回显模型名与延迟。Key 不上传。", "/check", body, active="check", page="check", crumbs=[("用我的 Key 测",)], extra_head='<meta name="robots" content="noindex">')
+    return shell("测试模型真伪 · Sinan Compute", "登录后用你自己的 Key 在浏览器里测一个中转站：8 条固定探针，比对 token 计数、回显模型名与延迟。Key 不上传。", "/check", body, active="check", page="check", crumbs=[("测试模型真伪",)], extra_head='<meta name="robots" content="noindex">')
 
 def build_weekly_index(all_weeks):
     rows = "".join('<tr><td><a class="name" href="/weekly/%s">%s</a></td><td>%s – %s</td><td class="num">%d</td><td class="num">%d</td></tr>' % (esc(w["week"]), esc(w["week"]), min(w["days"]), max(w["days"]), len(w["changes"]), sum(len(v) for v in w["new_sites"].values())) for w in all_weeks)
