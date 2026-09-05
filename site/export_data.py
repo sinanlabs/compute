@@ -184,6 +184,9 @@ def main():
     global FX
     db = D.connect(); FX = fx(db)
     F = floors(db); R = relay_rows(db); AV = availability(db); SF = status_facts(db); PB = probe_summary(db)
+    try: REG = {r["domain"]: (r["register_state"], r["register_msg"], r["register_checked"]) for r in db.execute("SELECT domain, register_state, register_msg, register_checked FROM relay_candidate WHERE level>=1")}
+    except Exception: REG = {}
+    CLOSED = {d_ for d_, v in REG.items() if v[0] == "closed"}
 
     # 站级比率 + 闸
     per_site = {}
@@ -218,7 +221,7 @@ def main():
             rows.append({"vendor": v, "out": round(row["out"], 3), "in": round(row["in"], 3) if row["in"] is not None else None,
                          "ratio": round(row["ratio"], 4), "band": code, "held": v in HELD, "as_of": row["as_of"][:16],
                          "nominal_out": row["nominal_out"], "price_field": row["price_field"], "stripe": row["stripe"], "sids": sorted(row["sids"]),
-                         "uptime": (AV.get(v) or {}).get("uptime"), "name": (SF.get(v) or {}).get("system_name"), "probe": PB.get((v, m))})
+                         "uptime": (AV.get(v) or {}).get("uptime"), "name": (SF.get(v) or {}).get("system_name"), "probe": PB.get((v, m)), "reg": (REG.get(v) or ("unknown",))[0]})
         if not rows: continue
         rank = {"explainable": 0, "normal": 1, "premium": 2, "below_bulk": 3, "unsustainable": 4, "far_above": 5}
         rows.sort(key=lambda x: (1 if x["held"] else 0, rank.get(x["band"], 9), x["out"]))
@@ -249,7 +252,7 @@ def main():
         sites.append({"domain": v, "name": sf.get("system_name") or r["entity_name"], "site_url": r["site_url"], "first_seen": r["first_seen_at"][:10],
                       "channel": r["first_channel"], "panel": r["panel_kind"], "version": sf.get("version") or r["panel_version"],
                       "cluster": cl, "median": round(med, 3) if med is not None else None, "n_models": len(mrows), "n_ratio": len(rs),
-                      "avail": AV.get(v), "facts": sf, "models": mrows, "ok_count": sum(1 for x in mrows if x["band"] in ("explainable", "normal")),
+                      "avail": AV.get(v), "facts": sf, "models": mrows, "register": {"state": (REG.get(v) or ("unknown", None, None))[0], "msg": (REG.get(v) or (None, None, None))[1], "checked": ((REG.get(v) or (None, None, None))[2] or "")[:10]}, "ok_count": sum(1 for x in mrows if x["band"] in ("explainable", "normal")),
                       "un_count": sum(1 for x in mrows if x["band"] == "unsustainable"),
                       "probe": {"pairs": sum(1 for x in mrows if x["probe"]), "consistent": sum(1 for x in mrows if x["probe"] and x["probe"]["status"] == "consistent"),
                                 "divergent": sum(1 for x in mrows if x["probe"] and x["probe"]["status"] == "divergent"), "ts": max([x["probe"]["ts"] for x in mrows if x["probe"]] or [""])} if any(x["probe"] for x in mrows) else None})
@@ -281,15 +284,15 @@ def main():
     AV7 = availability(db, hours=168)
     site_by = {s_["domain"]: s_ for s_ in sites}
     def _nm(d_): return (site_by.get(d_) or {}).get("name")
-    elig = [(d_, v) for d_, v in AV7.items() if v["n"] >= 24 and d_ in site_by and site_by[d_]["n_models"] >= 10]
+    elig = [(d_, v) for d_, v in AV7.items() if v["n"] >= 24 and d_ in site_by and site_by[d_]["n_models"] >= 10 and d_ not in CLOSED]   # 关闭注册的站不上榜
     up_board = [{"domain": d_, "name": _nm(d_), "uptime": v["uptime"], "n": v["n"], "p50": v["ttfb_p50"]} for d_, v in sorted(elig, key=lambda kv: (-kv[1]["uptime"], kv[1]["ttfb_p50"] or 9e9))[:8]]
     fast_board = [{"domain": d_, "name": _nm(d_), "uptime": v["uptime"], "n": v["n"], "p50": v["ttfb_p50"]} for d_, v in sorted([kv for kv in elig if kv[1]["uptime"] >= 99 and kv[1]["ttfb_p50"]], key=lambda kv: kv[1]["ttfb_p50"])[:8]]
     vol = Counter(c["vendor"] for c in changes)
-    big = [s_ for s_ in sites if s_["n_models"] >= 20]
+    big = [s_ for s_ in sites if s_["n_models"] >= 20 and s_["domain"] not in CLOSED]
     vol_board = [{"domain": d_, "name": _nm(d_), "n": n_} for d_, n_ in sorted([(s_["domain"], vol.get(s_["domain"], 0)) for s_ in big if vol.get(s_["domain"], 0) > 0], key=lambda x: -x[1])[:8]]
     zero_change = sum(1 for s_ in big if vol.get(s_["domain"], 0) == 0)
-    cov_board = [{"domain": s_["domain"], "name": s_.get("name"), "n": s_["n_models"]} for s_ in sorted([s_ for s_ in sites if s_["n_models"]], key=lambda s_: -s_["n_models"])[:8]]
-    def _inrange(m): return sorted([r for r in m["rows"] if not r["held"] and r["band"] in ("explainable", "normal")], key=lambda r: r["out"])
+    cov_board = [{"domain": s_["domain"], "name": s_.get("name"), "n": s_["n_models"]} for s_ in sorted([s_ for s_ in sites if s_["n_models"] and s_["domain"] not in CLOSED], key=lambda s_: -s_["n_models"])[:8]]
+    def _inrange(m): return sorted([r for r in m["rows"] if not r["held"] and r["band"] in ("explainable", "normal") and r["vendor"] not in CLOSED], key=lambda r: r["out"])
     flagship = []
     for m in [x for x in models if x["is_latest"]]:
         rs = _inrange(m)[:3]
@@ -310,7 +313,7 @@ def main():
         if m["id"] not in latest_ids: continue
         for r in m["rows"]:
             if not r["held"] and r["band"] in ("explainable", "normal"): psr.setdefault(r["vendor"], []).append(r["ratio"])
-    price_board = sorted([{"domain": v, "name": _nm(v), "median": round(st.median(rs), 4), "n": len(rs)} for v, rs in psr.items() if len(rs) >= 8], key=lambda x: x["median"])[:8]
+    price_board = sorted([{"domain": v, "name": _nm(v), "median": round(st.median(rs), 4), "n": len(rs)} for v, rs in psr.items() if len(rs) >= 8 and v not in CLOSED], key=lambda x: x["median"])[:8]
     # 期号徽章：只对四张“正向语义”榜发（响应 / 价格优势 / 双旗舰 / 覆盖），每站取最好名次
     BOARD_NAME = {"fast": "响应榜", "price": "价格优势榜", "dual": "双旗舰榜", "coverage": "覆盖榜"}
     placements = {}
@@ -329,7 +332,7 @@ def main():
         fam_count, site_ratios = {}, {}
         for mod in ("video", "image"):
             for f in MJ.get(mod, []):
-                rows = [r for r in f.get("rows", []) if not r.get("held") and r.get("site") not in held_media]
+                rows = [r for r in f.get("rows", []) if not r.get("held") and r.get("site") not in held_media and r.get("site") not in CLOSED]
                 for r in rows: fam_count.setdefault(r["site"], set()).add(f["family"])
                 inr = [r for r in rows if r.get("band") in ("explainable", "normal") and r.get("ratio") is not None]
                 for r in inr: site_ratios.setdefault(r["site"], []).append(r["ratio"])
@@ -352,11 +355,13 @@ def main():
         for s_ in sites: s_["rank_badge"] = placements.get(s_["domain"])
     rank = {"week": week_id, "media": media_rank, "date": D.now8()[:10], "window_days": 7, "n_sites": len(sites), "n_quotes": stats_quotes if False else None,
             "uptime": up_board, "fast": fast_board, "flagship": flagship, "dual": dual, "volatility": vol_board, "zero_change": zero_change, "n_big": len(big),
-            "coverage": cov_board, "probe": probe_cov, "eligible_uptime": len(elig), "dist_up": dist_up, "low": low_board, "price": price_board}
+            "coverage": cov_board, "probe": probe_cov, "eligible_uptime": len(elig), "dist_up": dist_up, "low": low_board, "price": price_board,
+            "register": {"closed": len(CLOSED), "open": sum(1 for v in REG.values() if v[0] == "open"), "unknown": sum(1 for v in REG.values() if v[0] not in ("open", "closed"))}}
     stats = {"confirmed": len(sites), "with_quotes": sum(1 for s_ in sites if s_["n_models"]), "quotes": db.execute("SELECT COUNT(*) c FROM offer_norm WHERE vendor_kind='relay' AND superseded_by IS NULL").fetchone()["c"],
              "seen_domains": db.execute("SELECT COUNT(*) c FROM seen_domain").fetchone()["c"], "held": len(HELD),
              "clusters": {k: sum(1 for s_ in sites if s_["cluster"] and s_["cluster"]["code"] == k) for k in ("ultra", "cheap", "near", "high", "held")},
              "reachable": sum(1 for s_ in sites if (s_["avail"] or {}).get("uptime", 0) and s_["avail"]["uptime"] >= 50),
+             "reg_closed": len(CLOSED), "reg_open": sum(1 for v in REG.values() if v[0] == "open"),
              "probed_sites": sum(1 for s_ in sites if s_["probe"]), "probed_pairs": len(PB), "probe_consistent": sum(1 for v in PB.values() if v["status"] == "consistent"), "probe_divergent": sum(1 for v in PB.values() if v["status"] == "divergent")}
     data = {"generated_at": D.now8(), "fx": {"rate": FX[0], "as_of": FX[1], "sid": FX[2]}, "models": models, "groups": groups,
             "vendor_name": VENDOR_NAME, "sites": sites, "stats": stats, "changes": changes[:40], "new_sites": new_sites,

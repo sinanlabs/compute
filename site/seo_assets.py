@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-"""生成分享图（og.png 1200×630）与每个模型页的分享图。纯 PIL，不依赖浏览器。"""
+"""生成首页、模型页、每期榜单的分享图（1200×630）。纯 PIL，不依赖浏览器。"""
 import os, io, json, sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from rank_seo import edition, rank_image_path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "img")
@@ -32,12 +33,12 @@ def canvas():
     im.paste(arc, (0, 0), arc)
     return im, ImageDraw.Draw(im)
 
-def brand(d, y=64):
+def brand(d, y=64, locale="zh"):
     d.rounded_rectangle((72, y, 72 + 54, y + 54), radius=16, fill=(110, 86, 245))
     d.polygon([(99, y + 10), (110, y + 27), (99, y + 44)], fill=(255, 255, 255))
     d.polygon([(99, y + 10), (88, y + 27), (99, y + 44)], fill=(185, 173, 255))
     d.text((144, y - 2), "Sinan Compute", font=font(34, cjk=False), fill=(255, 255, 255))
-    d.text((144, y + 36), "司南·算力 · SINAN LAB", font=font(18), fill=(160, 168, 200))
+    d.text((144, y + 36), "SINAN LAB / RELAY MEASUREMENTS" if locale == "en" else "司南·算力 · SINAN LAB", font=font(18, cjk=locale != "en"), fill=(160, 168, 200))
 
 def og_home(stats):
     im, d = canvas(); brand(d)
@@ -69,12 +70,80 @@ def og_model(m):
     os.makedirs(os.path.join(OUT, "og"), exist_ok=True)
     im.save(os.path.join(OUT, "og", m["id"] + ".png"), optimize=True)
 
-def main():
+def og_rank(rank, locale="zh", output=None):
+    """A dated snapshot card, without promotional superlatives or live-data fallbacks."""
+    week = edition(rank)
+    relative = rank_image_path(rank, locale)
+    target = os.path.join(output or OUT, relative[len("/img/"):])
+    en = locale == "en"
+    im, d = canvas(); brand(d, y=54, locale=locale)
+
+    def text_line(x, y, text, size, color, width=1056, latin=False):
+        # Fit translated labels and large future counts inside their own box.
+        f = font(size, cjk=not (en or latin))
+        while d.textbbox((0, 0), text, font=f)[2] > width and size > 14:
+            size -= 1; f = font(size, cjk=not (en or latin))
+        if d.textbbox((0, 0), text, font=f)[2] > width:
+            raise ValueError("Rank card text does not fit")
+        d.text((x, y), text, font=f, fill=color)
+
+    muted = (164, 174, 203); white = (247, 249, 255); accent = (193, 185, 255)
+    d.rounded_rectangle((864, 54, 1128, 112), radius=15, fill=(35, 30, 75), outline=(92, 79, 159))
+    text_line(900, 67, week, 28, accent, width=204, latin=True)
+    text_line(72, 160, "API RELAYS / WEEKLY MEASUREMENTS" if en else "API 中转站 · 周度测量", 21, accent)
+    text_line(72, 209, "Sinan Rankings" if en else "司南榜", 68, white)
+    text_line(72, 307, "Latency · Prices · Reachability · Model coverage" if en else "响应 · 价格 · 可达率 · 模型覆盖", 29, muted)
+    metrics = (("n_sites", "已确认中转站", "Confirmed relay sites"),
+               ("n_quotes", "实付报价", "Effective quotes"),
+               ("eligible_uptime", "进入榜单门槛的站", "Sites meeting the threshold"))
+    for i, (key, zh_label, en_label) in enumerate(metrics):
+        value = rank.get(key)
+        if value is not None and (type(value) is not int or value < 0):
+            raise ValueError("Invalid rank card count: " + key)
+        x = 72 + i * 360
+        d.rounded_rectangle((x, 380, x + 336, 506), radius=16, fill=(19, 24, 47), outline=(58, 61, 94))
+        text_line(x + 22, 396, en_label if en else zh_label, 22, muted, width=292)
+        text_line(x + 22, 432, format(value, ",") if value is not None else "—", 46, white, width=292, latin=True)
+    days = rank.get("window_days")
+    window = str(days) if days is not None else "—"
+    dated = ("Data %s · %s-day measurement window" if en else "数据日期 %s · 测量窗口 %s 天") % (rank["date"], window)
+    text_line(72, 530, dated, 22, muted)
+    text_line(72, 581, "Measured values, not recommendations." if en else "按测量值排序，不构成推荐。", 20, accent, width=575)
+    text_line(685, 583, "compute.sinanlab.com/rank/" + week, 19, muted, width=443, latin=True)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    im.save(target, optimize=True)
+    return target
+
+
+def generate_rank_images(data, rank_dir=None, output=None):
+    snapshots = [data["rank"]] if data.get("rank") else []
+    rank_dir = rank_dir or os.path.join(HERE, "rank")
+    if os.path.isdir(rank_dir):
+        for filename in sorted(os.listdir(rank_dir)):
+            if not filename.endswith(".json"): continue
+            with io.open(os.path.join(rank_dir, filename), encoding="utf-8") as source:
+                snapshot = json.load(source)
+            if filename != edition(snapshot) + ".json":
+                raise ValueError("Rank filename does not match its edition")
+            snapshots.append(snapshot)
+    generated = {}
+    for snapshot in snapshots:
+        for locale in ("zh", "en"):
+            key = rank_image_path(snapshot, locale)
+            if key not in generated:
+                generated[key] = og_rank(snapshot, locale, output=output)
+    return list(generated.values())
+
+
+def main(rank_only=False):
     D = json.load(io.open(os.path.join(HERE, "data_v2.json"), encoding="utf-8"))
     os.makedirs(OUT, exist_ok=True)
-    og_home(D["stats"])
-    for m in D["models"]: og_model(m)
-    print("分享图：og.png + %d 张模型图" % len(D["models"]))
+    if not rank_only:
+        og_home(D["stats"])
+        for m in D["models"]: og_model(m)
+        print("分享图：og.png + %d 张模型图" % len(D["models"]))
+    ranked = generate_rank_images(D)
+    print("榜单分享图：%d 张（中英文，包含历史期号）" % len(ranked))
 
 if __name__ == "__main__":
-    main()
+    main(rank_only="--rank-only" in sys.argv)

@@ -9,6 +9,7 @@
 """
 import os, io, re, sys, json, html as H
 from html.parser import HTMLParser
+from rank_seo import BASE as RANK_BASE, translate_rank_graph
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DICT = json.load(io.open(os.path.join(HERE, "i18n_en.json"), encoding="utf-8")) if os.path.exists(os.path.join(HERE, "i18n_en.json")) else {"html": {}, "js": {}}
@@ -117,6 +118,14 @@ def head_fix(html, base, path_zh):
     html = re.sub(r'<link rel="canonical" href="[^"]*">', '<link rel="canonical" href="%s%s">' % (base, en_path), html, 1)
     html = re.sub(r'<meta property="og:url" content="[^"]*">', '<meta property="og:url" content="%s%s">' % (base, en_path), html, 1)
     html = html.replace('"inLanguage": "zh-CN"', '"inLanguage": "en"')
+    if base == RANK_BASE and re.fullmatch(r"/rank(?:/\d{4}-w\d{2})?", path_zh):
+        def rank_ld(m):
+            graph = json.loads(m.group(1))
+            translated = translate_rank_graph(graph, tr_text) if isinstance(graph, dict) else graph
+            return '<script type="application/ld+json">%s</script>' % json.dumps(translated, ensure_ascii=False).replace("</", "<\\/")
+        html = re.sub(r'<script type="application/ld\+json">(.*?)</script>', rank_ld, html, flags=re.S)
+        html = re.sub(r'(<meta (?:property="og:image"|name="twitter:image") content=")' + re.escape(base) + r'/img/og/rank/(?!en/)',
+                      lambda m: m.group(1) + base + '/img/og/rank/en/', html)
     alt = '<link rel="alternate" hreflang="zh-CN" href="%s%s"><link rel="alternate" hreflang="en" href="%s%s"><link rel="alternate" hreflang="x-default" href="%s%s">' % (base, path_zh, base, en_path, base, path_zh)
     html = html.replace("</head>", alt + "</head>", 1)
     html = html.replace("/assets/app.js?", "/assets/app.en.js?").replace('src="/assets/app.js"', 'src="/assets/app.en.js"')

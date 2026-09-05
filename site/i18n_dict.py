@@ -376,6 +376,14 @@ HTML = {
 "- 阿里云百炼 万相 / Qwen-Image：取官方价格页的刊例价（单一地域口径，注明地域）。": "- Alibaba Cloud Bailian Wan / Qwen-Image: list price from the official pricing page (single-region basis, region noted).",
 "- 生数 Vidu：官方为积分计价，按官方公布的积分单价折成 元/秒，取标准时段价，错峰价写进条件。": "- Shengshu Vidu: credit-based officially; converted to CNY/second using the published credit price; standard-hours price taken, off-peak in conditions.",
 
+# ---------- 注册入口 ----------
+"新用户注册": "New-user sign-up", "开放": "Open", "已关闭": "Closed", "未能判定": "Undetermined", "注册已关": "Sign-up closed",
+"注册接口可用（可能需要邮箱验证或人机验证）": "Registration endpoint responds (may require email or CAPTCHA verification)",
+"站方已关闭新用户注册，新用户无法使用 · {n}-{n}-{n}": "The site has closed new-user registration; new users cannot sign up · {n}-{n}-{n}", "站方已关闭新用户注册，新用户无法使用 · ": "The site has closed new-user registration; new users cannot sign up · ",
+"非标准面板或未暴露注册接口，请到站上确认": "Non-standard panel or no registration endpoint exposed; check on the site",
+"新用户注册已关闭。": "New-user registration is closed.", "站方注册接口返回\"管理员关闭了新用户注册\"（探测于 {n}-{n}-{n}）。价格数据仅供已有账号的用户参考；本站榜单不收录关闭注册的站。": "The site's registration endpoint answers \"registration disabled by administrator\" (probed {n}-{n}-{n}). Prices are for existing account holders only; closed sites are excluded from our rankings.",
+"名次带样本量与门槛，能复算。已关闭新用户注册的站不进任何榜单（每日探测注册接口）。": "Every rank carries its sample size and threshold, so it can be recomputed. Sites that have closed new-user registration are excluded from all boards (registration endpoint probed daily).",
+
 # ---------- 司南榜 ----------
 "多模态 · 图像与视频": "Multimodal · image & video", "按秒、按张，对着官方价比": "Per second, per image, against official prices",
 "Seedance、Kling、Veo、Hailuo、Vidu、Wan 与 Nano Banana、Seedream、Qwen-Image、FLUX 在中转站的实付，与官方按秒 / 按张价放在同一把尺上。这是别处没有的数据。": "Effective relay prices for Seedance, Kling, Veo, Hailuo, Vidu, Wan and Nano Banana, Seedream, Qwen-Image, FLUX, on the same ruler as official per-second / per-image prices. Data you will not find elsewhere.",
@@ -414,6 +422,14 @@ HTML = {
 "{n} 次探测 · p50 {n}ms": "{n} probes · p50 {n}ms", "{n} 次探测 · p50 —ms": "{n} probes · p50 —", "可达 {n}% · {n} 次": "{n}% reachable · {n} probes", "参考价的 {n}%": "{n}% of reference", "参考价 ${n} · 说得通区间内 {n} 家": "reference ${n} · {n} sites in range",
 "GPT-6 ${n} + Fable 5.1 ${n}": "GPT-6 ${n} + Fable 5.1 ${n}", "{n} 次": "{n} changes", "7 天变价": "in 7 days", "个模型": "models",
 "按测量值排序，不构成推荐；排序不含任何商业变量。数据 {n}-{n}-{n} · 窗口 7 天 · 方法见": "Sorted by measured values; not a recommendation; no commercial variable in the ordering. Data {n}-{n}-{n} · 7-day window · see the", "。永久链接 /rank/{n}-w{n}": ". Permalink /rank/{n}-w{n}", "历次榜单": "Past editions",
+# Rank SEO: keep metadata and the English structured graph in the same glossary.
+"司南榜 {n}-w{n} · 中转站价格与响应测量 · Sinan Compute": "Rankings {n}-w{n} · API relay prices & latency · Sinan Compute",
+"{n}-w{n} 期司南榜，数据日期 {n}-{n}-{n}。查看中转站响应、价格、可达率与模型覆盖榜，附样本门槛和口径说明。按测量值排序，不构成推荐。": "Sinan Rankings {n}-w{n}, data dated {n}-{n}-{n}. Compare relay latency, prices, reachability and model coverage, with sample thresholds and definitions. Measured ordering, not recommendations.",
+"司南榜 {n}-w{n} 分享图：数据日期 {n}-{n}-{n}、中转站与报价数量、进入榜单门槛的站数。": "Sinan Rankings {n}-w{n} share card: data dated {n}-{n}-{n}, relay and quote counts, and sites meeting the ranking threshold.",
+"可达榜（最低可达率）": "Reachability (lowest reachability)",
+"新旗舰榜 · {s}": "New flagships · {s}",
+"视频合理价榜 · {s}": "In-range video prices · {s}",
+"图像合理价榜 · {s}": "In-range image prices · {s}",
 }
 
 # app.js 字面量子串（按长度降序替换；短词放最后兜底）
@@ -457,7 +473,7 @@ JS = {
 "</b> 参考价 ": "</b> reference ", " · 参考价 $": " · reference $", " · 实付 $": " · effective $", " $/百万输出": " $/M output", "/百万输出": "/M output", " $/次": " $/call", " $/秒": " $/s",
 "关注这个模型": "Watch this model", "关注这个站": "Watch this site", "取消关注": "Unwatch", "已关注 ✓": "Watching ✓", "我的关注": "My watches", "收起旧版本": "Hide older versions",
 "公开市场": "Public market", "参考基准": "Reference", "证据链": "Evidence chain", "证据 ↗": "Evidence ↗", "没找到": "Not found", "\"今天\"": "\"Today\"", "\"数据 \"": "\"Data \"", "\"显示 \"": "\"Show \"",
-"主推 ": "Featured ", " 站 · ": " sites · ", "\" 站\"": "\" sites\"", "' 秒'": "' s'", "\"模型\"": "\"Model\"", "\"站\"": "\"Site\"", " 官方 · ": " official · ", "':'我的')": "':'Me')",
+"主推 ": "Featured ", " 站 · ": " sites · ", "\" 站\"": "\" sites\"", "' 秒'": "' s'", "\"模型\"": "\"Model\"", "\"站\"": "\"Site\"", " 官方 · ": " official · ", "注册已关": "Sign-up closed", "':'我的')": "':'Me')",
 "探针 · 计数与同模型其他渠道不一致 ": "Probe · counts differ from peers ", "探针 · 计数一致 ": "Probe · counts consistent ", "探针 · 已测 ": "Probe · ", "探针 · 只成功 ": "Probe · only ok ", "探针 · 请求失败 ": "Probe · failed ",
 "登录后可以开启邮件提醒。": "Sign in to turn on email alerts.", "邮件服务接入中。": "Email service is being connected.", "你的 GitHub 没有可验证的邮箱，暂时无法开启邮件提醒。": "Your GitHub account has no verifiable email, so email alerts cannot be enabled yet.",
 "已通过邮件里的链接关闭提醒。勾上可重新开启。": "Alerts were turned off via the email link. Tick to turn them back on.", "邮件提醒：关注对象有变动时发到我的 GitHub 邮箱（每天最多一封）": "Email alerts: send changes to my watched items to my GitHub email (at most one a day)",

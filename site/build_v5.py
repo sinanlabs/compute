@@ -9,6 +9,7 @@
 """
 from __future__ import unicode_literals
 import os, io, json, re, shutil, html as H
+from rank_seo import rank_metadata
 try:
     import markdown
 except Exception:
@@ -307,7 +308,7 @@ if(!cg.querySelector('.chip[data-id="'+cur+'"]:not(.old)'))cg.classList.add("all
 function usage(){return {i:+document.getElementById("c-in").value||0,o:+document.getElementById("c-out").value||0};}
 function monthly(i,o){var u=usage();if(i==null||o==null)return null;return i*u.i+o*u.o;}
 function rowHtml(r,m,i,idx){var mc=monthly(r.in,r.out);var up=r.uptime==null?'<span class="up">—</span>':'<span class="up '+(r.uptime>=90?"good":r.uptime<50?"bad":"")+'">'+r.uptime.toFixed(0)+'%</span>';var held=r.held;
- return '<tr style="--i:'+idx+'"><td><a class="dom" href="/s/'+esc(r.vendor)+'">'+esc(r.vendor)+'</a>'+(r.name?'<div class="sub">'+esc(r.name)+'</div>':'')+'</td><td class="num"><span class="big">'+fmt(r.out)+'</span><span class="asf">抓取 '+r.as_of.slice(5,16).replace("T"," ")+'</span></td><td class="num">'+fmt(r.in)+'</td><td class="num">'+(mc==null?"—":"$"+mc.toFixed(mc<10?2:0))+'</td><td style="padding-left:18px">'+(held?'<span class="pill held">计价方式待核 · 不出比率</span>':'<span class="gcell">'+gauge(r.ratio,r.band)+'<span class="r '+r.band+'">'+pct(r.ratio)+'</span></span>')+'</td><td>'+(held?'—':'<span class="pill '+r.band+'">'+LABEL[r.band]+'</span><button class="help" data-help="'+r.band+'" aria-label="解释">?</button>'+probeHtml(r.probe))+'</td><td>'+up+'</td><td class="num"><button class="evb" data-m="'+esc(m.id)+'" data-i="'+i+'">证据 ↗</button></td></tr>';}
+ return '<tr style="--i:'+idx+'"><td><a class="dom" href="/s/'+esc(r.vendor)+'">'+esc(r.vendor)+'</a>'+(r.reg==="closed"?'<span class="pill" style="background:#FDECEC;color:#B42318;margin-left:6px;font-size:10.5px;padding:1px 7px">注册已关</span>':'')+(r.name?'<div class="sub">'+esc(r.name)+'</div>':'')+'</td><td class="num"><span class="big">'+fmt(r.out)+'</span><span class="asf">抓取 '+r.as_of.slice(5,16).replace("T"," ")+'</span></td><td class="num">'+fmt(r.in)+'</td><td class="num">'+(mc==null?"—":"$"+mc.toFixed(mc<10?2:0))+'</td><td style="padding-left:18px">'+(held?'<span class="pill held">计价方式待核 · 不出比率</span>':'<span class="gcell">'+gauge(r.ratio,r.band)+'<span class="r '+r.band+'">'+pct(r.ratio)+'</span></span>')+'</td><td>'+(held?'—':'<span class="pill '+r.band+'">'+LABEL[r.band]+'</span><button class="help" data-help="'+r.band+'" aria-label="解释">?</button>'+probeHtml(r.probe))+'</td><td>'+up+'</td><td class="num"><button class="evb" data-m="'+esc(m.id)+'" data-i="'+i+'">证据 ↗</button></td></tr>';}
 var PROBE_TXT={consistent:"探针 · 计数一致 ",divergent:"探针 · 计数与同模型其他渠道不一致 ",no_consensus:"探针 · 已测 ",partial:"探针 · 只成功 ",failed:"探针 · 请求失败 "};
 function probeHtml(pb){if(!pb)return "";var t=(PROBE_TXT[pb.status]||"探针 ")+pb.ok+"/"+pb.n+(pb.status==="no_consensus"?"，共识样本不足":"")+(pb.offset?" · 含固定前缀约 "+pb.offset+" token":"")+(pb.echo===false?" · 回显模型名不同":"");return '<div class="probe '+pb.status+'" title="'+esc(D.probe_help||"")+'">'+t+'<span class="pd"> · '+pb.ts.slice(5)+'</span></div>';}
 function render(){document.querySelectorAll(".chip[data-id]").forEach(function(c){c.setAttribute("aria-pressed",c.dataset.id===cur?"true":"false");});
@@ -565,8 +566,9 @@ def ssr_rows_all(m, rows):
         up = "—" if r["uptime"] is None else '<span class="up %s">%.0f%%</span>' % ("good" if r["uptime"] >= 90 else "bad" if r["uptime"] < 50 else "", r["uptime"])
         mid = ('<td style="padding-left:18px"><span class="pill held">计价方式待核 · 不出比率</span></td><td>—</td>' if r["held"] else
                '<td style="padding-left:18px"><span class="gcell">%s<span class="r %s">%s</span></span></td><td><span class="pill %s">%s</span>%s</td>' % (gauge_html(r["ratio"], r["band"]), r["band"], pct(r["ratio"]), r["band"], LABEL[r["band"]], probe_html(r.get("probe"))))
-        out.append('<tr><td><a class="dom" href="/s/%s">%s</a>%s</td><td class="num"><span class="big">%s</span><span class="asf">抓取 %s</span></td><td class="num">%s</td>%s<td>%s</td></tr>'
-                   % (esc(r["vendor"]), esc(r["vendor"]), ('<div class="sub">%s</div>' % esc(r["name"])) if r.get("name") else "", fmt(r["out"]), r["as_of"][5:16].replace("T", " "), fmt(r["in"]), mid, up))
+        regm = '<span class="pill" style="background:#FDECEC;color:#B42318;margin-left:6px;font-size:10.5px;padding:1px 7px">注册已关</span>' if r.get("reg") == "closed" else ""
+        out.append('<tr><td><a class="dom" href="/s/%s">%s</a>%s%s</td><td class="num"><span class="big">%s</span><span class="asf">抓取 %s</span></td><td class="num">%s</td>%s<td>%s</td></tr>'
+                   % (esc(r["vendor"]), esc(r["vendor"]), regm, ('<div class="sub">%s</div>' % esc(r["name"])) if r.get("name") else "", fmt(r["out"]), r["as_of"][5:16].replace("T", " "), fmt(r["in"]), mid, up))
     return "".join(out)
 
 def build_model(m):
@@ -647,6 +649,9 @@ def build_site(s):
         ("一致性探针", ("%d / %d 一致" % (s["probe"]["consistent"], s["probe"]["pairs"])) if s.get("probe") else "—",
          ("用本站 Key 测 %d 个模型的 token 计数，与同模型其他渠道比对 · %s" % (s["probe"]["pairs"], s["probe"]["ts"])) if s.get("probe") else "尚未用 Key 探测；只有拿到该站 Key 才能测", "" if s.get("probe") else "t"),
         ("登录方式", "、".join(f.get("login") or []) or "未暴露", ("需人机验证" if f.get("turnstile") else "无人机验证") + ("，有签到" if f.get("checkin") else ""), "t"),
+        ("新用户注册", {"open": "开放", "closed": "已关闭", "unknown": "未能判定"}.get((s.get("register") or {}).get("state"), "未能判定"),
+         {"open": "注册接口可用（可能需要邮箱验证或人机验证）", "closed": "站方已关闭新用户注册，新用户无法使用 · %s" % ((s.get("register") or {}).get("checked") or ""), "unknown": "非标准面板或未暴露注册接口，请到站上确认"}.get((s.get("register") or {}).get("state"), "未能判定"),
+         "" if (s.get("register") or {}).get("state") == "open" else "t"),
         ("面板", "%s %s" % (s.get("panel") or "—", s.get("version") or ""), "首次收录 %s · 来源 %s" % (s["first_seen"], s.get("channel") or ""), "t"),
     ]
     facts_html = "".join('<div class="card fact"><div class="k">%s</div><div class="v %s">%s</div><div class="n">%s</div></div>' % (k, t, esc(v), esc(n)) for k, v, n, t in facts)
@@ -660,6 +665,8 @@ def build_site(s):
             mid = '<td class="num">%s</td><td><span class="gcell">%s<span class="r %s">%s</span></span></td><td><span class="pill %s">%s</span><button class="help" data-help="%s" aria-label="解释">?</button>%s</td>' % (fmt(r["floor_out"]), gauge_html(r["ratio"], r["band"]), r["band"], pct(r["ratio"]), r["band"], LABEL[r["band"]], r["band"], probe_html(r.get("probe")))
         rows.append('<tr><td><b>%s</b><div class="sub">%s</div></td><td class="num"><span class="big">%s</span><span class="asf">%s · 抓取 %s</span></td>%s<td class="num"><button class="evb" data-i="%d">证据 ↗</button></td></tr>' % (esc(r["name"]), esc(r["raw"]), fmt(v), u, r["as_of"][5:16].replace("T", " "), mid, i))
     notice = ('<div class="notice rise" style="--i:1;margin-bottom:14px">%s</div>' % esc(cl["help"])) if held else ""
+    if (s.get("register") or {}).get("state") == "closed":
+        notice += '<div class="notice rise" style="--i:1.2;margin-bottom:14px;border-color:#F04438"><b>新用户注册已关闭。</b>站方注册接口返回"管理员关闭了新用户注册"（探测于 %s）。价格数据仅供已有账号的用户参考；本站榜单不收录关闭注册的站。</div>' % esc((s.get("register") or {}).get("checked") or "")
     noq = '<div class="callout" style="margin-top:14px">这个站的定价接口未公开或需要登录，本站暂无它的报价。可达性与面板事实仍每小时更新。</div>' if not s["n_models"] else ""
     tbl = ('<section class="card rise" style="margin-top:16px;--i:3"><div class="pad" style="padding-bottom:6px"><h2 class="sec">它卖的模型与实付价</h2><p class="lead">%s</p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">实付</th><th class="num">参考价</th><th>实付是参考价的几成</th><th>怎么看</th><th class="num">证据</th></tr></thead><tbody>%s</tbody></table></div><div class="tfoot"><span>%s</span></div></section>'
            % ("计价方式待核：只列名义报价换算的实付，不出比率、不分档。" if held else "参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。", "".join(rows), DISCLAIMER)) if s["n_models"] else ""
@@ -865,11 +872,11 @@ def relbar(items, key, lower_better=False):
         return 8 + 92 * ((1 - t) if lower_better else t)
     return f
 
-def build_rank(R, all_weeks):
+def build_rank(R, all_weeks, path="/rank"):
     st = D["stats"]; wk = R["week"]
-    title = "司南榜 · %s · 中转站测量榜单 · Sinan Compute" % wk
-    desc = "第 %s 期司南榜：响应延迟、价格优势、新旗舰最低合理实付、双旗舰、可达率分布与尾部、价格波动、覆盖与检测覆盖。全部按测量值排序，不含商业变量，不构成推荐。" % wk
-    head = u"""<div class="rkhead rise" style="--i:0"><div class="eyebrow">司南榜 · 测量榜单 · 每周一出刊</div><h1>司南榜 · %s</h1><p class="lead">过去 7 天的测量结果。每张榜只回答一个可测量的问题，按测量值排序，不含任何商业变量，不构成推荐。名次带样本量与门槛，能复算。</p>
+    seo = rank_metadata(R, path)
+    title = seo["title"]; desc = seo["description"]
+    head = u"""<div class="rkhead rise" style="--i:0"><div class="eyebrow">司南榜 · 测量榜单 · 每周一出刊</div><h1>司南榜 · %s</h1><p class="lead">过去 7 天的测量结果。每张榜只回答一个可测量的问题，按测量值排序，不含任何商业变量，不构成推荐。名次带样本量与门槛，能复算。<b>已关闭新用户注册的站不进任何榜单</b>（每日探测注册接口）。</p>
 <div class="meta"><span><b>%d</b>已确认中转站</span><span><b>%s</b>实付报价</span><span><b>%d</b>进入榜单门槛的站</span><span><b>%s</b>数据日期</span></div></div>""" % (wk, R["n_sites"], format(R["n_quotes"] or st["quotes"], ","), R["eligible_uptime"], R["date"])
     fast = R["fast"]; b_fast = board("响应榜", "可达率 ≥99% 的站里首字节延迟 p50 最低（美国西部探测节点，≥24 次探测）",
                rank_rows(fast, lambda x: "%dms" % x["p50"], lambda x: "可达 %.1f%% · %d 次" % (x["uptime"], x["n"]), bar=relbar(fast, lambda x: x["p50"], True)), 1)
@@ -909,7 +916,8 @@ def build_rank(R, all_weeks):
     hist = "".join('<a href="/rank/%s">%s</a>' % (esc(w), esc(w)) for w in all_weeks)
     foot = '<div class="tfoot" style="margin-top:16px"><span>按测量值排序，不构成推荐；排序不含任何商业变量。数据 %s · 窗口 7 天 · 方法见 <a href="/method">方法论</a>。永久链接 /rank/%s</span></div><div class="callout" style="margin-top:12px"><b>期号徽章</b>：响应榜、价格优势榜、双旗舰榜、覆盖榜、多模态价格优势榜上的站，可在各自站点页拿到带期号的徽章嵌入代码；徽章只显示榜名、名次、测量值与期号，点击回到当期榜单。</div><div class="mlinks card" style="margin-top:12px"><span class="vn">历次榜单</span>%s</div>' % (R["date"], esc(wk), hist)
     body = head + '<div class="rkgrid">%s%s</div>%s<div class="rkgrid">%s%s%s%s</div>%s%s%s' % (b_fast, b_price, b3, b4, b_up, b5, b6, media_html, b7, foot)
-    return shell(title, desc, "/rank", body, active="rank", page="rank", crumbs=[("司南榜",)], extra_head='<link rel="alternate" type="application/rss+xml" title="Sinan Compute 价格变动" href="/feed.xml">')
+    image_head = '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="%s"><meta name="twitter:image:alt" content="%s">' % (esc(seo["image_alt"]), esc(seo["image_alt"]))
+    return shell(title, desc, path, body, active="rank", page="rank", crumbs=[("司南榜",)], og_image=seo["image"], jsonld=[seo["jsonld"]], extra_head=image_head + '<link rel="alternate" type="application/rss+xml" title="Sinan Compute 价格变动" href="/feed.xml">')
 
 def load_rank_weeks():
     rd = os.path.join(HERE, "rank"); return sorted([f[:-5] for f in os.listdir(rd) if f.endswith(".json")], reverse=True) if os.path.exists(rd) else []
@@ -974,7 +982,7 @@ def main():
         os.makedirs(os.path.join(DIST, "rank"), exist_ok=True)
         for wk_ in rws:
             RJ = json.load(io.open(os.path.join(HERE, "rank", wk_ + ".json"), encoding="utf-8"))
-            W("rank/%s.html" % wk_, build_rank(RJ, rws).replace('<link rel="canonical" href="%s/rank">' % BASE, '<link rel="canonical" href="%s/rank/%s">' % (BASE, wk_), 1))
+            W("rank/%s.html" % wk_, build_rank(RJ, rws, path="/rank/" + wk_))
     os.makedirs(os.path.join(DIST, "badge"), exist_ok=True)
     for s in D["sites"]: W("badge/%s.svg" % s["domain"], badge_svg(s))
     ranked = [s for s in D["sites"] if s.get("rank_badge")]
