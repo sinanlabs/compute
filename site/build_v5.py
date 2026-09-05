@@ -272,7 +272,7 @@ function drawHist(cv){var m=cv.dataset.m,v=cv.dataset.v;var note=document.getEle
   ctx.fillStyle="#9AA0B8";ctx.fillText(new Date(t0).toISOString().slice(5,10),40,Hh-4);ctx.fillText("今天",W-36,Hh-4);
   note.innerHTML='黑线 = 该站实付 · 紫虚线 = 最低公开参考价 · 记录 '+S.length+' 个变价点'+(full?'（全部历史）':'（最近 7 天，<a href="/api/auth/github/start?return_to='+encodeURIComponent(location.pathname)+'" style="color:var(--p-ink)">登录</a>看全部）');}
  if(HISTC[m]){paint(HISTC[m]);return;}
- fetch("/history/"+m+".json").then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){HISTC[m]=j;paint(j);}).catch(function(){note.textContent="暂无走势数据。";});}
+ fetch(full?"/api/history/"+m:"/history/"+m+".json",{credentials:"include"}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){HISTC[m]=j;paint(j);}).catch(function(){if(full){fetch("/history/"+m+".json").then(function(r){return r.json();}).then(function(j){HISTC[m]=j;paint(j);}).catch(function(){note.textContent="暂无走势数据。";});}else{note.textContent="暂无走势数据。";}});}
 var _openD=openD;openD=function(eye,title,html){_openD(eye,title,html);var cv=document.querySelector("#dbody canvas.hist");if(cv)drawHist(cv);};
 document.addEventListener("click",function(e){var h=e.target.closest?e.target.closest(".help"):null;if(h){openD("这个标签什么意思",LABEL[h.dataset.help]||"",helpHtml(h.dataset.help));return;}});
 /* 搜索 */
@@ -747,7 +747,7 @@ def build_llms():
 ## 数据（JSON，公开）
 - %s/data_v2.json （模型账本、%d 个站点、快照索引、汇率）
 - %s/media.json
-- %s/history/<model_id>.json （价格走势）
+- %s/history/<model_id>.json （价格走势，公开部分为最近 7 天；全部历史登录后经 /api/history/<model_id> 获取）
 - https://compute.sinanlab.com/citation-context.json （每日生成的模型引用上下文）
 - https://compute.sinanlab.com/citation-context.md （同一上下文的可读版）
 - %s/feed.xml （价格变动 RSS）

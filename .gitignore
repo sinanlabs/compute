@@ -59,3 +59,4 @@ engine_git.sh
 
 .wrangler/
 data/
+site/history_full/
