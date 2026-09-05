@@ -126,6 +126,11 @@ def generate_rank_images(data, rank_dir=None, output=None):
             if filename != edition(snapshot) + ".json":
                 raise ValueError("Rank filename does not match its edition")
             snapshots.append(snapshot)
+    return generate_rank_snapshot_images(snapshots, output)
+
+
+def generate_rank_snapshot_images(snapshots, output=None):
+    """Build from the exact in-memory snapshots used for the HTML pages."""
     generated = {}
     for snapshot in snapshots:
         for locale in ("zh", "en"):

@@ -2,7 +2,6 @@
 import copy
 import importlib
 import json
-import os
 from pathlib import Path
 import re
 import tempfile
@@ -11,7 +10,7 @@ from html.parser import HTMLParser
 
 import i18n_apply
 from rank_seo import BASE, rank_image_path, rank_metadata, translate_rank_graph
-from seo_assets import generate_rank_images, og_rank
+from seo_assets import generate_rank_images, generate_rank_snapshot_images, og_rank
 from PIL import Image
 
 HERE = Path(__file__).resolve().parent
@@ -155,6 +154,9 @@ class RankRenderTests(unittest.TestCase):
         cls.snapshots = [(cls.build.D["rank"], "/rank")]
         for path in sorted((HERE / "rank").glob("*.json")):
             cls.snapshots.append((json.loads(path.read_text(encoding="utf-8")), "/rank/" + path.stem))
+        cls.assets = tempfile.TemporaryDirectory(prefix="sinan-rank-render-test-")
+        cls.addClassCleanup(cls.assets.cleanup)
+        generate_rank_snapshot_images([rank for rank, _ in cls.snapshots], cls.assets.name)
 
     def test_actual_html_urls_jsonld_images_and_visible_order_match(self):
         for rank, path in self.snapshots:
@@ -173,7 +175,7 @@ class RankRenderTests(unittest.TestCase):
                     self.assertEqual(parsed.meta["twitter:image"], parsed.meta["og:image"])
                     self.assertEqual(graph["primaryImageOfPage"]["url"], parsed.meta["og:image"])
                     self.assertEqual(parsed.meta["og:image:alt"], graph["primaryImageOfPage"]["caption"])
-                    self.assertTrue((HERE / rank_image_path(rank, locale).lstrip("/")).is_file())
+                    self.assertTrue((Path(self.assets.name) / rank_image_path(rank, locale)[len("/img/"):]).is_file())
                     schema_links = [row["item"]["url"] for board in graph["mainEntity"] for row in board["itemListElement"]]
                     self.assertEqual(schema_links, [BASE + link for link in parsed.rank_rows])
                     if locale == "en":

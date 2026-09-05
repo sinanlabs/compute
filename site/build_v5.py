@@ -434,6 +434,7 @@ ICONS = {
     "sites": '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
     "media": '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/>',
     "rank": '<path d="M8 21h8M12 17v4M6 3h12v5a6 6 0 0 1-12 0z"/><path d="M6 5H3v2a3 3 0 0 0 3 3M18 5h3v2a3 3 0 0 1-3 3"/>',
+    "check": '<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>',
     "method": '<path d="M4 6h16M4 12h10M4 18h7"/>',
     "data": '<path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/>',
 }
@@ -446,7 +447,7 @@ def shell(title, desc, path, body, active="", page="", crumbs=None, extra_head="
     st = D["stats"]
     canonical = BASE + path
     nav = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl, ('<span class="badge">%s</span>' % b) if b else "")
-                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", "")])
+                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("check", "/check", "用我的 Key 测", "")])
     nav2 = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl)
                    for k, h, lbl in [("method", "/method", "口径与定义"), ("data", "/method#data", "开放数据")])
     crumb = '<div class="crumb"><a href="https://sinanlab.com">← 司南实验室</a>%s</div>' % "".join(" › " + ('<a href="%s">%s</a>' % (c[1], esc(c[0])) if len(c) > 1 and c[1] else esc(c[0])) for c in (crumbs or []))
@@ -922,6 +923,55 @@ def build_rank(R, all_weeks, path="/rank"):
 def load_rank_weeks():
     rd = os.path.join(HERE, "rank"); return sorted([f[:-5] for f in os.listdir(rd) if f.endswith(".json")], reverse=True) if os.path.exists(rd) else []
 
+
+# ------------------------------------------------------------------ 自测：用你的 Key 测一个站（Key 不出浏览器）
+def build_check():
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">自测 · 登录后可用</div><h1 style="font-size:26px;margin-top:6px">用你的 Key 测一个站</h1><p class="lead">填一个中转站地址和你在该站的 Key，浏览器直接向该站发 8 条固定探针请求（每条只要 4 个输出 token，一次自测通常不到一分钱），把返回的 token 计数、回显模型名、首字节延迟，和我们从多个渠道得到的参考计数逐位比对。<b>Key 只在你的浏览器里，不上传、不落库、不经过我们的服务器。</b></p></div>
+<div id="gate" class="card pad rise" style="--i:1"><div class="callout">正在读取登录状态…</div></div>
+<section class="card pad rise" id="form" style="--i:1;display:none">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label style="display:block"><span class="sub">中转站地址（域名或 https://…）</span><input id="ck-base" list="qlist" placeholder="例如 toapis.cn" style="width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit"></label>
+<label style="display:block"><span class="sub">你在该站的 API Key（只在本页内存里用，刷新即忘）</span><input id="ck-key" type="password" autocomplete="off" placeholder="sk-…" style="width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit"></label></div>
+<div style="margin-top:14px"><span class="sub">要测的模型（默认用归一后的模型 id 作为请求里的 model；站方原名不同时可改）</span><div id="ck-models" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div></div>
+<div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap"><button class="btn p" id="ck-run">开始测试</button><span class="sub" id="ck-status"></span></div>
+<datalist id="qlist"></datalist>
+</section>
+<section class="card rise" id="ck-out" style="--i:2;margin-top:16px;display:none"><div class="pad" style="padding-bottom:6px"><h2 class="sec">结果</h2><p class="lead" id="ck-lead"></p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th>回显模型名</th><th class="num">成功</th><th class="num">首字节 p50</th><th>计数比对</th><th>判定</th></tr></thead><tbody id="ck-rows"></tbody></table></div><div class="pad" style="padding-top:8px"><button class="btn o" id="ck-report">把结果（不含 Key）提交给司南，帮助扩大检测覆盖</button> <span class="sub" id="ck-rep-status"></span><p class="disc" style="margin-top:10px">判定只有四种：一致 / 含固定前缀 / 不一致 / 无参考。"不一致"表示该渠道对同一输入返回的 token 计数与多渠道共识不同，成因很多（上游分流、系统提示注入、量化、缓存），本站不推测。这是一致性测量，不是真伪判定。</p></div></section>
+<script id="d" type="application/json">{{data}}</script>
+<script>(function(){
+var D0=JSON.parse(document.getElementById("d").textContent);var gate=document.getElementById("gate"),form=document.getElementById("form");
+var dl=document.getElementById("qlist");D0.site_index.forEach(function(x){var o=document.createElement("option");o.value=x.d;dl.appendChild(o);});
+fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).then(function(me){
+ if(!me||!me.user){gate.innerHTML='<h2 class="sec">登录后可用</h2><p class="lead">自测需要登录（GitHub 一键，不设密码），用来防滥用和让你可以把结果回流给我们。你的 Key 始终只在你自己的浏览器里。</p><a class="btn p" style="margin-top:12px" href="/api/auth/github/start?return_to=/check">用 GitHub 登录 →</a>';return;}
+ gate.style.display="none";form.style.display="block";
+ var TR=null;fetch("/assets/tokref.json").then(function(r){return r.json();}).then(function(t){TR=t;var box=document.getElementById("ck-models");
+  D0.models.forEach(function(m){var has=TR.models[m.id]&&TR.models[m.id].ref;var lab=document.createElement("label");lab.className="chip";lab.style.cssText="display:inline-flex;gap:6px;align-items:center;cursor:pointer";lab.innerHTML='<input type="checkbox" value="'+m.id+'" '+(has?'checked':'')+'> <span>'+m.name+'</span>'+(has?'<small class="sub">参考 '+TR.models[m.id].peers+' 渠道</small>':'<small class="sub">无参考</small>');box.appendChild(lab);});
+ });
+ var fmt=function(v){return v==null?"—":(v<1?v.toFixed(3):v<100?v.toFixed(2):v.toFixed(0));};
+ document.getElementById("ck-run").addEventListener("click",async function(){
+  var base=document.getElementById("ck-base").value.trim().replace(/^https?:\/\//,"").replace(/\/.*$/,"");var key=document.getElementById("ck-key").value.trim();
+  var models=[].slice.call(document.querySelectorAll("#ck-models input:checked")).map(function(i){return i.value;});
+  var st=document.getElementById("ck-status");if(!base||!key||!models.length||!TR){st.textContent="请填地址、Key，并至少选一个模型。";return;}
+  document.getElementById("ck-out").style.display="block";var rows=document.getElementById("ck-rows");rows.innerHTML="";window.__CK=[];
+  document.getElementById("ck-lead").textContent="被测站 "+base+" · "+models.length+" 个模型 × "+TR.probes.length+" 条探针 · 参考计数版本 "+TR.version+"（"+TR.generated_at.slice(0,10)+"）";
+  for(var mi=0;mi<models.length;mi++){var m=models[mi];var name=(D0.models.filter(function(x){return x.id===m;})[0]||{}).name||m;st.textContent="正在测 "+name+" …";
+   var counts=[],tt=[],echo="",ok=0,err="";
+   for(var i=0;i<TR.probes.length;i++){var t0=performance.now();try{var r=await fetch("https://"+base+"/v1/chat/completions",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},body:JSON.stringify({model:m,messages:[{role:"user",content:TR.probes[i]}],max_tokens:4})});tt.push(performance.now()-t0);
+     if(!r.ok){err="HTTP "+r.status;counts.push(null);continue;}var j=await r.json();echo=j.model||echo;var u=(j.usage||{}).prompt_tokens;counts.push(u==null?null:u);if(u!=null)ok++;}catch(e){counts.push(null);tt.push(null);err=e.name==="TypeError"?"浏览器被该站拒绝跨域（CORS）或网络错误":String(e);}}
+   var ref=(TR.models[m]||{}).ref,verdict="no_ref",vt="无参考",detail="";
+   if(!ok){verdict="failed";vt="请求失败";detail=err;}
+   else if(ref){var ds=[];for(var k=0;k<ref.length;k++){if(counts[k]!=null&&ref[k]!=null)ds.push(counts[k]-ref[k]);}var uniq=ds.filter(function(v,i,a){return a.indexOf(v)===i;});
+     if(uniq.length===1&&uniq[0]===0){verdict="consistent";vt="一致";}else if(uniq.length===1){verdict="prefix";vt="含固定前缀约 "+uniq[0]+" token";}else{verdict="divergent";vt="不一致";}
+     detail=counts.map(function(c,k){return (c==null?"—":c)+"/"+(ref[k]==null?"—":ref[k]);}).join(" ");}
+   else detail=counts.map(function(c){return c==null?"—":c;}).join(" ");
+   var sorted=tt.filter(function(x){return x!=null;}).sort(function(a,b){return a-b;});var p50=sorted.length?Math.round(sorted[Math.floor(sorted.length/2)]):null;
+   var cls={consistent:"explainable",prefix:"below_bulk",divergent:"unsustainable",no_ref:"held",failed:"held"}[verdict];
+   rows.insertAdjacentHTML("beforeend",'<tr><td><b>'+name+'</b><div class="sub">'+m+'</div></td><td class="sub">'+(echo||"—")+'</td><td class="num">'+ok+'/'+TR.probes.length+'</td><td class="num">'+(p50==null?"—":p50+"ms")+'</td><td class="sub" style="font-family:var(--mono);font-size:11px">'+detail+'</td><td><span class="pill '+cls+'">'+vt+'</span></td></tr>');
+   window.__CK.push({base:base,model:m,raw_model:m,counts:counts,echo:echo,ttfb_ms:tt,ok:ok,verdict:verdict});}
+  st.textContent="完成。";});
+ document.getElementById("ck-report").addEventListener("click",function(){var s=document.getElementById("ck-rep-status");if(!window.__CK||!window.__CK.length){s.textContent="先测一次。";return;}s.textContent="提交中…";Promise.all(window.__CK.map(function(x){return fetch("/api/check/report",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(x)});})).then(function(){s.textContent="已提交 "+window.__CK.length+" 条，谢谢。结果进入待审核队列，审核后计入该站的检测覆盖。";}).catch(function(){s.textContent="提交失败，稍后再试。";});});
+});})();</script>""", data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "models": [{"id": m["id"], "name": m["name"]} for m in D["models"] if m["is_latest"]]}))
+    return shell("用我的 Key 测一个站 · Sinan Compute", "登录后用你自己的 Key 在浏览器里测一个中转站：8 条固定探针，比对 token 计数、回显模型名与延迟。Key 不上传。", "/check", body, active="check", page="check", crumbs=[("用我的 Key 测",)], extra_head='<meta name="robots" content="noindex">')
+
 def build_weekly_index(all_weeks):
     rows = "".join('<tr><td><a class="name" href="/weekly/%s">%s</a></td><td>%s – %s</td><td class="num">%d</td><td class="num">%d</td></tr>' % (esc(w["week"]), esc(w["week"]), min(w["days"]), max(w["days"]), len(w["changes"]), sum(len(v) for v in w["new_sites"].values())) for w in all_weeks)
     body = '<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">中转站价格周报</h1><p class="lead">每周自动生成：价格变动、新收录、每个模型本周说得通的最低实付。订阅 <a href="/feed.xml" style="color:var(--p-ink)">RSS</a> 每天收变动。</p></div><section class="card rise"><div class="tablewrap"><table><thead><tr><th>周</th><th>日期</th><th class="num">变价</th><th class="num">新收录</th></tr></thead><tbody>%s</tbody></table></div></section><script id="d" type="application/json">%s</script>' % (rows or '<tr><td class="dim">尚无</td></tr>', jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": x["id"], "name": x["name"]} for x in D["models"]]}))
@@ -976,12 +1026,17 @@ def main():
         os.makedirs(os.path.join(DIST, "weekly"), exist_ok=True)
         for w in weeks: W("weekly/%s.html" % w["week"], build_weekly(w, weeks))
         W("weekly.html", build_weekly_index(weeks))
+    W("check.html", build_check())
+    if os.path.exists(os.path.join(HERE, "tokref.json")): shutil.copy(os.path.join(HERE, "tokref.json"), os.path.join(DIST, "assets", "tokref.json"))
+    rank_snapshots = []
     if D.get("rank"):
         rws = load_rank_weeks()
+        rank_snapshots.append(D["rank"])
         W("rank.html", build_rank(D["rank"], rws))
         os.makedirs(os.path.join(DIST, "rank"), exist_ok=True)
         for wk_ in rws:
             RJ = json.load(io.open(os.path.join(HERE, "rank", wk_ + ".json"), encoding="utf-8"))
+            rank_snapshots.append(RJ)
             W("rank/%s.html" % wk_, build_rank(RJ, rws, path="/rank/" + wk_))
     os.makedirs(os.path.join(DIST, "badge"), exist_ok=True)
     for s in D["sites"]: W("badge/%s.svg" % s["domain"], badge_svg(s))
@@ -1002,6 +1057,11 @@ def main():
         W("s/%s.html" % s["domain"], build_site(s)); n += 1
     for d_ in ("fonts", "img", "history"):
         if os.path.exists(os.path.join(HERE, d_)): shutil.copytree(os.path.join(HERE, d_), os.path.join(DIST, d_))
+    if rank_snapshots:
+        # Exports can refresh between seo_assets.py and this build. Generate
+        # from the same objects as the HTML, not another read of live files.
+        from seo_assets import generate_rank_snapshot_images
+        generate_rank_snapshot_images(rank_snapshots, output=os.path.join(DIST, "img"))
     for f in ("data_v2.json", "media.json", "go_links.json"):
         if os.path.exists(os.path.join(HERE, f)): shutil.copy(os.path.join(HERE, f), os.path.join(DIST, f))
     if os.path.exists(os.path.join(HERE, "static")):   # 站长平台验证文件等原样放根目录
