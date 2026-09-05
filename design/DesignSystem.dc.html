@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap">
+  <style>
+    body{margin:0;background:#0B0F14;color:#E8EEF3;font-family:"IBM Plex Sans","PingFang SC","Noto Sans SC",system-ui,sans-serif;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+    a{color:#4FD1D9;text-decoration:none} a:hover{color:#8AE3E8}
+    .serif{font-family:"Instrument Serif","Noto Serif SC","Songti SC",Georgia,serif;font-weight:400}
+    .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+  </style>
+</helmet>
+<div style="width:1440px;min-height:900px;background:#0B0F14;padding:48px 56px;box-sizing:border-box;display:flex;flex-direction:column;gap:36px">
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="mono" style="font-size:11px;letter-spacing:0.22em;color:#4FD1D9">设计系统 · 精密仪器</div>
+    <div class="serif" style="font-size:40px;line-height:1.1">冷黑底 · 发光青色数据墨水 · 衬线标题 · 等宽数字 · 罗盘尺</div>
+    <div style="font-size:14px;color:#A3B1BE;max-width:880px">一个交易情报终端，不是导航站。文字克制，数字说话；所有判断都落在同一把尺上；每个数字背后都有一份收据。</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px">
+    <!-- 色板 -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="mono" style="font-size:10px;letter-spacing:0.22em;color:#64768A">色板 · 中性冷灰 + 一个强调色 + 三个语义色</div>
+      <div style="display:grid;grid-template-columns:repeat(6, minmax(0,1fr));gap:10px">
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#0B0F14;border:1px solid #1F2A36"></div><div class="mono" style="font-size:11px">#0B0F14</div><div style="font-size:11px;color:#64768A">ground</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#10161E;border:1px solid #1F2A36"></div><div class="mono" style="font-size:11px">#10161E</div><div style="font-size:11px;color:#64768A">surface</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#1F2A36"></div><div class="mono" style="font-size:11px">#1F2A36</div><div style="font-size:11px;color:#64768A">hairline</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#64768A"></div><div class="mono" style="font-size:11px">#64768A</div><div style="font-size:11px;color:#64768A">ink-3</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#A3B1BE"></div><div class="mono" style="font-size:11px">#A3B1BE</div><div style="font-size:11px;color:#64768A">ink-2</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#E8EEF3"></div><div class="mono" style="font-size:11px">#E8EEF3</div><div style="font-size:11px;color:#64768A">ink</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:10px">
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#4FD1D9;box-shadow:0 0 30px rgba(79,209,217,0.35)"></div><div class="mono" style="font-size:11px">#4FD1D9</div><div style="font-size:11px;color:#64768A">accent · 罗盘针 / 参考价 / 链接</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#4CC38A"></div><div class="mono" style="font-size:11px">#4CC38A</div><div style="font-size:11px;color:#64768A">good · 40–125% 解释得通</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#E0AE4A"></div><div class="mono" style="font-size:11px">#E0AE4A</div><div style="font-size:11px;color:#64768A">warn · 15–40% 低于批量折扣</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border-radius:10px;background:#E4614C"></div><div class="mono" style="font-size:11px">#E4614C</div><div style="font-size:11px;color:#64768A">crit · &lt;15% 数学上不可持续</div></div>
+      </div>
+      <div style="font-size:12px;color:#64768A">语义色只用在判读上，从不做装饰。强调青色只有三个去处：罗盘针、参考价、链接。</div>
+    </div>
+    <!-- 字体 -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="mono" style="font-size:10px;letter-spacing:0.22em;color:#64768A">字体 · 三种角色</div>
+      <div style="display:flex;flex-direction:column;gap:14px;background:#10161E;border:1px solid #1F2A36;border-radius:12px;padding:20px 22px">
+        <div style="display:flex;align-items:baseline;gap:16px"><div class="serif" style="font-size:36px;line-height:1">官方价、公开市场价 <em style="color:#4FD1D9">Instrument Serif</em></div></div>
+        <div style="font-size:12px;color:#64768A">标题 · Instrument Serif + Noto Serif SC · 400 · 只用于一屏一句话的标题，斜体做强调</div>
+        <div style="height:1px;background:#1F2A36"></div>
+        <div class="mono" style="font-size:28px;letter-spacing:-0.01em">0.742 <span style="color:#E4614C">3.0%</span> $13,522 · 2026-09-02T12:22</div>
+        <div style="font-size:12px;color:#64768A">数字 · JetBrains Mono · tabular-nums · 所有价格、比率、时间、域名、哈希</div>
+        <div style="height:1px;background:#1F2A36"></div>
+        <div style="font-size:15px;color:#E8EEF3">便宜和风险同一行。先看解释得通的，再看便宜得离谱的。</div>
+        <div style="font-size:12px;color:#64768A">正文 · IBM Plex Sans + PingFang SC · 13–15px · 行高 1.55</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 组件 -->
+  <div style="display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:24px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="mono" style="font-size:10px;letter-spacing:0.22em;color:#64768A">罗盘尺 · 产品的核心图元</div>
+      <div style="background:#10161E;border:1px solid #1F2A36;border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;gap:8px"><div style="position:relative;width:100%;height:10px;border-radius:5px;display:flex"><div style="width:7.5%;background:#E4614C;opacity:.45;border-radius:5px 0 0 5px"></div><div style="width:12.5%;background:#E0AE4A;opacity:.45"></div><div style="width:42.5%;background:#4CC38A;opacity:.4"></div><div style="width:37.5%;background:#1F2A36;border-radius:0 5px 5px 0"></div><div style="position:absolute;left:50%;top:-4px;width:1px;height:18px;background:#A3B1BE"></div><div style="position:absolute;left:30%;top:-7px;width:2px;height:24px;background:#4CC38A;box-shadow:0 0 10px #4CC38A"></div></div><div style="position:relative;height:14px" class="mono"><span style="position:absolute;left:0;font-size:10px;color:#64768A">0%</span><span style="position:absolute;left:7.5%;font-size:10px;color:#64768A">15%</span><span style="position:absolute;left:20%;font-size:10px;color:#64768A">40%</span><span style="position:absolute;left:37.5%;font-size:10px;color:#64768A">75%</span><span style="position:absolute;left:50%;transform:translateX(-50%);font-size:10px;color:#A3B1BE">100% 官方</span><span style="position:absolute;left:62.5%;font-size:10px;color:#64768A">125%</span><span style="position:absolute;right:0;font-size:10px;color:#64768A">200%</span></div></div>
+        <div style="font-size:12.5px;color:#A3B1BE">刻度是线性的 0–200%，官方价永远在正中央的细线上；指针发光、颜色跟它落在的区。同一把尺出现在首页每一行、站点页的画像、媒体页每一行——用户学一次，处处能读。</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="mono" style="font-size:10px;letter-spacing:0.22em;color:#64768A">判读标签 · 只说算术，不说人</div>
+      <div style="background:#10161E;border:1px solid #1F2A36;border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><span class="mono" style="font-size:11.5px;padding:3px 10px;border-radius:999px;background:rgba(79,209,217,0.14);color:#4FD1D9">◆ 基准</span><span style="font-size:12px;color:#64768A">参考价行</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="mono" style="font-size:11.5px;padding:3px 10px;border-radius:999px;background:rgba(76,195,138,0.14);color:#4CC38A">● 可由批量折扣解释</span><span class="mono" style="font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid #2A3644;color:#A3B1BE">● 与公开价接近</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="mono" style="font-size:11.5px;padding:3px 10px;border-radius:999px;background:rgba(224,174,74,0.14);color:#E0AE4A">● 低于常见批量折扣</span><span class="mono" style="font-size:11.5px;padding:3px 10px;border-radius:999px;background:rgba(228,97,76,0.14);color:#E4614C">● 数学上不可持续</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="mono" style="font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid #2A3644;color:#64768A">计价基数待核</span><span class="mono" style="font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid #2A3644;color:#64768A">无参考</span><span style="width:18px;height:18px;border-radius:50%;border:1px solid #2A3644;color:#64768A;font-size:11px;display:inline-flex;align-items:center;justify-content:center">?</span></div>
+        <div style="font-size:12.5px;color:#A3B1BE">绿区分两档：40–75%「可由批量折扣解释」、75–125%「与公开价接近」。每个标签旁的 ? 打开一句人话。指控性词汇在发布管线里被拦，不是靠自觉。</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="mono" style="font-size:10px;letter-spacing:0.22em;color:#64768A">按钮 · 证据 · 卡片</div>
+      <div style="background:#10161E;border:1px solid #1F2A36;border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:8px;background:#4FD1D9;color:#06181B;font-weight:600;border-radius:9px;padding:10px 16px;font-size:14px;height:44px;box-sizing:border-box">前往站点 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#06181B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg></div><div style="display:flex;align-items:center;border:1px solid #2A3644;color:#E8EEF3;border-radius:9px;padding:10px 16px;font-size:14px;height:44px;box-sizing:border-box">用我的 Key 核实</div><div style="display:flex;align-items:center;border:1px solid #4FD1D9;color:#4FD1D9;border-radius:9px;padding:10px 16px;font-size:13px;height:44px;box-sizing:border-box">次要强调</div></div>
+        <div style="display:flex;gap:8px;align-items:center"><span class="mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#A3B1BE;border:1px solid #2A3644;border-radius:6px;padding:4px 9px">证据 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M7 17L17 7M9 7h8v8"/></svg></span><span class="mono" style="font-size:11px;color:#4FD1D9;border:1px solid #2A3644;border-radius:6px;padding:4px 9px">#16 · #7 · #12</span><span style="font-size:12px;color:#64768A">证据永远可点，永远带快照号</span></div>
+        <div style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:10px;background:#0E141B;border:1px solid #1F2A36"><div class="mono" style="font-size:10px;letter-spacing:0.18em;color:#64768A">读数卡</div><div class="mono" style="font-size:24px">99%</div><div style="font-size:11px;color:#64768A">标签 · 大数字 · 一行注脚。圆角 12 · 描边 1px hairline · 不用阴影</div></div>
+        <div style="font-size:12.5px;color:#A3B1BE">主按钮高 44 · 圆角 9 · 一屏只有一个青色实心按钮。卡片描边不投影，靠层级色区分深浅。</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

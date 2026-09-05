@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap">
+  <style>
+    body{margin:0;background:#0B0F14;color:#E8EEF3;font-family:"IBM Plex Sans","PingFang SC","Noto Sans SC",system-ui,sans-serif;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+    a{color:#4FD1D9;text-decoration:none} a:hover{color:#8AE3E8}
+    .serif{font-family:"Instrument Serif","Noto Serif SC","Songti SC",Georgia,serif;font-weight:400}
+    .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+    .row:hover{background:#121A23}
+  </style>
+</helmet>
+<div style="width:1440px;min-height:1160px;background:#0B0F14;background-image:radial-gradient(ellipse 900px 420px at 78% -10%, rgba(79,209,217,0.10), transparent 60%);position:relative;overflow:hidden">
+
+  <!-- 顶栏 -->
+  <div style="display:flex;align-items:center;gap:28px;padding:22px 56px;border-bottom:1px solid #1F2A36">
+    <div style="display:flex;align-items:center;gap:12px">
+      <svg width="30" height="30" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17.5" fill="none" stroke="#2A3644" stroke-width="1.2"/><path d="M20 5v4M20 31v4M5 20h4M31 20h4" stroke="#64768A" stroke-width="1.2" stroke-linecap="round"/><path d="M20 9 L24.5 20 L20 31 Z" fill="#4FD1D9"/><path d="M20 9 L15.5 20 L20 31 Z" fill="#2A3644"/><circle cx="20" cy="20" r="2.2" fill="#0B0F14" stroke="#4FD1D9" stroke-width="1.4"/></svg>
+      <div style="display:flex;flex-direction:column">
+        <div class="serif" style="font-size:22px;line-height:1;letter-spacing:0.01em">算力罗盘</div>
+        <div class="mono" style="font-size:10px;letter-spacing:0.22em;color:#64768A;margin-top:3px">RELAY INTEL · 09·02 16:00 CST</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:26px;font-size:13.5px;color:#A3B1BE;margin-left:24px">
+      <div style="color:#E8EEF3;border-bottom:1px solid #4FD1D9;padding-bottom:2px">模型比价</div>
+      <div>站点</div>
+      <div>图像与视频</div>
+      <div>动态</div>
+      <div>方法</div>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;background:#10161E;border:1px solid #1F2A36;border-radius:10px;padding:9px 14px;width:380px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64768A" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <div style="color:#64768A;font-size:13.5px">查一个站（toapis.cn）或一个模型（DeepSeek V4）</div>
+      <div class="mono" style="margin-left:auto;font-size:10.5px;color:#64768A;border:1px solid #2A3644;border-radius:5px;padding:1px 6px">⌘K</div>
+    </div>
+  </div>
+
+  <!-- 誓言条 -->
+  <div style="display:flex;gap:28px;padding:10px 56px;font-size:12px;color:#64768A;border-bottom:1px solid #141C25">
+    <div><span style="color:#A3B1BE">不收任何人的钱</span> — 没有付费墙、返佣、认证费</div>
+    <div><span style="color:#A3B1BE">每个数字可点证据</span> — 来源、抓取时间、快照哈希</div>
+    <div><span style="color:#A3B1BE">只给事实不给推荐</span> — 判断留给你</div>
+  </div>
+
+  <!-- 首屏：标题 + 读数 -->
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:48px;padding:44px 56px 28px;align-items:end">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="mono" style="font-size:11px;letter-spacing:0.22em;color:#4FD1D9">01 · 你要用哪个模型</div>
+      <div class="serif" style="font-size:54px;line-height:1.05;letter-spacing:-0.01em;text-wrap:balance">官方价、公开市场价、中转站实付价，<br><em style="color:#4FD1D9">放在同一把尺上。</em></div>
+      <div style="font-size:15px;color:#A3B1BE;max-width:620px">便宜和风险同一行。先看解释得通的，再看便宜得离谱的——那些折起来了，别急着买。</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:1px;background:#1F2A36;border:1px solid #1F2A36;border-radius:12px;overflow:hidden">
+      <div style="background:#10161E;padding:14px 16px;display:flex;flex-direction:column;gap:2px"><div class="mono" style="font-size:10px;letter-spacing:0.18em;color:#64768A">已确认站点</div><div class="mono" style="font-size:26px;color:#E8EEF3">306</div></div>
+      <div style="background:#10161E;padding:14px 16px;display:flex;flex-direction:column;gap:2px"><div class="mono" style="font-size:10px;letter-spacing:0.18em;color:#64768A">基数待核 · 不出比率</div><div class="mono" style="font-size:26px;color:#A3B1BE">23<span style="font-size:13px;color:#64768A"> 站</span></div></div>
+      <div style="background:#10161E;padding:14px 16px;display:flex;flex-direction:column;gap:2px"><div class="mono" style="font-size:10px;letter-spacing:0.18em;color:#64768A">今日价格变动</div><div class="mono" style="font-size:26px;color:#E8EEF3">40</div></div>
+      <div style="background:#10161E;padding:14px 16px;display:flex;flex-direction:column;gap:2px"><div class="mono" style="font-size:10px;letter-spacing:0.18em;color:#64768A">实付 &lt;15% 的站</div><div class="mono" style="font-size:26px;color:#E4614C">41<span style="font-size:13px;color:#64768A"> / 101</span></div></div>
+    </div>
+  </div>
+
+  <!-- 模型选择：按厂商分组 -->
+  <div style="display:flex;flex-direction:column;gap:8px;padding:6px 56px 18px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="mono" style="font-size:10px;letter-spacing:0.18em;color:#64768A;width:76px">ANTHROPIC</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;background:#4FD1D9;color:#06181B;font-weight:600;font-size:13px">Claude Fable 5.1<span class="mono" style="font-size:11px;opacity:.75">8 家</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;border:1px solid #2A3644;color:#A3B1BE;font-size:13px">Claude Opus 5<span class="mono" style="font-size:11px;color:#64768A">50 家</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;border:1px solid #2A3644;color:#A3B1BE;font-size:13px">Opus 4.6<span class="mono" style="font-size:11px;color:#64768A">59 家</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;border:1px solid #2A3644;color:#A3B1BE;font-size:13px">Sonnet 4.6<span class="mono" style="font-size:11px;color:#64768A">59 家</span></div>
+      <div class="mono" style="font-size:10px;letter-spacing:0.18em;color:#64768A;width:76px;margin-left:18px">OPENAI</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;border:1px solid #2A3644;color:#A3B1BE;font-size:13px">GPT-5.6 Luna<span class="mono" style="font-size:11px;color:#64768A">65 家</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;border:1px solid #2A3644;color:#A3B1BE;font-size:13px">GPT-5.5<span class="mono" style="font-size:11px;color:#64768A">88 家</span></div>
+      <div class="mono" style="font-size:10px;letter-spacing:0.18em;color:#64768A;width:76px;margin-left:18px">DEEPSEEK</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;border:1px solid #2A3644;color:#A3B1BE;font-size:13px">V4 Pro<span class="mono" style="font-size:11px;color:#64768A">40 家</span></div>
+      <div style="padding:7px 13px;border-radius:999px;border:1px dashed #2A3644;color:#64768A;font-size:13px">Google · Moonshot · 智谱 · xAI · 阿里 · MiniMax ›</div>
+    </div>
+  </div>
+
+  <!-- 尺：图例 + 用量 -->
+  <div style="display:flex;align-items:center;gap:22px;padding:0 56px 12px;font-size:12px;color:#64768A">
+    <div style="display:flex;align-items:center;gap:8px"><div style="position:relative;width:180px;height:8px;border-radius:4px;overflow:hidden;display:flex"><div style="width:7.5%;background:#E4614C;opacity:.7"></div><div style="width:12.5%;background:#E0AE4A;opacity:.7"></div><div style="width:42.5%;background:#4CC38A;opacity:.6"></div><div style="width:37.5%;background:#2A3644"></div></div><div>0%</div><div style="color:#A3B1BE">← 相对官方价 →</div><div>200%</div></div>
+    <div style="display:flex;gap:14px"><div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#E4614C;margin-right:5px"></span>&lt;15% 数学上不可持续</div><div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#E0AE4A;margin-right:5px"></span>15–40% 低于批量折扣</div><div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#4CC38A;margin-right:5px"></span>40–75% 可由批量折扣解释 · 75–125% 与公开价接近</div></div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;background:#10161E;border:1px solid #1F2A36;border-radius:8px;padding:6px 12px"><span style="color:#A3B1BE">按你的用量算</span><span class="mono" style="color:#E8EEF3;border-bottom:1px solid #4FD1D9">50</span><span>M 输入</span><span class="mono" style="color:#E8EEF3;border-bottom:1px solid #4FD1D9">10</span><span>M 输出 / 月</span></div>
+  </div>
+
+  <!-- 账本表 -->
+  <div style="margin:0 56px;border:1px solid #1F2A36;border-radius:14px;background:#0E141B;overflow:hidden">
+    <div style="display:grid;grid-template-columns:230px 90px 120px 96px 110px 200px 150px 84px;gap:0;padding:10px 20px;border-bottom:1px solid #1F2A36" class="mono">
+      <div style="font-size:10px;letter-spacing:0.16em;color:#64768A">渠道</div><div style="font-size:10px;letter-spacing:0.16em;color:#64768A">类型</div><div style="font-size:10px;letter-spacing:0.16em;color:#64768A;text-align:right">输出 $/M</div><div style="font-size:10px;letter-spacing:0.16em;color:#64768A;text-align:right">输入 $/M</div><div style="font-size:10px;letter-spacing:0.16em;color:#64768A;text-align:right">你的月成本</div><div style="font-size:10px;letter-spacing:0.16em;color:#64768A;padding-left:14px">相对官方价 · 罗盘尺</div><div style="font-size:10px;letter-spacing:0.16em;color:#64768A">判读</div><div style="font-size:10px;letter-spacing:0.16em;color:#64768A;text-align:right">证据</div>
+    </div>
+
+    <!-- 参考价行 -->
+    <div style="display:grid;grid-template-columns:230px 90px 120px 96px 110px 200px 150px 84px;align-items:center;padding:14px 20px;border-bottom:1px solid #1F2A36;background:linear-gradient(90deg, rgba(79,209,217,0.10), rgba(79,209,217,0.02));border-left:3px solid #4FD1D9">
+      <div style="display:flex;flex-direction:column"><div class="mono" style="font-size:14px;color:#E8EEF3">openrouter</div><div style="font-size:11.5px;color:#64768A">公开市场 · 供应商标价</div></div>
+      <div class="mono" style="font-size:11px;color:#4FD1D9">参考</div>
+      <div class="mono" style="font-size:17px;text-align:right;color:#E8EEF3">50.00</div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#A3B1BE">10.00</div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#A3B1BE">$1,000</div>
+      <div style="padding-left:14px;display:flex;align-items:center;gap:10px"><div style="position:relative;width:120px;height:8px;border-radius:4px;display:flex;overflow:visible"><div style="width:7.5%;background:#E4614C;opacity:.35;border-radius:4px 0 0 4px"></div><div style="width:12.5%;background:#E0AE4A;opacity:.35"></div><div style="width:42.5%;background:#4CC38A;opacity:.3"></div><div style="width:37.5%;background:#1F2A36;border-radius:0 4px 4px 0"></div><div style="position:absolute;left:50%;top:-5px;width:2px;height:18px;background:#4FD1D9"></div></div><div class="mono" style="font-size:12px;color:#4FD1D9">1.00×</div></div>
+      <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 9px;border-radius:999px;background:rgba(79,209,217,0.14);color:#4FD1D9" class="mono">◆ 基准</span></div>
+      <div style="text-align:right"><span class="mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#A3B1BE;border:1px solid #2A3644;border-radius:6px;padding:3px 8px">#7 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M7 17L17 7M9 7h8v8"/></svg></span></div>
+    </div>
+
+    <!-- 解释得通 -->
+    <div class="row" style="display:grid;grid-template-columns:230px 90px 120px 96px 110px 200px 150px 84px;align-items:center;padding:13px 20px;border-bottom:1px solid #141C25">
+      <div style="display:flex;flex-direction:column"><div class="mono" style="font-size:14px;color:#E8EEF3">runapi.host</div><div style="font-size:11.5px;color:#64768A">Run API · 24h 100%</div></div>
+      <div class="mono" style="font-size:11px;color:#64768A">中转站</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end"><div class="mono" style="font-size:17px;color:#E8EEF3">30.06</div><div class="mono" style="font-size:10px;color:#64768A">抓取 14:46</div></div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#A3B1BE">6.01</div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#E8EEF3">$601</div>
+      <div style="padding-left:14px;display:flex;align-items:center;gap:10px"><div style="position:relative;width:120px;height:8px;border-radius:4px;display:flex"><div style="width:7.5%;background:#E4614C;opacity:.35;border-radius:4px 0 0 4px"></div><div style="width:12.5%;background:#E0AE4A;opacity:.35"></div><div style="width:42.5%;background:#4CC38A;opacity:.3"></div><div style="width:37.5%;background:#1F2A36;border-radius:0 4px 4px 0"></div><div style="position:absolute;left:50%;top:-2px;width:1px;height:12px;background:#64768A"></div><div style="position:absolute;left:30%;top:-5px;width:2px;height:18px;background:#4CC38A;box-shadow:0 0 8px #4CC38A"></div></div><div class="mono" style="font-size:12px;color:#4CC38A">60%</div></div>
+      <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 9px;border-radius:999px;background:rgba(76,195,138,0.14);color:#4CC38A" class="mono">● 可由批量折扣解释</span></div>
+      <div style="text-align:right"><span class="mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#A3B1BE;border:1px solid #2A3644;border-radius:6px;padding:3px 8px">证据 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M7 17L17 7M9 7h8v8"/></svg></span></div>
+    </div>
+
+    <!-- 低于折扣 -->
+    <div class="row" style="display:grid;grid-template-columns:230px 90px 120px 96px 110px 200px 150px 84px;align-items:center;padding:13px 20px;border-bottom:1px solid #141C25">
+      <div style="display:flex;flex-direction:column"><div class="mono" style="font-size:14px;color:#E8EEF3">dawclaudecode.com</div><div style="font-size:11.5px;color:#64768A">DawCode · 24h 100%</div></div>
+      <div class="mono" style="font-size:11px;color:#64768A">中转站</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end"><div class="mono" style="font-size:17px;color:#E8EEF3">14.84</div><div class="mono" style="font-size:10px;color:#64768A">抓取 14:40</div></div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#A3B1BE">2.97</div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#E8EEF3">$297</div>
+      <div style="padding-left:14px;display:flex;align-items:center;gap:10px"><div style="position:relative;width:120px;height:8px;border-radius:4px;display:flex"><div style="width:7.5%;background:#E4614C;opacity:.35;border-radius:4px 0 0 4px"></div><div style="width:12.5%;background:#E0AE4A;opacity:.35"></div><div style="width:42.5%;background:#4CC38A;opacity:.3"></div><div style="width:37.5%;background:#1F2A36;border-radius:0 4px 4px 0"></div><div style="position:absolute;left:50%;top:-2px;width:1px;height:12px;background:#64768A"></div><div style="position:absolute;left:15%;top:-5px;width:2px;height:18px;background:#E0AE4A;box-shadow:0 0 8px #E0AE4A"></div></div><div class="mono" style="font-size:12px;color:#E0AE4A">30%</div></div>
+      <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 9px;border-radius:999px;background:rgba(224,174,74,0.14);color:#E0AE4A" class="mono">● 低于常见批量折扣</span></div>
+      <div style="text-align:right"><span class="mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#A3B1BE;border:1px solid #2A3644;border-radius:6px;padding:3px 8px">证据 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M7 17L17 7M9 7h8v8"/></svg></span></div>
+    </div>
+    <div class="row" style="display:grid;grid-template-columns:230px 90px 120px 96px 110px 200px 150px 84px;align-items:center;padding:13px 20px;border-bottom:1px solid #141C25">
+      <div style="display:flex;flex-direction:column"><div class="mono" style="font-size:14px;color:#E8EEF3">78code.cc</div><div style="font-size:11.5px;color:#64768A">24h 100%</div></div>
+      <div class="mono" style="font-size:11px;color:#64768A">中转站</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end"><div class="mono" style="font-size:17px;color:#E8EEF3">11.88</div><div class="mono" style="font-size:10px;color:#64768A">抓取 14:39</div></div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#A3B1BE">2.38</div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#E8EEF3">$238</div>
+      <div style="padding-left:14px;display:flex;align-items:center;gap:10px"><div style="position:relative;width:120px;height:8px;border-radius:4px;display:flex"><div style="width:7.5%;background:#E4614C;opacity:.35;border-radius:4px 0 0 4px"></div><div style="width:12.5%;background:#E0AE4A;opacity:.35"></div><div style="width:42.5%;background:#4CC38A;opacity:.3"></div><div style="width:37.5%;background:#1F2A36;border-radius:0 4px 4px 0"></div><div style="position:absolute;left:50%;top:-2px;width:1px;height:12px;background:#64768A"></div><div style="position:absolute;left:12%;top:-5px;width:2px;height:18px;background:#E0AE4A;box-shadow:0 0 8px #E0AE4A"></div></div><div class="mono" style="font-size:12px;color:#E0AE4A">24%</div></div>
+      <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 9px;border-radius:999px;background:rgba(224,174,74,0.14);color:#E0AE4A" class="mono">● 低于常见批量折扣</span></div>
+      <div style="text-align:right"><span class="mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#A3B1BE;border:1px solid #2A3644;border-radius:6px;padding:3px 8px">证据 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M7 17L17 7M9 7h8v8"/></svg></span></div>
+    </div>
+    <div class="row" style="display:grid;grid-template-columns:230px 90px 120px 96px 110px 200px 150px 84px;align-items:center;padding:13px 20px;border-bottom:1px solid #141C25">
+      <div style="display:flex;flex-direction:column"><div class="mono" style="font-size:14px;color:#E8EEF3">easyrouter.io</div><div style="font-size:11.5px;color:#64768A">24h 100%</div></div>
+      <div class="mono" style="font-size:11px;color:#64768A">中转站</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end"><div class="mono" style="font-size:17px;color:#E8EEF3">7.79</div><div class="mono" style="font-size:10px;color:#64768A">抓取 14:31</div></div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#A3B1BE">1.56</div>
+      <div class="mono" style="font-size:13px;text-align:right;color:#E8EEF3">$156</div>
+      <div style="padding-left:14px;display:flex;align-items:center;gap:10px"><div style="position:relative;width:120px;height:8px;border-radius:4px;display:flex"><div style="width:7.5%;background:#E4614C;opacity:.35;border-radius:4px 0 0 4px"></div><div style="width:12.5%;background:#E0AE4A;opacity:.35"></div><div style="width:42.5%;background:#4CC38A;opacity:.3"></div><div style="width:37.5%;background:#1F2A36;border-radius:0 4px 4px 0"></div><div style="position:absolute;left:50%;top:-2px;width:1px;height:12px;background:#64768A"></div><div style="position:absolute;left:8%;top:-5px;width:2px;height:18px;background:#E0AE4A;box-shadow:0 0 8px #E0AE4A"></div></div><div class="mono" style="font-size:12px;color:#E0AE4A">16%</div></div>
+      <div><span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 9px;border-radius:999px;background:rgba(224,174,74,0.14);color:#E0AE4A" class="mono">● 低于常见批量折扣</span></div>
+      <div style="text-align:right"><span class="mono" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#A3B1BE;border:1px solid #2A3644;border-radius:6px;padding:3px 8px">证据 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M7 17L17 7M9 7h8v8"/></svg></span></div>
+    </div>
+
+    <!-- 折叠：不可持续 -->
+    <div style="display:flex;align-items:center;gap:14px;padding:12px 20px;background:#0B1016;border-top:1px dashed #2A3644;border-bottom:1px solid #141C25">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E4614C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      <div style="font-size:13px;color:#A3B1BE">另有 <span class="mono" style="color:#E4614C">3</span> 家报价低到在无补贴假设下数学上不可能（<span class="mono" style="color:#E4614C">2.1%</span> 起）— 展开看，别急着买</div>
+      <div style="display:flex;gap:6px;margin-left:auto" class="mono"><span style="font-size:11px;color:#64768A;border:1px solid #2A3644;border-radius:5px;padding:1px 7px">a6api.com</span><span style="font-size:11px;color:#64768A;border:1px solid #2A3644;border-radius:5px;padding:1px 7px">ciyuanapis.xyz</span><span style="font-size:11px;color:#64768A;border:1px solid #2A3644;border-radius:5px;padding:1px 7px">tikbit.ai</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;padding:12px 20px;background:#0B1016;border-bottom:1px solid #141C25">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64768A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      <div style="font-size:13px;color:#A3B1BE"><span class="mono">1</span> 家高于公开价（meow61.my · 163%）</div>
+    </div>
+    <div style="display:flex;gap:22px;padding:11px 20px;font-size:12px;color:#64768A;background:#0E141B">
+      <div><span style="color:#A3B1BE">Claude Fable 5.1</span>：参考价 openrouter $50.00/M 输出</div><div>中转站 8 家：可由折扣解释 1 · 低于批量折扣 3 · 不可持续 3 · 高于公开价 1</div><div style="margin-left:auto">实付 = 名义 × 充值比例 ÷ 汇率 6.74 · 可用性来自心跳探针</div>
+    </div>
+  </div>
+
+  <!-- 下半：站点画像 + 动态 -->
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:28px;padding:40px 56px 48px">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:baseline;gap:16px"><div class="mono" style="font-size:11px;letter-spacing:0.22em;color:#4FD1D9">02 · 你在用的站靠谱吗</div><div style="font-size:13px;color:#64768A">101 站有画像 · 按实付相对公开价的中位数分四簇</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:12px">
+        <div style="background:#10161E;border:1px solid #1F2A36;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;border-top:2px solid #E4614C"><div class="mono" style="font-size:30px;color:#E8EEF3">41</div><div style="font-size:13px;color:#E8EEF3">超低价</div><div style="font-size:12px;color:#64768A">实付不到公开价 15%。xeduapi · macode · aifast …</div></div>
+        <div style="background:#10161E;border:1px solid #1F2A36;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;border-top:2px solid #E0AE4A"><div class="mono" style="font-size:30px;color:#E8EEF3">20</div><div style="font-size:13px;color:#E8EEF3">两三折</div><div style="font-size:12px;color:#64768A">15%–50%。123api · easyrouter · 4sapi 清一色 0.297</div></div>
+        <div style="background:#10161E;border:1px solid #1F2A36;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;border-top:2px solid #4CC38A"><div class="mono" style="font-size:30px;color:#E8EEF3">21</div><div style="font-size:13px;color:#E8EEF3">贴官方</div><div style="font-size:12px;color:#64768A">50%–150%。toapis 83% · aidianwo 103% · airouter 108%</div></div>
+        <div style="background:#10161E;border:1px solid #1F2A36;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;border-top:2px solid #64768A"><div class="mono" style="font-size:30px;color:#E8EEF3">19</div><div style="font-size:13px;color:#E8EEF3">高价 / 待核</div><div style="font-size:12px;color:#64768A">≥150% 或全线异常——多为倍率基数读错，不出比率</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#A3B1BE"><div style="width:6px;height:6px;border-radius:50%;background:#4FD1D9"></div>四成的站实付不到公开价的 15%。这是这个市场最该先知道的一个数。<a href="#" style="margin-left:auto">看全部 306 站 →</a></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="mono" style="font-size:11px;letter-spacing:0.22em;color:#4FD1D9">03 · 今天变了什么</div>
+      <div style="background:#10161E;border:1px solid #1F2A36;border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid #141C25"><div class="mono" style="font-size:11px;color:#64768A;padding-top:3px">14:46</div><div style="font-size:13px"><span class="mono">runapi.host</span> · kimi-k2 输出价 <span class="mono" style="color:#64768A;text-decoration:line-through">1.829</span> → <span class="mono" style="color:#4CC38A">1.760</span> ↓</div></div>
+        <div style="display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid #141C25"><div class="mono" style="font-size:11px;color:#64768A;padding-top:3px">14:45</div><div style="font-size:13px"><span class="mono">openclawroot.com</span> · minimax-m2.5 <span class="mono" style="color:#64768A;text-decoration:line-through">75.00</span> → <span class="mono" style="color:#4CC38A">8.00</span> ↓</div></div>
+        <div style="display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid #141C25"><div class="mono" style="font-size:11px;color:#64768A;padding-top:3px">14:40</div><div style="font-size:13px"><span class="mono">autorouter.top</span> · deepseek-v4-pro <span class="mono" style="color:#64768A;text-decoration:line-through">2.070</span> → <span class="mono" style="color:#4CC38A">0.900</span> ↓</div></div>
+        <div style="display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;padding:12px 16px"><div class="mono" style="font-size:11px;color:#64768A;padding-top:3px">06:40</div><div style="font-size:13px">发现引擎从证书日志自主确认新站 <span class="mono">aidianwo.com</span><div style="font-size:11.5px;color:#64768A;margin-top:2px">爱点我AI大模型API聚合平台 · one-api v1.0.0-rc.24</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

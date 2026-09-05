@@ -1,0 +1,20 @@
+# Sinan Compute · Cloudflare Pages 配置（wrangler 直传）
+# 密钥（GITHUB_CLIENT_SECRET、SESSION_SECRET）只放在 Cloudflare 面板的 Secrets 里，不进仓库。
+name = "sinan-compute"
+pages_build_output_dir = "site/dist"
+compatibility_date = "2025-06-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sinan-users"
+database_id = "4109f1ab-5f52-43c8-bee8-90664cd14af6"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "01d14fee71b2465d906fdccbf4eac4bb"
+
+[vars]
+# GitHub OAuth App 的 Client ID（非密钥）。Eric 建好应用后填入。
+GITHUB_CLIENT_ID = "Ov23liyyjBUluoOWdC81"
+COOKIE_DOMAIN = ".sinanlab.com"
+SITE_ORIGIN = "https://compute.sinanlab.com"

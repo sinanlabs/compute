@@ -1,0 +1,61 @@
+# 依赖 / 构建
+node_modules/
+dist/
+__pycache__/
+*.pyc
+
+# 密钥 / 环境 —— 任何情况下都不进仓库
+.env
+.env.*
+*.env
+data/keys.env
+*.pem
+*.key
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 本地数据与生成物（在服务器上由采集管线重新生成）
+data/*.sqlite
+data/*.sqlite-*
+data/raw/
+data/logs/
+site/index.html
+site/media.html
+site/s/
+site/home_data.json
+site/data_v2.json
+site/media.json
+design/suanli-luopan-ui-design.html
+nohup.out
+site/dist/
+site/dist/**
+site/history/
+data/secrets.env
+
+# 采集引擎（私有仓库 sinanlabs/engine，本目录里的这些路径不进公开仓库）
+adapters/
+discovery/
+probes/
+bulk_confirm.py
+bulk_confirm_file.py
+daily_discover.py
+harvest_directories.py
+harvest_hvoyai.py
+pull_all_pricing.py
+pull_new_pricing.py
+pull_official_refs.py
+run_costfloor.py
+run_discovery.py
+run_media_costfloor.py
+run_video_costfloor.py
+tail_ct.py
+daily_refresh.sh
+run_forever.sh
+core/media.py
+.engine.git/
+engine_git.sh
+
+.wrangler/
+data/

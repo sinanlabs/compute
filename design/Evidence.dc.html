@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap">
+  <style>
+    body{margin:0;background:#0B0F14;color:#E8EEF3;font-family:"IBM Plex Sans","PingFang SC","Noto Sans SC",system-ui,sans-serif;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+    a{color:#4FD1D9;text-decoration:none} a:hover{color:#8AE3E8}
+    .serif{font-family:"Instrument Serif","Noto Serif SC","Songti SC",Georgia,serif;font-weight:400}
+    .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+  </style>
+</helmet>
+<!-- 证据抽屉：从右侧滑入，宽 480，覆盖在暗化的页面上 -->
+<div style="width:720px;height:1000px;background:#0B0F14;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:rgba(5,8,11,0.55)"></div>
+  <div style="position:absolute;top:0;right:0;width:480px;height:1000px;background:#10161E;border-left:1px solid #1F2A36;box-shadow:-30px 0 60px rgba(0,0,0,0.55);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:22px 26px 16px;border-bottom:1px solid #1F2A36">
+      <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+        <div class="mono" style="font-size:10px;letter-spacing:0.24em;color:#4FD1D9">证据链 · 三段快照</div>
+        <div class="serif" style="font-size:24px;line-height:1.15">macode.cloud · Claude Opus 4.6</div>
+        <div style="font-size:13px;color:#A3B1BE">实付 <span class="mono" style="color:#E8EEF3">$0.742</span> / 百万输出，为公开参考价的 <span class="mono" style="color:#E4614C">3.0%</span></div>
+      </div>
+      <div style="width:30px;height:30px;border-radius:8px;border:1px solid #2A3644;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3B1BE" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+    </div>
+
+    <!-- 换算链：像一张收据 -->
+    <div style="padding:20px 26px;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid #1F2A36">
+      <div class="mono" style="font-size:10px;letter-spacing:0.22em;color:#64768A">换算链</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;font-size:13.5px;align-items:baseline">
+        <div style="color:#A3B1BE">面板名义价<div style="font-size:11px;color:#64768A">倍率 25 × $2 / M</div></div><div class="mono" style="font-size:16px">50.00 <span style="font-size:11px;color:#64768A">USD</span></div>
+        <div style="color:#A3B1BE">× 充值比例<div style="font-size:11px;color:#64768A">面板 price 字段 · 每 $1 名义额度收多少元</div></div><div class="mono" style="font-size:16px">0.10 <span style="font-size:11px;color:#64768A">元 / $1</span></div>
+        <div style="color:#A3B1BE">÷ 汇率<div style="font-size:11px;color:#64768A">USD/CNY · open.er-api.com · 09-02 00:02</div></div><div class="mono" style="font-size:16px">6.7369</div>
+        <div style="border-top:1px solid #2A3644;padding-top:10px;color:#E8EEF3">= 实付</div><div class="mono" style="border-top:1px solid #2A3644;padding-top:10px;font-size:20px;color:#E8EEF3">0.742 <span style="font-size:11px;color:#64768A">USD / M</span></div>
+        <div style="color:#A3B1BE">÷ 最低公开渠道价<div style="font-size:11px;color:#64768A">openrouter · anthropic/claude-opus-4.6</div></div><div class="mono" style="font-size:16px">25.00</div>
+        <div style="color:#E8EEF3">= 比率</div><div class="mono" style="font-size:20px;color:#E4614C">3.0%</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;background:rgba(228,97,76,0.10);border:1px solid rgba(228,97,76,0.35)"><span class="mono" style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(228,97,76,0.16);color:#E4614C">● 数学上不可持续</span><div style="font-size:12.5px;color:#A3B1BE">在无补贴假设下，这个价格无法由公开成本解释。本站只给算术，不判断成因。</div></div>
+    </div>
+
+    <!-- 三段快照 -->
+    <div style="padding:20px 26px;display:flex;flex-direction:column;gap:10px;flex:1">
+      <div class="mono" style="font-size:10px;letter-spacing:0.22em;color:#64768A">快照 · 正文按哈希存对象存储，永不覆盖</div>
+      <div style="border:1px solid #1F2A36;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;background:#0E141B"><div style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:11px;color:#4FD1D9">#16</span><span class="mono" style="font-size:11px;color:#A3B1BE">relay.pricing.macode.cloud</span></div><div class="mono" style="font-size:12px;color:#E8EEF3;word-break:break-all">https://macode.cloud/api/pricing</div><div class="mono" style="font-size:11px;color:#64768A">2026-09-01T23:31:08+08:00 · sha256:9f2c1ae4…b73d0c81</div></div>
+      <div style="border:1px solid #1F2A36;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;background:#0E141B"><div style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:11px;color:#4FD1D9">#7</span><span class="mono" style="font-size:11px;color:#A3B1BE">openrouter.models</span></div><div class="mono" style="font-size:12px;color:#E8EEF3;word-break:break-all">https://openrouter.ai/api/v1/models</div><div class="mono" style="font-size:11px;color:#64768A">2026-09-02T12:22:04+08:00 · sha256:15fc4e3f…e332f282</div></div>
+      <div style="border:1px solid #1F2A36;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;background:#0E141B"><div style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:11px;color:#4FD1D9">#12</span><span class="mono" style="font-size:11px;color:#A3B1BE">fx.usd_cny</span></div><div class="mono" style="font-size:12px;color:#E8EEF3;word-break:break-all">https://open.er-api.com/v6/latest/USD</div><div class="mono" style="font-size:11px;color:#64768A">2026-09-02T00:02:31+00:00 · sha256:a1d7…</div></div>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px"><div style="flex:1;text-align:center;border:1px solid #2A3644;border-radius:9px;padding:9px;font-size:13px;color:#E8EEF3">复制换算</div><div style="flex:1;text-align:center;border:1px solid #2A3644;border-radius:9px;padding:9px;font-size:13px;color:#E8EEF3">下载三份快照</div><div style="flex:1;text-align:center;border:1px solid #2A3644;border-radius:9px;padding:9px;font-size:13px;color:#A3B1BE">我是站方，提出核对</div></div>
+        <div style="font-size:11.5px;color:#64768A;line-height:1.5">此为算术比值，不构成对该渠道的任何指控，也不排除存在本站未收录的更低公开来源。规则出处见方法论 §2–3。</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

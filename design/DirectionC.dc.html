@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+  <style>
+    body{margin:0;background:#05080C;color:#D9E6EC;font-family:"JetBrains Mono","PingFang SC",ui-monospace,Menlo,monospace;font-size:13px;line-height:1.5}
+    a{color:#7CF6E0} a:hover{color:#B6FBEE}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+  </style>
+</helmet>
+<div style="width:720px;height:520px;background:#05080C;background-image:radial-gradient(circle at 50% 120%, rgba(124,246,224,0.16), transparent 55%),repeating-radial-gradient(circle at 50% 120%, transparent 0 58px, rgba(124,246,224,0.06) 58px 59px);padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden">
+  <div style="display:flex;align-items:baseline;gap:12px"><div class="mono" style="font-size:10px;letter-spacing:0.22em;color:#7CF6E0">备选方向 C · 雷达 / 信号</div><div style="font-size:12px;color:#6F8791">低保真 · 全等宽 · 扫描线 · 信号格 · 更像安全工具</div></div>
+  <div class="mono" style="font-size:26px;line-height:1.15;letter-spacing:-0.01em;font-weight:700">SCAN · 306 RELAYS<br><span style="color:#7CF6E0;font-weight:400">41 BELOW 15% OF LIST</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div style="border:1px solid rgba(124,246,224,0.25);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:rgba(5,8,12,0.6)">
+      <div style="display:flex;justify-content:space-between"><span>runapi.host</span><span style="color:#7CF6E0">▮▮▮▮▯ 60%</span></div>
+      <div style="display:flex;justify-content:space-between"><span>dawclaudecode.com</span><span style="color:#F5C86B">▮▮▯▯▯ 30%</span></div>
+      <div style="display:flex;justify-content:space-between"><span>easyrouter.io</span><span style="color:#F5C86B">▮▯▯▯▯ 16%</span></div>
+      <div style="display:flex;justify-content:space-between"><span>a6api.com</span><span style="color:#FF6B5B">▯▯▯▯▯ 2.1%</span></div>
+    </div>
+    <div style="border:1px solid rgba(124,246,224,0.25);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;background:rgba(5,8,12,0.6);font-size:12px;color:#9FB3BC">
+      <div style="color:#7CF6E0">&gt; probe toapis.cn --fingerprint</div>
+      <div>tokenizer  12/12 match</div>
+      <div>billing    +0.4% drift</div>
+      <div>context    128k ok · 200k FAIL</div>
+      <div>hours      20-24h drift JS=0.31</div>
+      <div style="color:#7CF6E0">&gt; verdict: inconsistent (p=0.94)</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:12px;color:#6F8791;margin-top:auto">
+    <div><span style="color:#D9E6EC;font-weight:700">优点</span>：最"酷炫"，把真伪检测这条主线做成视觉中心；极客受众一眼认同。</div>
+    <div><span style="color:#D9E6EC;font-weight:700">代价</span>：容易滑向 hacker 味的噱头，可读性差；也和"不指控、只算术"的中立姿态有张力。</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
