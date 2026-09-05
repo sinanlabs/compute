@@ -945,9 +945,12 @@ def build_rank(R, all_weeks, path="/rank"):
     mc = MR.get("coverage", []); b_mc = board("多模态覆盖榜", "在卖图像 / 视频模型族最多的站（按族计，不按条）", rank_rows(mc, lambda x: "%d" % x["n"], lambda x: "个图像 / 视频族", bar=relbar(mc, lambda x: x["n"], False)), 11)
     mpz = MR.get("price", []); b_mp = board("多模态价格优势榜", "图像 / 视频报价在说得通区间内的实付中位数最低；至少 5 条可比报价；数值 = 官方参考价的几成", rank_rows(mpz, lambda x: "%d%%" % round(x["median"] * 100), lambda x: "%d 条可比报价" % x["n"], bar=relbar(mpz, lambda x: x["median"], True)), 12)
     media_html = '<div class="rise" style="--i:8.5;margin-top:26px"><div class="eyebrow" style="color:var(--p)">多模态 · 图像与视频</div><h2 style="font-size:22px;margin:6px 0 0">按秒、按张，对着官方价比</h2><p class="lead">Seedance、Kling、Veo、Hailuo、Vidu、Wan 与 Nano Banana、Seedream、Qwen-Image、FLUX 在中转站的实付，与官方按秒 / 按张价放在同一把尺上。这是别处没有的数据。</p></div><div class="rkgrid">%s%s</div><div class="rkgrid">%s%s</div>' % (b_v, b_i, b_mc, b_mp)
+    au = R.get("audit") or []
+    audit_html = ('<div class="callout" style="margin-top:12px"><b>本期待核 · %d 条</b>：%s 榜首若比第二名低 40%% 以上且只此一家，先不进榜，等核对原始条目后放行；另有 %d 条待核行（单位提示不一致 / 价格孤点 / 按规格计价）不参与比对。规则见口径与定义。</div>'
+                  % (len(au), "、".join("%s（%s，$%s vs $%s）" % (esc(x["site"]), esc(x["family"]), x["value"], x["second"]) for x in au[:6]) + ("。" if au else ""), R.get("audit_open") or 0)) if (au or R.get("audit_open")) else ""
     hist = "".join('<a href="/rank/%s">%s</a>' % (esc(w), esc(w)) for w in all_weeks)
     foot = '<div class="tfoot" style="margin-top:16px"><span>按测量值排序，不构成推荐；排序不含任何商业变量。数据 %s · 窗口 7 天 · 方法见 <a href="/method">方法论</a>。永久链接 /rank/%s</span></div><div class="callout" style="margin-top:12px"><b>期号徽章</b>：响应榜、价格优势榜、双旗舰榜、覆盖榜、多模态价格优势榜上的站，可在各自站点页拿到带期号的徽章嵌入代码；徽章只显示榜名、名次、测量值与期号，点击回到当期榜单。</div><div class="mlinks card" style="margin-top:12px"><span class="vn">历次榜单</span>%s</div>' % (R["date"], esc(wk), hist)
-    body = head + '<div class="rkgrid">%s%s</div>%s<div class="rkgrid">%s%s%s%s</div>%s%s%s' % (b_fast, b_price, b3, b4, b_up, b5, b6, media_html, b7, foot)
+    body = head + '<div class="rkgrid">%s%s</div>%s<div class="rkgrid">%s%s%s%s</div>%s%s%s%s' % (b_fast, b_price, b3, b4, b_up, b5, b6, media_html, audit_html, b7, foot)
     image_head = '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="%s"><meta name="twitter:image:alt" content="%s">' % (esc(seo["image_alt"]), esc(seo["image_alt"]))
     return shell(title, desc, path, body, active="rank", page="rank", crumbs=[("司南榜",)], og_image=seo["image"], jsonld=[seo["jsonld"]], extra_head=image_head + '<link rel="alternate" type="application/rss+xml" title="Sinan Compute 价格变动" href="/feed.xml">')
 

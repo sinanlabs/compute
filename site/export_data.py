@@ -351,7 +351,7 @@ def main():
                 placements[x["domain"]] = {"week": week_id, "board": key, "board_name": BOARD_NAME[key], "pos": i + 1, "value": vt(x)}
     for s_ in sites: s_["rank_badge"] = placements.get(s_["domain"])
     # ---- 多模态榜（图像 / 视频）：读 media.json（export_media 先跑）----
-    media_rank = {"video": [], "image": [], "coverage": [], "price": []}
+    media_rank = {"video": [], "image": [], "coverage": [], "price": []}; rank_audit = []
     mp = os.path.join(HERE, "media.json")
     if os.path.exists(mp):
         MJ = json.load(open(mp, encoding="utf-8")); held_media = set(MJ.get("held_sites") or [])
@@ -368,7 +368,17 @@ def main():
                 for r in sorted([r for r in inr if keyf(r)], key=keyf):   # 同一站多个版本只取最低的一条
                     if r["site"] in seen_site: continue
                     seen_site.add(r["site"]); best.append(r)
-                    if len(best) >= 3: break
+                    if len(best) >= 4: break
+                # 规则 D · 榜首差距：榜首比第二名低 40% 以上且只此一家 → 榜首待核，不进榜（写 quality_hold，核查放行前不再上榜）
+                while len(best) >= 2 and keyf(best[0]) < 0.6 * keyf(best[1]):
+                    top = best.pop(0)
+                    rank_audit.append({"board": mod, "family": f["family"], "site": top["site"], "name": top["name"], "value": round(keyf(top), 4), "second": round(keyf(best[0]), 4)})
+                    try:
+                        if not db.execute("SELECT 1 FROM quality_hold WHERE vendor=? AND raw_name=? AND reason='board_margin' AND cleared IS NULL", (top["site"], top["name"])).fetchone():
+                            db.execute("INSERT INTO quality_hold(vendor, model, raw_name, unit, reason, detail, created) VALUES (?,?,?,?,?,?,?)",
+                                       (top["site"], top.get("ref_model"), top["name"], top.get("unit"), "board_margin", "%s/%s 榜首 %.4f 比第二名 %.4f 低 40%% 以上，只此一家" % (mod, f["family"], keyf(top), keyf(best[0])), D.now8())); db.commit()
+                    except Exception: pass
+                best = best[:3]
                 if best:
                     media_rank[mod].append({"family": f["family"], "name": f.get("name") or f["family"], "ref": (f.get("ref") or {}).get("usd") or best[0].get("ref_price"), "n_inrange": len(inr), "n_sites": f.get("n_sites"),
                                             "rows": [{"site": r["site"], "name": _nm(r["site"]), "value": round(keyf(r), 4), "ratio": r["ratio"], "label": r.get("version_label") or r.get("name")} for r in best]})
@@ -381,7 +391,7 @@ def main():
         for s_ in sites: s_["rank_badge"] = placements.get(s_["domain"])
     rank = {"week": week_id, "media": media_rank, "date": D.now8()[:10], "window_days": 7, "n_sites": len(sites), "n_quotes": stats_quotes if False else None,
             "uptime": up_board, "fast": fast_board, "flagship": flagship, "dual": dual, "volatility": vol_board, "zero_change": zero_change, "n_big": len(big),
-            "coverage": cov_board, "probe": probe_cov, "eligible_uptime": len(elig), "dist_up": dist_up, "low": low_board, "price": price_board,
+            "coverage": cov_board, "probe": probe_cov, "audit": rank_audit, "audit_open": (lambda: (db.execute("SELECT COUNT(*) c FROM quality_hold WHERE cleared IS NULL").fetchone()["c"]))() if True else 0, "eligible_uptime": len(elig), "dist_up": dist_up, "low": low_board, "price": price_board,
             "register": {"closed": len(CLOSED), "open": sum(1 for v in REG.values() if v[0] == "open"), "unknown": sum(1 for v in REG.values() if v[0] not in ("open", "closed"))}}
     stats = {"confirmed": len(sites), "with_quotes": sum(1 for s_ in sites if s_["n_models"]), "quotes": db.execute("SELECT COUNT(*) c FROM offer_norm WHERE vendor_kind='relay' AND superseded_by IS NULL").fetchone()["c"],
              "seen_domains": db.execute("SELECT COUNT(*) c FROM seen_domain").fetchone()["c"], "held": len(HELD),

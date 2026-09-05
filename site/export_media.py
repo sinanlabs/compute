@@ -41,7 +41,7 @@ def main():
         name = c.get("raw_name") or r["model"]
         res = compare({"name": name, "unit": r["unit"], "eff_usd": eff, "duration_s": c.get("duration_s")}, refs)
         if res["modality"] not in ("image", "video") or not res.get("family") or res.get("placeholder"): continue
-        row = {"site": r["vendor"], "name": name, "unit": r["unit"], "eff": round(eff, 4), "nominal": r["price"], "price_field": round(float(p), 4), "usd_direct": bool(c.get("usd_direct")), "spec": c.get("spec"),
+        row = {"site": r["vendor"], "name": name, "unit": r["unit"], "eff": round(eff, 4), "nominal": r["price"], "price_field": round(float(p), 4), "usd_direct": bool(c.get("usd_direct")), "spec": c.get("spec"), "variable_price": bool(c.get("variable_price")),
                "sids": [r["snapshot_id"]], "as_of": r["valid_from"][:16], "tier": res.get("tier"), "version_note": res.get("version_note")}
         if res.get("ratio") is not None:
             code, label = band(res["ratio"])
@@ -51,9 +51,18 @@ def main():
             per_site[r["vendor"]].append(res["ratio"])
         fam_rows[(res["modality"], res["family"])].append(row)
     HELD = media_site_gate(per_site)
+    # 行级待核：核查脚本挂起的（单位提示不一致 / 价格孤点 / 榜首差距）+ 价格随规格变的（billing_mode 为矩阵/尺寸型）
+    try:
+        QH = {(r["vendor"], r["raw_name"]): r["reason"] for r in db.execute("SELECT vendor, raw_name, reason FROM quality_hold WHERE cleared IS NULL")}
+    except Exception:
+        QH = {}
+    for lst in fam_rows.values():
+        for x in lst:
+            reason = QH.get((x["site"], x["name"])) or ("variable_price" if x.get("variable_price") else None)
+            if reason: x["hold_reason"] = reason
     out = {"image": [], "video": []}
     for (mod, fam), lst in fam_rows.items():
-        for x in lst: x["held"] = x["site"] in HELD
+        for x in lst: x["held"] = (x["site"] in HELD) or bool(x.get("hold_reason"))
         cmp_rows = [x for x in lst if x.get("ratio") is not None and not x["held"]]
         ref = None
         for (m, u), (price, region, sid, vendor) in refs.items():
