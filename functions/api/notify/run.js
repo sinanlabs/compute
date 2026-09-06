@@ -85,6 +85,17 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
+  if (b.kind === "post") {
+    // linux.do 发帖稿：payload = { date, posts:[{kind, title, text}] }，只发管理员，正文原样放 <pre> 里方便复制
+    const admins = (await env.DB.prepare("SELECT email, handle FROM users WHERE role='admin' AND email IS NOT NULL").all()).results || [];
+    const posts = Array.isArray(P.posts) ? P.posts.slice(0, 6) : [];
+    const body = posts.map((p) => `<h3 style="font-size:14px;margin:18px 0 6px">${esc(p.kind)} · ${esc(p.title)}</h3><pre style="white-space:pre-wrap;font:13px/1.6 ui-monospace,Menlo,monospace;background:#F5F5F7;border-radius:10px;padding:14px">${esc(p.text)}</pre>`).join("");
+    for (const a of admins) {
+      await send(a.email, { subject: `今日发帖稿 ${P.date || ""} · ${posts.length} 篇（${posts.map((p) => p.kind).join(" / ")}）`, tags: ["post"],
+        text: posts.map((p) => p.text).join("\n\n==========\n\n"), html: layout({ title: "今日发帖稿（复制即可）", intro: "由当天数据自动生成，已过措辞自检。复制【标题】与【正文】到 linux.do 对应分类即可。", body, footer: "只发管理员，不对外。" }) });
+    }
+  }
+
   if (b.kind === "weekly") {
     const url = P.url || `${site}/weekly/${P.week || ""}`;
     const best = Array.isArray(P.best) ? P.best.slice(0, 10) : [];

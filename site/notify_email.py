@@ -73,6 +73,11 @@ def audit_payload():
 
 def main():
     arg = sys.argv[1] if len(sys.argv) > 1 else "auto"
+    if arg == "post":
+        pj = os.path.join(ROOT, "data", "posts", "today.json")
+        if not os.path.exists(pj): return print("发帖稿：没有可发的")
+        posts = json.load(io.open(pj, encoding="utf-8"))
+        return run("post", {"date": today.isoformat(), "posts": posts})
     if arg == "audit":
         p = audit_payload()
         return run("audit", p) if p else print("数据核查：今天没有新情况，不发")
