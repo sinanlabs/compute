@@ -308,6 +308,10 @@ def main():
     _t = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8)))
     week_id = "%d-w%02d" % _t.isocalendar()[:2]
     AV7 = availability(db, hours=168)
+    # 退场规则：7 天里探测 ≥100 次且一次都没连上 → 视为已下线（页面保留、标"7 天未连通"，不进任何榜、不计入可达统计）
+    DEAD = {d_ for d_, v in AV7.items() if v["n"] >= 100 and (v["uptime"] or 0) == 0}
+    for s_ in sites: s_["dead"] = s_["domain"] in DEAD
+    CLOSED = CLOSED | DEAD   # 榜单排除口径：注册已关 ∪ 已下线
     site_by = {s_["domain"]: s_ for s_ in sites}
     def _nm(d_): return (site_by.get(d_) or {}).get("name")
     elig = [(d_, v) for d_, v in AV7.items() if v["n"] >= 24 and d_ in site_by and site_by[d_]["n_models"] >= 10 and d_ not in CLOSED]   # 关闭注册的站不上榜
@@ -392,7 +396,7 @@ def main():
     rank = {"week": week_id, "media": media_rank, "date": D.now8()[:10], "window_days": 7, "n_sites": len(sites), "n_quotes": stats_quotes if False else None,
             "uptime": up_board, "fast": fast_board, "flagship": flagship, "dual": dual, "volatility": vol_board, "zero_change": zero_change, "n_big": len(big),
             "coverage": cov_board, "probe": probe_cov, "audit": rank_audit, "audit_open": (lambda: (db.execute("SELECT COUNT(*) c FROM quality_hold WHERE cleared IS NULL").fetchone()["c"]))() if True else 0, "eligible_uptime": len(elig), "dist_up": dist_up, "low": low_board, "price": price_board,
-            "register": {"closed": len(CLOSED), "open": sum(1 for v in REG.values() if v[0] == "open"), "unknown": sum(1 for v in REG.values() if v[0] not in ("open", "closed"))}}
+            "dead": len(DEAD), "register": {"closed": len(CLOSED - DEAD), "open": sum(1 for v in REG.values() if v[0] == "open"), "unknown": sum(1 for v in REG.values() if v[0] not in ("open", "closed"))}}
     stats = {"confirmed": len(sites), "with_quotes": sum(1 for s_ in sites if s_["n_models"]), "quotes": db.execute("SELECT COUNT(*) c FROM offer_norm WHERE vendor_kind='relay' AND superseded_by IS NULL").fetchone()["c"],
              "seen_domains": db.execute("SELECT COUNT(*) c FROM seen_domain").fetchone()["c"], "held": len(HELD),
              "clusters": {k: sum(1 for s_ in sites if s_["cluster"] and s_["cluster"]["code"] == k) for k in ("ultra", "cheap", "near", "high", "held")},

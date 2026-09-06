@@ -653,6 +653,7 @@ def build_sites():
         av = s.get("avail") or {}
         up = "—" if av.get("uptime") is None else '<span class="up %s">%.0f%%</span>' % ("good" if av["uptime"] >= 90 else "bad" if av["uptime"] < 50 else "", av["uptime"])
         pic = ('<span class="pill %s">%s%s</span>' % (code, esc(cl["name"]), (" · 中位 %s" % pct(s["median"])) if s["median"] is not None and code != "held" else "")) if cl else '<span class="pill none">定价接口未公开</span>'
+        if s.get("dead"): pic += '<span class="pill" style="background:#EEF0F6;color:var(--ink-2);margin-left:6px">7 天未连通</span>'
         rows.append('<tr data-cl="%s" data-nm="%d"><td><a class="dom" href="/s/%s">%s</a>%s</td><td>%s</td><td class="num">%s</td><td class="num">%s</td><td>%s</td><td class="num">%s</td><td class="mono" style="font-size:12px">%s</td></tr>'
                     % (code, s["n_models"], esc(s["domain"]), esc(s["domain"]), ('<div class="sub">%s</div>' % esc(s["name"])) if s.get("name") else "", pic, s["n_models"] if s["n_models"] else "—",
                        ('<span style="color:var(--good)">%d</span> / <span style="color:var(--crit)">%d</span>' % (s["ok_count"], s["un_count"])) if s["n_models"] and code != "held" else "—", up, ("%dms" % av["ttfb_p50"]) if av.get("ttfb_p50") else "—", esc(s["first_seen"])))
@@ -665,6 +666,14 @@ def build_sites():
 <script id="d" type="application/json">{{data}}</script>""",
         n=st["confirmed"], nq=st["confirmed"] - st["with_quotes"], filters=filters, rows="".join(rows),
         data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+    submit_card = u"""<section class="card pad rise" id="submit" style="--i:3;margin-top:18px"><h2 class="sec">提交一个中转站</h2><p class="lead">你知道的站还没在总表里？填域名，我们当晚做一次面板确认，命中就收录。只收域名，不收任何推广参数；收录与否只看能不能确认它是模型 API 中转站，与谁提交无关。</p>
+<div id="sub-gate" class="callout" style="margin-top:12px">正在读取登录状态…</div>
+<div id="sub-form" style="display:none;margin-top:12px"><div style="display:flex;gap:10px;flex-wrap:wrap"><input id="sub-dom" placeholder="例如 toapis.cn" style="flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit;font-size:14px;background:var(--card)"><button class="btn p" id="sub-go">提交</button></div><p class="sub" id="sub-msg" style="margin-top:8px"></p><div id="sub-mine" class="sub" style="margin-top:6px"></div></div>
+<script>(function(){var g=document.getElementById("sub-gate"),f=document.getElementById("sub-form"),M=document.getElementById("sub-msg");var ST={pending:"待核对（当晚处理）",confirmed:"已确认收录",already_listed:"已在总表",no_panel:"可达但不是可确认的中转面板",unreachable:"连不上"};
+function mine(){fetch("/api/submit",{credentials:"include"}).then(function(r){return r.json();}).then(function(j){var it=j.items||[];if(!it.length)return;document.getElementById("sub-mine").innerHTML="我提交过的："+it.slice(0,8).map(function(x){return esc(x.domain)+"（"+(ST[x.status]||x.status)+"）";}).join(" · ");});}
+fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).then(function(m){if(m&&m.user){g.style.display="none";f.style.display="";mine();}else{g.innerHTML='提交需要登录（用来防刷）。<a href="/login?return_to=/sites%23submit" style="color:var(--p-ink)">登录 →</a>';}}).catch(function(){g.textContent="暂时无法读取登录状态。";});
+document.getElementById("sub-go").addEventListener("click",function(){var v=document.getElementById("sub-dom").value.trim();if(!v)return;M.textContent="提交中…";fetch("/api/submit",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({domain:v})}).then(function(r){return r.json();}).then(function(j){if(j.ok){M.textContent=(j.duplicate?"这个站已经在队列里：":"已收到：")+j.domain+"，"+(ST[j.status]||j.status)+"。";document.getElementById("sub-dom").value="";mine();}else{M.textContent={bad_domain:"域名格式不对",too_many_requests:"今天提交太多了，明天再来",login_required:"请先登录"}[j.error]||"出错了";}}).catch(function(){M.textContent="网络错误，请重试。";});});})();</script></section>"""
+    body = body + submit_card
     return shell("中转站总表 · Sinan Compute", "%d 个经面板指纹确认的模型 API 中转站：价格画像、在卖模型数、24h 可达率、首次收录日期。" % st["confirmed"], "/sites", body, active="sites", page="sites", crumbs=[("中转站总表",)])
 
 # ------------------------------------------------------------------ 站点页
@@ -673,7 +682,7 @@ def build_site(s):
     price = ("%s 元 / $1" % f["price"] + ((" · Stripe %s" % f["stripe"]) if f.get("stripe") not in (None, 8) else "")) if f.get("price") is not None else "未暴露"
     facts = [
         ("价格画像", cl["name"] if cl else "无比对", ("中位 %s" % pct(s["median"])) if (cl and not held and s["median"] is not None) else (cl["help"] if cl else "定价接口未公开，没有能对上参考价的模型"), "t" if not (cl and not held and s["median"] is not None) else ""),
-        ("24h 可达", ("%.0f%%" % av["uptime"]) if av.get("uptime") is not None else "—", ("延迟 p50 %dms · %d 次探测 · %s" % (av["ttfb_p50"], av["n"], D["probe_node"])) if av.get("ttfb_p50") else "尚无探测", ""),
+        ("24h 可达", ("7 天未连通" if s.get("dead") else (("%.0f%%" % av["uptime"]) if av.get("uptime") is not None else "—")), ("连续 7 天、≥100 次探测一次都没连上；页面保留，不进任何榜" if s.get("dead") else (("延迟 p50 %dms · %d 次探测 · %s" % (av["ttfb_p50"], av["n"], D["probe_node"])) if av.get("ttfb_p50") else "尚无探测")), "t" if s.get("dead") else ""),
         ("在卖模型", str(s["n_models"]) if s["n_models"] else "—", ("说得通 %d · 低于成本下限 %d" % (s["ok_count"], s["un_count"])) if (s["n_models"] and not held) else ("只列名义报价" if held else "定价接口未公开，暂无报价"), ""),
         ("充值比例", price, "面板 price 字段：每 $1 名义额度收多少元", "t"),
         ("一致性探针", ("%d / %d 一致" % (s["probe"]["consistent"], s["probe"]["pairs"])) if s.get("probe") else "—",

@@ -371,6 +371,10 @@ HTML = {
 "用邮箱验证码登录时，我们只保存邮箱地址（用于发验证码与你自己开启的提醒）；验证码本身只存哈希，10 分钟后自动销毁。用 Google 登录时，我们保存 Google 账号编号、显示名、头像地址与已验证的邮箱。": "When you sign in with an email code, we store only the email address (to send codes and the alerts you switch on); the code itself is stored only as a hash and destroyed after 10 minutes. When you sign in with Google, we store the Google account id, display name, avatar URL and verified email.",
 # ---------- 数据核查 ----------
 "本期待核 · {n} 条": "Under review this week · {n}", "榜首若比第二名低 40% 以上且只此一家，先不进榜，等核对原始条目后放行；另有 {n} 条待核行（单位提示不一致 / 价格孤点 / 按规格计价）不参与比对。规则见口径与定义。": "A board leader more than 40% below the runner-up, with no second site close to it, is held out until its raw record is checked; {n} more rows are on hold (unit hint mismatch / lone outlier / spec-dependent price) and excluded from comparison. Rules in Definitions.",
+# ---------- 收录 / 退场 / 提交 ----------
+"7 天未连通": "Unreachable for 7 days", "连续 7 天、≥100 次探测一次都没连上；页面保留，不进任何榜": "No successful probe in 7 days (≥100 attempts); page kept, excluded from all boards",
+"提交一个中转站": "Submit a relay site", "你知道的站还没在总表里？填域名，我们当晚做一次面板确认，命中就收录。只收域名，不收任何推广参数；收录与否只看能不能确认它是模型 API 中转站，与谁提交无关。": "Know a site that is not listed yet? Enter its domain and we run a panel fingerprint check that night; if it matches, it is listed. Domains only, no referral parameters; listing depends solely on whether it can be confirmed as a model-API relay, not on who submits it.",
+"正在读取登录状态…": "Checking sign-in…", "提交": "Submit", "例如 toapis.cn": "e.g. toapis.cn",
 # ---------- 一致性探针 ----------
 "能力抽样 答对 {n}/{n}": "Capability sample {n}/{n} correct", "能力抽样 答对 {n}/{n} · 多渠道中位 {n}": "Capability sample {n}/{n} correct · peer median {n}", "能力抽样 答对 {n}/{n} · 中位样本不足": "Capability sample {n}/{n} correct · too few peers for a median",
 "能力抽样": "Capability sample", "{n} 个模型 · 低于中位 {n}": "{n} models · {n} below median", "30 道机器判分小题，本站答对数与同模型其他渠道中位数比": "30 machine-graded short tasks; this site's correct count vs. the median of other channels for the same model", "尚未用 Key 抽样": "Not yet sampled with a key",
@@ -479,6 +483,8 @@ HTML = {
 
 # app.js 字面量子串（按长度降序替换；短词放最后兜底）
 JS = {
+    "待核对（当晚处理）": "Pending (checked tonight)", "已确认收录": "Confirmed and listed", "已在总表": "Already listed", "可达但不是可确认的中转面板": "Reachable but not a recognisable relay panel", "连不上": "Unreachable",
+    "提交需要登录（用来防刷）。": "Sign-in required (anti-spam). ", "我提交过的：": "My submissions: ", "提交中…": "Submitting…", "这个站已经在队列里：": "Already queued: ", "已收到：": "Received: ", "域名格式不对": "Invalid domain", "今天提交太多了，明天再来": "Daily limit reached, try tomorrow", "请先登录": "Please sign in first",
     "登录": "Sign in", "注册": "Sign up", "登录 →": "Sign in →", "登录并关注 →": "Sign in and watch →", "会出现在你的关注列表，价格、可达率或探针结果变化时提醒你。不设密码：邮箱验证码，或用 Google / GitHub 账号。": " will appear in your watch list, and you get alerted when price, reachability or probe results change. No passwords: an email code, or a Google / GitHub account.",
     "Google / GitHub 登录只读取公开资料与邮箱；邮箱只用于登录识别与你自己开启的提醒；所有价格数据不登录也全部可见。": "Google / GitHub sign-in reads only your public profile and email; your email is used only to recognise you and for alerts you switch on; all price data is visible without signing in.",
     "登录后这里是你关注的站和模型。不设密码：邮箱验证码，或用 Google / GitHub 账号。": "Once signed in, your watched sites and models appear here. No passwords: an email code, or a Google / GitHub account.",
