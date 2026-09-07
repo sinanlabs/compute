@@ -7,7 +7,7 @@
   每天  daily    价格变动日报（主流模型变动 ≥5 条才生成）+ 新收录 + 7 天未连通
   任意  check    自测工具介绍（一次性，手动 python3 site/linuxdo_post.py check）
 用法：python3 site/linuxdo_post.py [auto|rank|model|probe|daily|check]"""
-import os, io, sys, json, datetime as dt
+import os, io, sys, json, re, datetime as dt
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.wording import lint
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
@@ -106,8 +106,21 @@ def post_check(D, M):
          "参考计数来自 ≥3 个有 Key 渠道的一致结果；只有 2 个渠道一致的标「弱参考」。结果可以选择回流给我们（不含 Key），帮助扩大检测覆盖。"]
     return "check", L[0].lstrip("# "), "\n".join(L[1:]) + FOOT
 
+def strip_links(text):
+    """新账号版：去掉所有链接与可被自动识别成链接的域名，改成可搜索的文字。"""
+    text = re.sub(r"https?://compute\.sinanlab\.com/rank/[\w-]+", "站内「司南榜」页", text)
+    text = re.sub(r"https?://compute\.sinanlab\.com/method", "站内「口径与定义」页", text)
+    text = re.sub(r"https?://compute\.sinanlab\.com/m/[\w.\-]+", "站内该模型页", text)
+    text = re.sub(r"https?://compute\.sinanlab\.com/check", "站内「测试模型真伪」页", text)
+    text = re.sub(r"https?://compute\.sinanlab\.com/sites", "站内「中转站总表」页", text)
+    text = re.sub(r"https?://\S+", "", text)
+    text = text.replace("数据与方法：", "站名：Sinan Compute（司南算力），搜索即可；数据与方法见")
+    return text
+
 def main():
     arg = sys.argv[1] if len(sys.argv) > 1 else "auto"
+    nolinks = "--nolinks" in sys.argv
+    if nolinks: sys.argv = [a for a in sys.argv if a != "--nolinks"]; arg = sys.argv[1] if len(sys.argv) > 1 else "auto"
     D, M = load(); today = dt.datetime.now(BJ); wd = today.weekday()
     kinds = {"auto": ["daily"] + (["rank"] if wd == 0 else []) + (["model"] if wd == 2 else []) + (["probe"] if wd == 4 else []),
              "all": ["rank", "model", "probe", "daily", "check"]}.get(arg, [arg])
@@ -118,10 +131,11 @@ def main():
         res = gens[k](D, M)
         if not res: print("  %s：今天数据不够，不生成" % k); continue
         kind, title, body = res
+        if nolinks: body = strip_links(body)
         bad = [x for x in lint(title + "\n" + body) if x[1] == "banned_term"]
         if bad: print("  %s：措辞自检命中 %s，不发" % (kind, bad[:3])); continue
         txt = "【标题】\n%s\n\n【正文】\n%s\n" % (title, body)
-        io.open(os.path.join(outdir, kind + ".md"), "w", encoding="utf-8").write(txt); made.append((kind, title, txt))
+        io.open(os.path.join(outdir, kind + ("-nolinks" if nolinks else "") + ".md"), "w", encoding="utf-8").write(txt); made.append((kind, title, txt))
     if made:
         io.open(os.path.join(ROOT, "data", "posts", "today.md"), "w", encoding="utf-8").write("\n\n==========\n\n".join(t for _, _, t in made))
         json.dump([{"kind": k, "title": t, "text": x} for k, t, x in made], io.open(os.path.join(ROOT, "data", "posts", "today.json"), "w", encoding="utf-8"), ensure_ascii=False)
