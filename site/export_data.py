@@ -5,7 +5,7 @@
 真实价格变动（同 sku 前后价不同）、模型芯片按厂商分组。
 """
 from __future__ import unicode_literals
-import os, sys, json, re, statistics as st
+import re, os, sys, json, statistics as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import db as D
 from core.cost_floor import band
@@ -319,7 +319,23 @@ def main():
     for s_ in sites: s_["dead"] = s_["domain"] in DEAD
     CLOSED = CLOSED | DEAD   # 榜单排除口径：注册已关 ∪ 已下线
     site_by = {s_["domain"]: s_ for s_ in sites}
-    def _nm(d_): return (site_by.get(d_) or {}).get("name")
+    def _nm(d_):
+        """榜单/帖子用的站名：去掉站方塞在名字里的联系方式（QQ 号、微信、TG、"充值联系"），只留品牌名。"""
+        n = (site_by.get(d_) or {}).get("name")
+        if not n: return None
+        n = re.sub(r"(充值)?(联系|咨询|加|找)?\s*(QQ|Q|qq|微信|vx|VX|wx|WX|TG|tg|Telegram|电报)[:：]?\s*[A-Za-z0-9_@]{4,}.*$", "", n)
+        n = re.sub(r"\b[Qq]\d{5,}\b.*$", "", n); n = re.sub(r"https?://\S+", "", n)
+        n = n.strip(" -·|,，。;；")[:30]
+        return n or None
+    def _dd(rows, val, key="domain"):
+        """同一运营方的多个域名（toapis.cn / toapis.com、runapi.host / runapi.co）只占一个名次：站名相同且数值相差 <2% 视为同站，保留先出现的，其余记进 also。"""
+        out = []
+        for r in rows:
+            nm_ = r.get("name"); v = val(r)
+            dup = next((o for o in out if nm_ and o.get("name") == nm_ and v is not None and val(o) is not None and abs(v - val(o)) <= 0.02 * max(abs(v), 1e-9)), None)
+            if dup: dup.setdefault("also", []).append(r[key]); continue
+            out.append(r)
+        return out
     elig = [(d_, v) for d_, v in AV7.items() if v["n"] >= 24 and d_ in site_by and site_by[d_]["n_models"] >= 10 and d_ not in CLOSED]   # 关闭注册的站不上榜
     up_board = [{"domain": d_, "name": _nm(d_), "uptime": v["uptime"], "n": v["n"], "p50": v["ttfb_p50"]} for d_, v in sorted(elig, key=lambda kv: (-kv[1]["uptime"], kv[1]["ttfb_p50"] or 9e9))[:8]]
     fast_board = [{"domain": d_, "name": _nm(d_), "uptime": v["uptime"], "n": v["n"], "p50": v["ttfb_p50"]} for d_, v in sorted([kv for kv in elig if kv[1]["uptime"] >= 99 and kv[1]["ttfb_p50"]], key=lambda kv: kv[1]["ttfb_p50"])[:8]]
@@ -328,6 +344,7 @@ def main():
     vol_board = [{"domain": d_, "name": _nm(d_), "n": n_} for d_, n_ in sorted([(s_["domain"], vol.get(s_["domain"], 0)) for s_ in big if vol.get(s_["domain"], 0) > 0], key=lambda x: -x[1])[:8]]
     zero_change = sum(1 for s_ in big if vol.get(s_["domain"], 0) == 0)
     cov_board = [{"domain": s_["domain"], "name": s_.get("name"), "n": s_["n_models"]} for s_ in sorted([s_ for s_ in sites if s_["n_models"] and s_["domain"] not in CLOSED], key=lambda s_: -s_["n_models"])[:8]]
+    cov_board = _dd(cov_board, lambda x: x["n"])
     def _inrange(m): return sorted([r for r in m["rows"] if not r["held"] and r["band"] in ("explainable", "normal") and r["vendor"] not in CLOSED], key=lambda r: r["out"])
     flagship = []
     for m in [x for x in models if x["is_latest"]]:
@@ -338,8 +355,10 @@ def main():
         m = next((x for x in models if x["id"] == mid), None); return {r["vendor"]: r for r in _inrange(m)} if m else {}
     g6, f51 = _rows_of("gpt-6-astra"), _rows_of("claude-fable-5.1")
     dual = sorted([{"domain": v, "name": _nm(v), "gpt6": g6[v]["out"], "fable": f51[v]["out"], "sum": round(g6[v]["out"] + f51[v]["out"], 3)} for v in set(g6) & set(f51)], key=lambda x: x["sum"])[:8]
+    dual = _dd(dual, lambda x: x["sum"])
     probe_cov = sorted([dict(domain=s_["domain"], name=s_.get("name"), **s_["probe"]) for s_ in sites if s_.get("probe")], key=lambda x: (-x["consistent"], -x["pairs"]))
     # 可达分布 + 最低 8 家（满屏 100% 没有区分度，改成看分布和尾部）
+    fast_board = _dd(fast_board, lambda x: x["p50"]); up_board = _dd(up_board, lambda x: x["uptime"])
     dist_up = {"full": sum(1 for _, v in elig if v["uptime"] >= 99.95), "hi": sum(1 for _, v in elig if 99 <= v["uptime"] < 99.95), "low": sum(1 for _, v in elig if v["uptime"] < 99)}
     low_board = [{"domain": d_, "name": _nm(d_), "uptime": v["uptime"], "n": v["n"], "p50": v["ttfb_p50"]} for d_, v in sorted(elig, key=lambda kv: (kv[1]["uptime"], -(kv[1]["ttfb_p50"] or 0)))[:8]]
     # 价格优势榜：最新代模型在说得通区间内的实付中位数（参考价的几成）最低；≥8 个可比模型
@@ -350,6 +369,7 @@ def main():
         for r in m["rows"]:
             if not r["held"] and r["band"] in ("explainable", "normal"): psr.setdefault(r["vendor"], []).append(r["ratio"])
     price_board = sorted([{"domain": v, "name": _nm(v), "median": round(st.median(rs), 4), "n": len(rs)} for v, rs in psr.items() if len(rs) >= 8 and v not in CLOSED], key=lambda x: x["median"])[:8]
+    price_board = _dd(price_board, lambda x: x["median"])
     # 期号徽章：只对四张“正向语义”榜发（响应 / 价格优势 / 双旗舰 / 覆盖），每站取最好名次
     BOARD_NAME = {"fast": "响应榜", "price": "价格优势榜", "dual": "双旗舰榜", "coverage": "覆盖榜"}
     placements = {}
@@ -375,8 +395,9 @@ def main():
                 if not inr: continue
                 keyf = (lambda r: r.get("per_s") or r.get("eff")) if mod == "video" else (lambda r: r.get("eff"))
                 seen_site, best = set(), []
-                for r in sorted([r for r in inr if keyf(r)], key=keyf):   # 同一站多个版本只取最低的一条
+                for r in sorted([r for r in inr if keyf(r)], key=keyf):   # 同一站多个版本只取最低的一条；同名同价的别名域不重复占位
                     if r["site"] in seen_site: continue
+                    if any(_nm(b["site"]) and _nm(b["site"]) == _nm(r["site"]) and abs(keyf(b) - keyf(r)) <= 0.02 * keyf(r) for b in best): seen_site.add(r["site"]); continue
                     seen_site.add(r["site"]); best.append(r)
                     if len(best) >= 4: break
                 # 规则 D · 榜首差距：榜首比第二名低 40% 以上且只此一家 → 榜首待核，不进榜（写 quality_hold，核查放行前不再上榜）
@@ -393,7 +414,8 @@ def main():
                     media_rank[mod].append({"family": f["family"], "name": f.get("name") or f["family"], "ref": (f.get("ref") or {}).get("usd") or best[0].get("ref_price"), "n_inrange": len(inr), "n_sites": f.get("n_sites"),
                                             "rows": [{"site": r["site"], "name": _nm(r["site"]), "value": round(keyf(r), 4), "ratio": r["ratio"], "label": r.get("version_label") or r.get("name")} for r in best]})
         media_rank["coverage"] = [{"domain": d_, "name": _nm(d_), "n": len(fs)} for d_, fs in sorted(fam_count.items(), key=lambda kv: -len(kv[1]))[:8]]
-        media_rank["price"] = sorted([{"domain": d_, "name": _nm(d_), "median": round(st.median(rs), 4), "n": len(rs)} for d_, rs in site_ratios.items() if len(rs) >= 5], key=lambda x: x["median"])[:8]
+        media_rank["price"] = _dd(sorted([{"domain": d_, "name": _nm(d_), "median": round(st.median(rs), 4), "n": len(rs)} for d_, rs in site_ratios.items() if len(rs) >= 5], key=lambda x: x["median"]), lambda x: x["median"])[:8]
+        media_rank["coverage"] = _dd(media_rank["coverage"], lambda x: x["n"])
         for i, x in enumerate(media_rank["price"]):
             cur = placements.get(x["domain"])
             if cur is None or i + 1 < cur["pos"]:

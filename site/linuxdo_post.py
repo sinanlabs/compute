@@ -20,8 +20,15 @@ def load():
     D = json.load(io.open(os.path.join(HERE, "dist", "data_v2.json"), encoding="utf-8"))
     M = json.load(io.open(os.path.join(HERE, "dist", "media.json"), encoding="utf-8")) if os.path.exists(os.path.join(HERE, "dist", "media.json")) else {}
     return D, M
+import re as _re
+def clean_name(n):
+    if not n: return None
+    n = _re.sub(r"(充值)?(联系|咨询|加|找)?\s*(QQ|Q|qq|微信|vx|VX|wx|WX|TG|tg|Telegram|电报)[:：]?\s*[A-Za-z0-9_@]{4,}.*$", "", n)
+    n = _re.sub(r"\b[Qq]\d{5,}\b.*$", "", n); n = _re.sub(r"https?://\S+", "", n).strip(" -·|,，。;；")[:30]
+    return n or None
 def nm(D, dom):
-    s = next((x for x in D["sites"] if x["domain"] == dom), None); return ("%s（%s）" % (dom, s["name"])) if s and s.get("name") and s["name"] != dom else dom
+    s = next((x for x in D["sites"] if x["domain"] == dom), None); n = clean_name(s.get("name")) if s else None
+    return ("%s（%s）" % (dom, n)) if n and n != dom else dom
 
 def post_rank(D, M):
     R = D["rank"]; st = D["stats"]; wk = R["week"]
