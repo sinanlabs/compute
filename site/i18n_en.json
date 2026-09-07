@@ -700,6 +700,8 @@
 "用邮箱验证码登录时，我们只保存邮箱地址（用于发验证码与你自己开启的提醒）；验证码本身只存哈希，10 分钟后自动销毁。用 Google 登录时，我们保存 Google 账号编号、显示名、头像地址与已验证的邮箱。": "When you sign in with an email code, we store only the email address (to send codes and the alerts you switch on); the code itself is stored only as a hash and destroyed after 10 minutes. When you sign in with Google, we store the Google account id, display name, avatar URL and verified email.",
 "本期待核 · {n} 条": "Under review this week · {n}",
 "榜首若比第二名低 40% 以上且只此一家，先不进榜，等核对原始条目后放行；另有 {n} 条待核行（单位提示不一致 / 价格孤点 / 按规格计价）不参与比对。规则见口径与定义。": "A board leader more than 40% below the runner-up, with no second site close to it, is held out until its raw record is checked; {n} more rows are on hold (unit hint mismatch / lone outlier / spec-dependent price) and excluded from comparison. Rules in Definitions.",
+"订阅型（Sub2API）· 套餐价需登录": "Subscription relay (Sub2API) · plan prices behind login",
+"这是一个 Sub2API 面板的订阅型中转站：按套餐（月付 / 次数）售卖 Claude Code、Codex 等订阅额度，价格要登录后才能看到，本站不做套餐比价。这里列的是能公开核实的事实：面板类型、注册是否开放、登录方式、24h 可达。": "This is a subscription-type relay on the Sub2API panel: it sells Claude Code, Codex and similar quota as plans (monthly / per-use), and prices are only visible after login, so we do not compare plans. Listed here are the publicly verifiable facts: panel type, whether registration is open, sign-in methods, 24h reachability.",
 "7 天未连通": "Unreachable for 7 days",
 "连续 7 天、≥100 次探测一次都没连上；页面保留，不进任何榜": "No successful probe in 7 days (≥100 attempts); page kept, excluded from all boards",
 "提交一个中转站": "Submit a relay site",

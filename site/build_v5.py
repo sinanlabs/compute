@@ -653,6 +653,7 @@ def build_sites():
         av = s.get("avail") or {}
         up = "—" if av.get("uptime") is None else '<span class="up %s">%.0f%%</span>' % ("good" if av["uptime"] >= 90 else "bad" if av["uptime"] < 50 else "", av["uptime"])
         pic = ('<span class="pill %s">%s%s</span>' % (code, esc(cl["name"]), (" · 中位 %s" % pct(s["median"])) if s["median"] is not None and code != "held" else "")) if cl else '<span class="pill none">定价接口未公开</span>'
+        if s.get("panel") == "sub2api" and not cl: pic = '<span class="pill none">订阅型（Sub2API）· 套餐价需登录</span>'
         if s.get("dead"): pic += '<span class="pill" style="background:#EEF0F6;color:var(--ink-2);margin-left:6px">7 天未连通</span>'
         rows.append('<tr data-cl="%s" data-nm="%d"><td><a class="dom" href="/s/%s">%s</a>%s</td><td>%s</td><td class="num">%s</td><td class="num">%s</td><td>%s</td><td class="num">%s</td><td class="mono" style="font-size:12px">%s</td></tr>'
                     % (code, s["n_models"], esc(s["domain"]), esc(s["domain"]), ('<div class="sub">%s</div>' % esc(s["name"])) if s.get("name") else "", pic, s["n_models"] if s["n_models"] else "—",
@@ -708,7 +709,10 @@ def build_site(s):
     notice = ('<div class="notice rise" style="--i:1;margin-bottom:14px">%s</div>' % esc(cl["help"])) if held else ""
     if (s.get("register") or {}).get("state") == "closed":
         notice += '<div class="notice rise" style="--i:1.2;margin-bottom:14px;border-color:#F04438"><b>新用户注册已关闭。</b>站方注册接口返回"管理员关闭了新用户注册"（探测于 %s）。价格数据仅供已有账号的用户参考；本站榜单不收录关闭注册的站。</div>' % esc((s.get("register") or {}).get("checked") or "")
-    noq = '<div class="callout" style="margin-top:14px">这个站的定价接口未公开或需要登录，本站暂无它的报价。可达性与面板事实仍每小时更新。</div>' if not s["n_models"] else ""
+    noq = ""
+    if not s["models"]:
+        noq = ('<div class="callout" style="margin-top:14px">这是一个 Sub2API 面板的订阅型中转站：按套餐（月付 / 次数）售卖 Claude Code、Codex 等订阅额度，价格要登录后才能看到，本站不做套餐比价。这里列的是能公开核实的事实：面板类型、注册是否开放、登录方式、24h 可达。</div>' if s.get("panel") == "sub2api" else
+               '<div class="callout" style="margin-top:14px">这个站的定价接口未公开或需要登录，本站暂无它的报价。可达性与面板事实仍每小时更新。</div>')
     tbl = ('<section class="card rise" style="margin-top:16px;--i:3"><div class="pad" style="padding-bottom:6px"><h2 class="sec">它卖的模型与实付价</h2><p class="lead">%s</p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">实付</th><th class="num">参考价</th><th>实付是参考价的几成</th><th>怎么看</th><th class="num">证据</th></tr></thead><tbody>%s</tbody></table></div><div class="tfoot"><span>%s</span></div></section>'
            % ("计价方式待核：只列名义报价换算的实付，不出比率、不分档。" if held else "参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。", "".join(rows), DISCLAIMER)) if s["n_models"] else ""
     body = tpl(u"""<div class="sitehead rise" style="--i:0"><div><h1>{{domain}}<span class="nm">{{name}}</span></h1></div><div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">{{pic}}<button class="btn o watch" data-kind="site" data-key="{{domain}}">关注这个站</button><a class="btn p" href="/go/{{domain}}" rel="noopener nofollow">前往站点 →</a></div></div>

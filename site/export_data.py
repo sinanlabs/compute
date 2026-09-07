@@ -109,6 +109,12 @@ def status_facts(db):
         try:
             js = json.loads(open(os.path.join(os.path.dirname(D.DB_PATH), r["raw_key"]), "rb").read().decode("utf-8", "ignore"))
             d = js.get("data", js)
+            if "registration_enabled" in d or "site_name" in d:   # Sub2API 的 settings/public
+                login = ["邮箱"] + [n for k, n in (("linuxdo_oauth_enabled", "LINUX DO"), ("github_oauth_enabled", "GitHub"), ("google_oauth_enabled", "Google"), ("passkey_enabled", "Passkey")) if d.get(k)]
+                facts[r["domain"]] = {"system_name": d.get("site_name"), "version": None, "login": login, "turnstile": bool(d.get("turnstile_enabled") or d.get("tencent_captcha_enabled")),
+                                      "price": None, "stripe": None, "display": None, "announce": False, "checkin": False, "start_time": None,
+                                      "panel_family": "sub2api", "invite_only": bool(d.get("invitation_code_enabled")), "email_verify": bool(d.get("email_verify_enabled"))}
+                continue
             login = [n for k, n in (("email_verification", "邮箱"), ("github_oauth", "GitHub"), ("wechat_login", "微信"), ("telegram_oauth", "Telegram"),
                                     ("linuxdo_oauth", "LINUX DO"), ("oidc_enabled", "OIDC"), ("discord_oauth", "Discord")) if d.get(k)]
             facts[r["domain"]] = {"system_name": d.get("system_name"), "version": d.get("version"), "login": login,
