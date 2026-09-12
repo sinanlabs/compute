@@ -131,8 +131,11 @@ h1,h2,h3{margin:0;letter-spacing:-.01em}h2.sec{font-size:20px;font-weight:700}
 .calc input{width:58px;border:0;border-bottom:2px solid var(--p);background:transparent;font:inherit;font-family:var(--mono);color:var(--ink);text-align:right;outline:0;padding:2px 4px}
 .calc .pre{border:1px solid var(--hair-2);background:var(--card);border-radius:8px;padding:3px 8px;font-size:11.5px;cursor:pointer}
 .calc .pre:hover{border-color:var(--p);color:var(--p-ink)}
-.chips{display:flex;gap:8px;flex-wrap:wrap;padding:16px 24px 6px;align-items:center}
-.chips .vn{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-right:2px}
+.chips{display:flex;flex-direction:column;gap:0;padding:10px 24px 6px}
+.chips .vrow{display:grid;grid-template-columns:104px 1fr;gap:10px 14px;align-items:center;padding:8px 0;border-top:1px solid var(--hair)}.chips .vrow:first-child{border-top:0}
+.chips .vc{display:flex;flex-wrap:wrap;gap:8px}.chips .vrow.tail{border-top:1px dashed var(--hair)}
+.chips .vn{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+@media (max-width:560px){.chips .vrow{grid-template-columns:1fr;gap:6px}}
 .chip{border:1px solid var(--hair);background:var(--card);border-radius:999px;padding:7px 12px;cursor:pointer;font-size:12.5px;font-weight:500;color:var(--ink-2);display:inline-flex;gap:7px;align-items:center;transition:all .3s var(--ease)}
 .chip .n{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
 .chip:hover{border-color:var(--p);color:var(--p-ink);transform:translateY(-1px)}
@@ -487,15 +490,16 @@ def build_index():
     default = next((m["id"] for m in D["models"] if m["is_latest"] and m["n_relay"] >= 20), D["models"][0]["id"])
     dm = next(m for m in D["models"] if m["id"] == default)
     # 芯片：按厂商分组，最新两代默认显示，其余折叠
-    chips = []
+    chips = []   # 按厂商一行一组：左列厂商名，右列该厂商的模型芯片（最新两代默认显示，旧版本折叠）
     for v, ids in D["groups"].items():
-        chips.append('<span class="vn">%s</span>' % esc(D["vendor_name"].get(v, v)))
+        row = []
         for mid in ids:
             m = next((x for x in D["models"] if x["id"] == mid), None)
             if not m: continue
-            chips.append('<button class="chip%s" data-id="%s" aria-pressed="%s">%s<span class="n">%d 家</span></button>' % ("" if m["is_latest"] else " old", esc(m["id"]), "true" if m["id"] == default else "false", esc(m["name"]), m["n_relay"]))
+            row.append('<button class="chip%s" data-id="%s" aria-pressed="%s">%s<span class="n">%d 家</span></button>' % ("" if m["is_latest"] else " old", esc(m["id"]), "true" if m["id"] == default else "false", esc(m["name"]), m["n_relay"]))
+        if row: chips.append('<div class="vrow"><span class="vn">%s</span><div class="vc">%s</div></div>' % (esc(D["vendor_name"].get(v, v)), "".join(row)))
     n_old = sum(1 for m in D["models"] if not m["is_latest"])
-    if n_old: chips.append('<button class="chip more" id="more" data-label="展开 %d 个旧版本">展开 %d 个旧版本</button>' % (n_old, n_old))
+    if n_old: chips.append('<div class="vrow tail"><span class="vn"></span><div class="vc"><button class="chip more" id="more" data-label="展开 %d 个旧版本">展开 %d 个旧版本</button></div></div>' % (n_old, n_old))
     changes = D.get("changes", [])[:8]
     feed = []
     if D.get("new_sites"): feed.append(('今日', '新收录 <b>%d</b> 个站' % len(D["new_sites"]), '全部经面板指纹确认 · <a href="/sites" style="color:var(--p-ink)">看站点总表</a>'))
