@@ -57,7 +57,7 @@ HTML = {
 "输出 $/百万": "Output $/M", "输入 $/百万": "Input $/M", "$/秒": "$/s", "${n} / 秒": "${n} / s",
 "中转站名义价 $/百万输出": "Relay list price $/M output", "中转站名义价 · $/百万输出": "Relay list price · $/M output",
 "全部 {n} 家 →": "All {n} sites →", "全部 {n} 个模型 →": "All {n} models →", "价格画像": "Price profile", "在卖模型": "Models sold", "常见问题": "FAQ",
-"关注这个站": "Watch this site", "关注这个模型": "Watch this model", "前往站点 →": "Visit site →",
+"关注这个站": "Watch this site", "关注这个模型": "Watch this model", "前往站点 ↗": "Visit site →",
 "延迟 p{n} {n}ms · {n} 次探测 · 美国西部探测节点": "Latency p{n} {n}ms · {n} probes · US-West probe node", "延迟 p{n}": "Latency p{n}",
 "充值比例": "Top-up rate", "{n} 元 / ${n}": "¥{n} per ${n}", "面板 price 字段：每 ${n} 名义额度收多少元": "Panel \"price\" field: CNY charged per ${n} of nominal credit",
 "登录方式": "Login methods", "面板": "Panel", "版本": "Version", "邮箱": "Email", "微信": "WeChat", "无人机验证": "No CAPTCHA", "需人机验证": "CAPTCHA required", "未暴露": "Not exposed",

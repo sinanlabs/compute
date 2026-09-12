@@ -42,7 +42,9 @@ def pretty(m):
     if m in PRETTY: return PRETTY[m]
     s = m.replace("-", " ").replace("claude ", "Claude ").replace("gpt ", "GPT-").replace("gemini ", "Gemini ").replace("deepseek ", "DeepSeek ")
     s = s.replace("kimi ", "Kimi ").replace("glm ", "GLM-").replace("grok ", "Grok ").replace("qwen", "Qwen ").replace("minimax ", "MiniMax ")
-    return re.sub(r"\b(v\d)", lambda x: x.group(1).upper(), s).replace("  ", " ").strip()
+    s = re.sub(r"\b(v\d)", lambda x: x.group(1).upper(), s).replace("  ", " ").strip()
+    # 展示名统一首字母大写：fable→Fable、astra→Astra、flash→Flash、m3→M3；已含连字符大写的（GPT-6）不动
+    return " ".join((w[:1].upper() + w[1:]) if w and w[0].isalpha() and "-" not in w else w for w in s.split())
 
 def fx(db):
     r = db.execute("SELECT rate, as_of, snapshot_id FROM fx_rate ORDER BY id DESC LIMIT 1").fetchone()
