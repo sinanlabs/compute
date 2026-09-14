@@ -712,6 +712,8 @@
 "正在读取登录状态…": "Checking sign-in…",
 "提交": "Submit",
 "例如 toapis.cn": "e.g. toapis.cn",
+"¥{s} · {n} 台": "¥{s} · {n} hosts",
+"{n} 台": "{n} hosts",
 "算力租赁": "GPU rental",
 "算力租赁账本 · 每日 · {s}": "GPU rental ledger · daily · {s}",
 "一张显卡租一小时多少钱": "What one GPU costs per hour",

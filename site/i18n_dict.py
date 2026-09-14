@@ -378,6 +378,7 @@ HTML = {
 "提交一个中转站": "Submit a relay site", "你知道的站还没在总表里？填域名，我们当晚做一次面板确认，命中就收录。只收域名，不收任何推广参数；收录与否只看能不能确认它是模型 API 中转站，与谁提交无关。": "Know a site that is not listed yet? Enter its domain and we run a panel fingerprint check that night; if it matches, it is listed. Domains only, no referral parameters; listing depends solely on whether it can be confirmed as a model-API relay, not on who submits it.",
 "正在读取登录状态…": "Checking sign-in…", "提交": "Submit", "例如 toapis.cn": "e.g. toapis.cn",
 # ---------- 算力租赁账本 ----------
+"¥{s} · {n} 台": "¥{s} · {n} hosts", "{n} 台": "{n} hosts",
 "算力租赁": "GPU rental", "算力租赁账本 · 每日 · {s}": "GPU rental ledger · daily · {s}", "一张显卡租一小时多少钱": "What one GPU costs per hour",
 "Token 的生产成本里，芯片占四到五成。这里每天记录主流 GPU 在公开租赁平台上的单卡时价：RunPod 的安全云与社区云标价、Vast.ai 按需市场的最低价与中位价（只取可靠度 ≥95% 的机器）、共绩算力官网的起步价。每个数字带抓取时间与原文快照。国内平台大多需要登录才能看到价格，接入中。": "Chips are 40–55% of what a token costs to produce. This ledger records daily per-GPU hourly prices on public rental platforms: RunPod secure and community cloud list prices, Vast.ai on-demand market minimum and median (hosts with ≥95% reliability only), and the starting price on suanli.cn. Every number carries a fetch time and a raw snapshot. Most Chinese platforms show prices only after login; being connected.",
 "GPU": "GPU", "{n} GB 显存": "{n} GB VRAM", "安全云": "Secure cloud", "社区云": "Community cloud", "按需最低": "On-demand min", "按需中位": "On-demand median", "官网起步价": "Starting price", "共绩算力": "Suanli", "{n} 天 {s}": "{n}d {s}",
