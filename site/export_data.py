@@ -205,6 +205,21 @@ def t2_summary(db, PB, days=7, min_peers=3):
         if (site, m) in PB: PB[(site, m)]["cap"] = cap
         else: PB[(site, m)] = {"status": "cap_only", "ok": 0, "n": 0, "echo": None, "peers": 0, "offset": 0, "ts": d["ts"], "cap": cap}
 
+def task_tokens(db, days=14):
+    """任务成本账单原料：每模型完成同一套 30 道小题，各渠道报的 completion_tokens 中位（每题）。只统计成功且有 usage 的行。"""
+    try:
+        rows = db.execute("SELECT model, site, task_idx, completion_tokens, prompt_tokens FROM probe_t2 WHERE status=200 AND completion_tokens IS NOT NULL AND ts >= datetime('now','-%d days')" % days).fetchall()
+    except Exception:
+        return {}
+    by = {}
+    for r in rows: by.setdefault(r["model"], {}).setdefault(r["site"], []).append((r["completion_tokens"], r["prompt_tokens"] or 0))
+    out = {}
+    for m, sites in by.items():
+        per_site = [(st.median([c for c, _ in v]), st.median([p for _, p in v]), len(v)) for v in sites.values() if len(v) >= 10]
+        if not per_site: continue
+        out[m] = {"out_per_task": round(st.median([x[0] for x in per_site]), 1), "in_per_task": round(st.median([x[1] for x in per_site]), 1), "channels": len(per_site), "n_tasks": sum(x[2] for x in per_site)}
+    return out
+
 def price_changes(db, days=7):
     out = []
     for r in db.execute("""SELECT n.vendor, n.model, n.unit, o.price AS old_p, n.price AS new_p, n.valid_from, n.vendor_kind
@@ -217,7 +232,7 @@ def price_changes(db, days=7):
 def main():
     global FX
     db = D.connect(); FX = fx(db)
-    F = floors(db); R = relay_rows(db); AV = availability(db); SF = status_facts(db); PB = probe_summary(db); t2_summary(db, PB)
+    F = floors(db); R = relay_rows(db); AV = availability(db); SF = status_facts(db); PB = probe_summary(db); t2_summary(db, PB); TT = task_tokens(db)
     try: REG = {r["domain"]: (r["register_state"], r["register_msg"], r["register_checked"]) for r in db.execute("SELECT domain, register_state, register_msg, register_checked FROM relay_candidate WHERE level>=1")}
     except Exception: REG = {}
     CLOSED = {d_ for d_, v in REG.items() if v[0] == "closed"}
@@ -434,7 +449,7 @@ def main():
              "reg_closed": len(CLOSED), "reg_open": sum(1 for v in REG.values() if v[0] == "open"),
              "probed_sites": sum(1 for s_ in sites if s_["probe"]), "probed_pairs": len(PB), "probe_consistent": sum(1 for v in PB.values() if v["status"] == "consistent"), "cap_pairs": sum(1 for v in PB.values() if v.get("cap")), "cap_below": sum(1 for v in PB.values() if (v.get("cap") or {}).get("status") == "below"), "probe_divergent": sum(1 for v in PB.values() if v["status"] == "divergent")}
     data = {"generated_at": D.now8(), "fx": {"rate": FX[0], "as_of": FX[1], "sid": FX[2]}, "models": models, "groups": groups,
-            "vendor_name": VENDOR_NAME, "sites": sites, "stats": stats, "changes": changes[:40], "new_sites": new_sites,
+            "vendor_name": VENDOR_NAME, "sites": sites, "stats": stats, "task_tokens": TT, "changes": changes[:40], "new_sites": new_sites,
             "snaps": {str(k): v for k, v in snaps.items() if v}, "label_help": LABEL_HELP, "probe_node": "美国西部探测节点", "rank": rank,
             "probe_help": "用本站在该中转站注册的 Key，向声明的模型发 12 条固定探针串（中英/emoji/代码/生僻字混排），各只要 1 个输出 token；记录返回的 prompt_tokens 计数与回显的模型名。同一模型不同分词器切出的 token 数不同：若 ≥3 个渠道对同一模型报出完全相同的 12 个计数，视为该模型的共识簇；某渠道的计数与共识簇不同，只记为“计数不一致”，不推测成因。这是一致性测量，不是真伪判定。"}
     rank["n_quotes"] = stats["quotes"]

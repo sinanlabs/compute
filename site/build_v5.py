@@ -443,6 +443,7 @@ ICONS = {
     "media": '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/>',
     "rank": '<path d="M8 21h8M12 17v4M6 3h12v5a6 6 0 0 1-12 0z"/><path d="M6 5H3v2a3 3 0 0 0 3 3M18 5h3v2a3 3 0 0 1-3 3"/>',
     "check": '<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>',
+    "pindex": '<path d="M3 17l5-6 4 3 4-5 5 4"/><path d="M3 21h18"/>',
     "method": '<path d="M4 6h16M4 12h10M4 18h7"/>',
     "data": '<path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/>',
 }
@@ -455,7 +456,7 @@ def shell(title, desc, path, body, active="", page="", crumbs=None, extra_head="
     st = D["stats"]
     canonical = BASE + path
     nav = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl, ('<span class="badge">%s</span>' % b) if b else "")
-                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("check", "/check", "测试模型真伪", "")])
+                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("pindex", "/price-index", "Token 价格指数", ""), ("check", "/check", "测试模型真伪", "")])
     nav2 = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl)
                    for k, h, lbl in [("method", "/method", "口径与定义"), ("data", "/method#data", "开放数据")])
     crumb = '<div class="crumb"><a href="https://sinanlab.com">← 司南实验室</a>%s</div>' % "".join(" › " + ('<a href="%s">%s</a>' % (c[1], esc(c[0])) if len(c) > 1 and c[1] else esc(c[0])) for c in (crumbs or []))
@@ -533,6 +534,12 @@ def build_index():
            '<div class="card"><div class="k">T1 · 一致性探针</div><div class="v">%d<small>组 站×模型</small></div><p>用我们的 Key 向同一模型发固定探针串，比对 token 计数：%d 组与其他渠道一致，%d 组不一致，其余样本不足。</p></div>'
            '<div class="card"><div class="k">T2 · 能力抽样</div><div class="v">%d<small>组 站×模型</small></div><p>30 道机器判分小题，本站答对数与同模型多渠道中位数比；%d 组低于中位。</p></div>'
            % (st["reachable"], st["confirmed"], st.get("probed_pairs", 0), st.get("probe_consistent", 0), st.get("probe_divergent", 0), st.get("cap_pairs", 0), st.get("cap_below", 0)))
+    pistrip = ""
+    if PI and PI.get("latest"):
+        L_ = PI["latest"]
+        pistrip = ('<a class="card pad rise" href="/price-index" style="--i:3.2;margin-top:18px;display:flex;flex-wrap:wrap;gap:10px 26px;align-items:baseline"><span class="eyebrow" style="color:var(--p)">司南 Token 价格指数 · %s</span>'
+                   '<span><b style="font-family:var(--mono);font-size:22px">%d%%</b> <span class="sub">全市场：市场中位实付是官方价的几成</span></span>%s<span class="sub" style="margin-left:auto">每日更新 · 可引用 · 看指数 →</span></a>'
+                   % (PI["generated_at"][:10], round(L_["all"]["ratio"] * 100), "".join('<span><b style="font-family:var(--mono)">%d%%</b> <span class="sub">%s</span></span>' % (round(L_[k]["ratio"] * 100), n_) for k, n_ in (("flagship", "旗舰"), ("mid", "中档"), ("flash", "快速")) if L_.get(k))))
     # 首页 HTML 只内联默认模型（约 30 KB）；40 个模型的全量账本放 assets/ledger.json，浏览器空闲时或点到别的模型时再取
     dml = [m for m in D["models"] if m["id"] == default]
     sids = {D["fx"]["sid"]}
@@ -549,6 +556,7 @@ def build_index():
 <div class="cta"><a class="btn w" href="#ledger">查一个模型</a><a class="btn g" href="/rank">看司南榜</a><a class="btn g" href="/check">用我的 Key 自测</a></div></div>
 <div class="stat"><b data-count="{{quotes_raw}}">{{quotes}}</b><small>条实付报价 · 24h 内</small></div><div class="tag">地球影像 NASA BLUE MARBLE · BLACK MARBLE<br>实时大气散射 · 拖动转动地球</div></section>
 <div class="kpis">{{kpis}}</div>
+{{pistrip}}
 <section class="rise" id="rank" style="--i:3.5;margin-top:22px"><div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><div><div class="eyebrow" style="color:var(--p)">司南榜 · {{week}}</div><h2 class="sec" style="margin-top:4px">本周司南榜</h2><p class="lead" style="margin-top:4px">每张榜只回答一个可测量的问题，按测量值排序，每周一出刊；不含任何商业变量，不构成推荐。</p></div><a class="btn o" href="/rank" style="margin-left:auto">看全部 12 张榜 →</a></div><div class="rkmini">{{rkmini}}</div></section>
 <section class="card ledger rise" id="ledger" style="--i:4">
 <div class="lh"><div><h2 class="sec">模型实付账本</h2><p class="lead">先点一个模型，下面的表就换成它。输出价按 $/百万 token；中转价已按人民币充值通道折成实付；参考价取官方与公开市场的最低价。</p></div>
@@ -567,7 +575,7 @@ def build_index():
 <section class="rise" style="--i:8;margin-top:22px"><div class="eyebrow" style="color:var(--p)">SinanLab · 司南实验室</div><h2 class="sec" style="margin-top:4px">三个站，一把尺</h2><div class="prods"><a class="card" href="/"><b>Sinan Compute · 司南·算力</b><p>模型 API 中转站的实付价、可达率、一致性与能力检测，每周司南榜。</p></a><a class="card" href="https://robo.sinanlab.com"><b>Sinan Robo · 司南·机脑</b><p>开源具身模型（VLA）的许可证、权重、可上机器人本体，做成可审计的索引与榜单。</p></a><a class="card" href="https://sinanlab.com/"><b>母站 sinanlab.com</b><p>为什么可信、收入透明、隐私政策，以及两个站的订阅与账号。</p></a></div></section>
 <noscript><div class="notice" style="margin-top:18px">本页的模型切换、证据抽屏需要 JavaScript。上面的表格是默认模型 {{dmname}} 的静态版本；全部站点见 <a href="/sites">站点总表</a>。</div></noscript>
 <script id="d" type="application/json">{{data}}</script>""",
-        n=st["confirmed"], quotes=format(st["quotes"], ","), quotes_raw=st["quotes"], kpis=kpi_html, week=esc(RK.get("week", "")), rkmini=rkmini, det=det, mlinks="".join('<a href="/m/%s">%s</a>' % (esc(m["id"]), esc(m["name"])) for m in D["models"]), chips="".join(chips), rows=ssr_ledger_rows(dm), disc=DISCLAIMER, tiles=tiles_html, feed=feed_html, dmname=esc(dm["name"]), data=jsdata(light))
+        n=st["confirmed"], quotes=format(st["quotes"], ","), quotes_raw=st["quotes"], kpis=kpi_html, week=esc(RK.get("week", "")), rkmini=rkmini, det=det, pistrip=pistrip, mlinks="".join('<a href="/m/%s">%s</a>' % (esc(m["id"]), esc(m["name"])) for m in D["models"]), chips="".join(chips), rows=ssr_ledger_rows(dm), disc=DISCLAIMER, tiles=tiles_html, feed=feed_html, dmname=esc(dm["name"]), data=jsdata(light))
     desc = "司南实验室出品。%d 个中转站的模型 API 实付价对着官方与公开市场价逐条算成比率，%s 条报价，每个数字可追溯抓取快照。不收任何被测渠道的钱。" % (st["confirmed"], format(st["quotes"], ","))
     ld = [{"@context": "https://schema.org", "@type": "WebSite", "name": "Sinan Compute", "alternateName": "司南·算力", "url": BASE + "/", "inLanguage": "zh-CN",
            "publisher": {"@type": "Organization", "name": "Sinan Lab", "alternateName": "司南实验室", "url": "https://sinanlab.com", "logo": BASE + "/brand/sinanlab-mark.png", "email": "hello@sinanlab.com"},
@@ -1001,6 +1009,87 @@ document.getElementById("em").addEventListener("keydown",function(e){if(e.key===
 <script id="d" type="application/json">{{data}}</script>""", data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
     return shell("登录 · Sinan Compute", "用邮箱验证码、Google 或 GitHub 账号登录司南实验室，不设密码。", "/login", body, page="login", crumbs=[("登录",)], extra_head='<meta name="robots" content="noindex">')
 
+# ------------------------------------------------------------------ 司南 Token 价格指数
+PI = json.load(io.open(os.path.join(HERE, "price_index.json"), encoding="utf-8")) if os.path.exists(os.path.join(HERE, "price_index.json")) else None
+
+def pi_chart(series, keys, w=860, h=260):
+    """折价率折线图（内联 SVG，无依赖）。keys = [(key, label, color)]。"""
+    if len(series) < 2: return ""
+    pad_l, pad_r, pad_t, pad_b = 44, 16, 14, 30
+    xs = list(range(len(series)))
+    vals = [d[k]["ratio"] * 100 for d in series for k, _, _ in keys if d.get(k)]
+    lo, hi = 0, max(100, (max(vals) // 20 + 1) * 20)
+    def X(i): return pad_l + (w - pad_l - pad_r) * i / max(1, len(series) - 1)
+    def Y(v): return pad_t + (h - pad_t - pad_b) * (1 - (v - lo) / (hi - lo))
+    grid = "".join('<line x1="%d" x2="%d" y1="%.1f" y2="%.1f" stroke="var(--hair)"/><text x="%d" y="%.1f" font-size="10" fill="var(--ink-3)" text-anchor="end">%d%%</text>' % (pad_l, w - pad_r, Y(v), Y(v), pad_l - 6, Y(v) + 3, v) for v in range(0, int(hi) + 1, 20))
+    lines = ""
+    for k, lbl, col in keys:
+        pts = [(X(i), Y(d[k]["ratio"] * 100)) for i, d in enumerate(series) if d.get(k)]
+        if len(pts) < 2: continue
+        lines += '<polyline fill="none" stroke="%s" stroke-width="2" points="%s"/>' % (col, " ".join("%.1f,%.1f" % p for p in pts))
+        lines += '<circle cx="%.1f" cy="%.1f" r="3" fill="%s"/>' % (pts[-1][0], pts[-1][1], col)
+    step = max(1, len(series) // 6)
+    xt = "".join('<text x="%.1f" y="%d" font-size="10" fill="var(--ink-3)" text-anchor="middle">%s</text>' % (X(i), h - 8, series[i]["date"][5:]) for i in range(0, len(series), step))
+    legend = "".join('<span style="display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12px"><i style="width:14px;height:3px;background:%s;display:inline-block;border-radius:2px"></i>%s</span>' % (col, lbl) for _, lbl, col in keys)
+    return '<div class="sub" style="margin:8px 0 4px">%s</div><svg viewBox="0 0 %d %d" width="100%%" style="display:block;max-width:%dpx">%s%s%s</svg>' % (legend, w, h, w, grid, lines, xt)
+
+def build_price_index():
+    if not PI or not PI.get("latest"): return None
+    L = PI["latest"]; S = PI["series"]; wk = S[-8] if len(S) >= 8 else S[0]
+    def chg(k):
+        a, b = (L.get(k) or {}).get("level"), (wk.get(k) or {}).get("level")
+        return ("%+.1f%%" % ((a / b - 1) * 100)) if a and b else "—"
+    cards = []
+    for k, nm_ in (("all", "全市场"), ("flagship", "旗舰（官方 ≥$20/M）"), ("mid", "中档（$2–20/M）"), ("flash", "快速（<$2/M）")):
+        v = L.get(k)
+        if not v: continue
+        cards.append('<div class="card kpi"><div class="k">%s</div><div class="v"><span>%d%%</span><small>官方价的几成</small></div><div class="n">市场中位 $%s/M ≈ ¥%s/M · %d 个模型 · 点位 %.1f · 7 天 %s</div></div>' % (nm_, round(v["ratio"] * 100), fmt(v["price_usd"]), fmt(v["price_cny"]), v["n_models"], v.get("level") or 0, chg(k)))
+    chart = pi_chart(S, [("all", "全市场", "#07070B"), ("flagship", "旗舰", "#6E56F5"), ("mid", "中档", "#B54708"), ("flash", "快速", "#067647")])
+    rows = []
+    for mid, m in sorted(PI["models"].items(), key=lambda kv: (-{"flagship": 3, "mid": 2, "flash": 1}[kv[1]["tier"]], -kv[1]["floor"])):
+        t = m["series"][-1]; t7 = m["series"][-8] if len(m["series"]) >= 8 else m["series"][0]
+        d7 = ("%+.0f%%" % ((t["median"] / t7["median"] - 1) * 100)) if t7["median"] else "—"
+        rows.append('<tr><td><a href="/m/%s"><b>%s</b></a><div class="sub">%s</div></td><td class="num">$%s</td><td class="num"><b>$%s</b><div class="sub">¥%s</div></td><td class="num sub">$%s – $%s</td><td class="num">%d</td><td class="num"><span class="r">%d%%</span></td><td class="num sub">%s</td></tr>' % (
+            esc(mid), esc(m["name"]), {"flagship": "旗舰", "mid": "中档", "flash": "快速"}[m["tier"]], fmt(m["floor"]), fmt(t["median"]), fmt(t["median"] * PI["fx"]), fmt(t["p25"]), fmt(t["p75"]), t["n"], round(t["ratio"] * 100), d7))
+    TT = D.get("task_tokens") or {}
+    if TT:
+        trs = []
+        for mid, v in sorted(TT.items(), key=lambda kv: -kv[1]["out_per_task"]):
+            m = PI["models"].get(mid); price = m["series"][-1]["median"] if m else None; floor = m["floor"] if m else None
+            cost = lambda p: ("¥%.2f" % (v["out_per_task"] * 1000 / 1e6 * p * PI["fx"])) if p else "—"
+            trs.append('<tr><td><b>%s</b></td><td class="num">%s</td><td class="num">%s</td><td class="num">%s</td><td class="num">%s</td><td class="num sub">%d 渠道 · %d 题</td></tr>' % (esc(m["name"] if m else mid), v["out_per_task"], v["in_per_task"], cost(floor), cost(price), v["channels"], v["n_tasks"]))
+        task_html = '<div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">每题输出 token（中位）</th><th class="num">每题输入 token</th><th class="num">1000 题输出成本 · 官方价</th><th class="num">1000 题输出成本 · 市场中位</th><th class="num">样本</th></tr></thead><tbody>%s</tbody></table></div>' % "".join(trs)
+    else:
+        task_html = '<div class="callout">数据积累中：能力抽样从 2026-09-14 起记录每题的 Token 用量，几天后这里会出现"同一件事各模型花多少 Token、多少钱"。</div>'
+    embed = '&lt;a href="%s/price-index"&gt;&lt;img src="%s/badge/price-index.svg" alt="司南 Token 价格指数" width="360" height="72"&gt;&lt;/a&gt;' % (BASE, BASE)
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">司南 Token 价格指数 · 每日 · {{date}}</div><h1 style="font-size:26px;margin-top:6px">中国中转市场：每百万 Token 多少钱</h1><p class="lead">Token 正在成为 AI 服务的计量与结算单位，但没有人每天发布它的市场价。我们把 {{n_sites}} 个中转站每天的实付报价压成一条可引用的序列：每个主流模型的跨站中位价、它相对官方价的折价率，以及一个不受模型进出影响的链式点位（{{base}} = 100）。</p></div>
+<div class="kpis rise" style="--i:1">{{cards}}</div>
+<section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">折价率走势</h2><p class="lead" style="margin-top:4px">市场中位实付 ÷ 官方参考价。旗舰模型长期在 15% 左右，因为多数站按"1 元充 1 美元额度"卖、名义价照抄官方价；快速档接近官方价。这是测量结果，不是对哪一档的推荐。</p>{{chart}}</section>
+<section class="card rise" style="--i:3;margin-top:18px"><div class="pad" style="padding-bottom:6px"><h2 class="sec">今日各模型</h2><p class="lead" style="margin-top:4px">只计入当天有 ≥{{min_sites}} 个站报价的最新两代模型；"7 天"为市场中位价相对 7 天前的变化。</p></div>
+<div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">官方参考 $/M</th><th class="num">市场中位</th><th class="num">25–75 分位</th><th class="num">站数</th><th class="num">折价率</th><th class="num">7 天</th></tr></thead><tbody>{{rows}}</tbody></table></div></section>
+<section class="card pad rise" style="--i:4;margin-top:18px"><h2 class="sec">任务成本：同一件事各模型花多少 Token</h2><p class="lead" style="margin-top:4px">Token 有三张账单：生产成本、市场单价、任务成本。前两张这页给了，第三张来自我们每天对各模型发的同一套 30 道小题：记录每题实际消耗的输出 token，乘上单价，就是"做这件事花多少钱"。</p>{{task}}</section>
+<section class="card pad rise" style="--i:5;margin-top:18px"><h2 class="sec">口径、数据与引用</h2><p class="lead" style="margin-top:4px">{{method}}</p>
+<p class="sub" style="margin-top:10px">数据：<a href="/price-index.json" style="color:var(--p-ink)">price-index.json</a>（全部序列，每日更新）· 引用时请写"司南 Token 价格指数（Sinan Token Price Index），compute.sinanlab.com"。</p>
+<div style="margin-top:12px"><img src="/badge/price-index.svg" alt="司南 Token 价格指数" width="360" height="72" style="display:block;margin-bottom:8px"><code style="display:block;font-size:11.5px;background:var(--ground-2);padding:10px 12px;border-radius:10px;word-break:break-all">{{embed}}</code></div></section>
+<script id="d" type="application/json">{{data}}</script>""",
+        date=PI["generated_at"][:10], n_sites=D["stats"]["confirmed"], base=PI["base_date"], cards="".join(cards), chart=chart, min_sites=PI["min_sites"], rows="".join(rows), task=task_html, method=esc(PI["method"]), embed=embed,
+        data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+    return shell("司南 Token 价格指数 · 每百万 Token 多少钱 · Sinan Compute", "中国模型 API 中转市场每日 Token 价格指数：各主流模型跨站中位实付价、相对官方价的折价率、链式点位，可引用可下载。", "/price-index", body, active="pindex", page="pindex", crumbs=[("Token 价格指数",)])
+
+def price_index_badge():
+    L = PI["latest"] if PI and PI.get("latest") else None
+    if not L: return None
+    font = "Inter,-apple-system,Segoe UI,PingFang SC,Source Han Sans SC,Noto Sans SC,sans-serif"
+    parts = " · ".join("%s %d%%" % (n, round(L[k]["ratio"] * 100)) for k, n in (("flagship", "旗舰"), ("mid", "中档"), ("flash", "快速")) if L.get(k))
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="72" viewBox="0 0 360 72" role="img" aria-label="司南 Token 价格指数">'
+            '<rect width="360" height="72" rx="14" fill="#07070B"/><rect x=".5" y=".5" width="359" height="71" rx="13.5" fill="none" stroke="#F5F5F7" stroke-opacity=".14"/>'
+            '<g transform="translate(14 14) scale(.6875)">%s</g><line x1="68" y1="18" x2="68" y2="54" stroke="#B8A4FA" stroke-width="1"/>'
+            '<text x="80" y="29" font-family="%s" font-size="11" fill="#B8A4FA">司南 Token 价格指数 · %s</text>'
+            '<text x="80" y="51" font-family="%s" font-size="15" font-weight="600" fill="#F5F5F7">全市场 %d%% · %s</text>'
+            '<text x="346" y="29" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#B8A4FA">点位 %.1f</text>'
+            '<text x="346" y="51" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#F5F5F7">$%s/M</text></svg>'
+            % (MARK_SVG, font, PI["generated_at"][:10], font, round(L["all"]["ratio"] * 100), parts, L["all"].get("level") or 0, fmt(L["all"]["price_usd"])))
+
 def build_check():
     body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">自测 · 登录后可用</div><h1 style="font-size:26px;margin-top:6px">测试模型真伪</h1><p class="lead">填一个中转站地址和你在该站的 Key，浏览器直接向该站发 8 条固定探针请求（每条只要 4 个输出 token，一次自测通常不到一分钱），把返回的 token 计数、回显模型名、首字节延迟，和我们从多个渠道得到的参考计数逐位比对。<b>Key 只在你的浏览器里，不上传、不落库、不经过我们的服务器。</b></p><p class="callout">当前提供一致性检测，不能单凭测试结果判定模型真伪。</p></div>
 <div id="gate" class="card pad rise" style="--i:1"><div class="callout">正在读取登录状态…</div></div>
@@ -1109,6 +1198,9 @@ def main():
         for w in weeks: W("weekly/%s.html" % w["week"], build_weekly(w, weeks))
         W("weekly.html", build_weekly_index(weeks))
     W("check.html", build_check()); W("login.html", build_login())
+    if PI and PI.get("latest"):
+        W("price-index.html", build_price_index()); shutil.copy(os.path.join(HERE, "price_index.json"), os.path.join(DIST, "price-index.json"))
+        os.makedirs(os.path.join(DIST, "badge"), exist_ok=True); W("badge/price-index.svg", price_index_badge())
     if os.path.exists(os.path.join(HERE, "tokref.json")): shutil.copy(os.path.join(HERE, "tokref.json"), os.path.join(DIST, "assets", "tokref.json"))
     rank_snapshots = []
     if D.get("rank"):
@@ -1153,7 +1245,7 @@ def main():
             else: shutil.copy(src_, dst_)
     W("assets/ledger.json", jsdata({"models": D["models"], "snaps": D["snaps"]}))
     W("robots.txt", "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n" % BASE)
-    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly")] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
+    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily")] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
     W("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join('  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq></url>\n' % (BASE, u, GEN_DATE, c) for u, c in urls) + "</urlset>\n")
     W("favicon.svg", FAVICON)
     W("_headers", "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/assets/*\n  Cache-Control: public, max-age=604800\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n/img/*\n  Cache-Control: public, max-age=2592000\n")
