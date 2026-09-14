@@ -30,6 +30,16 @@ def nm(D, dom):
     s = next((x for x in D["sites"] if x["domain"] == dom), None); n = clean_name(s.get("name")) if s else None
     return ("%s（%s）" % (dom, n)) if n and n != dom else dom
 
+def index_line():
+    """司南 Token 价格指数一行（有数据才有）。"""
+    p = os.path.join(HERE, "price_index.json")
+    if not os.path.exists(p): return ""
+    PI = json.load(io.open(p, encoding="utf-8")); L = PI.get("latest")
+    if not L: return ""
+    parts = " · ".join("%s %d%%" % (n, round(L[k]["ratio"] * 100)) for k, n in (("flagship", "旗舰"), ("mid", "中档"), ("flash", "快速")) if L.get(k))
+    return "\n**司南 Token 价格指数（%s）**：全市场中位实付是官方价的 %d%%（$%s/百万输出 ≈ ¥%s），%s；点位 %.1f（%s = 100）。每日更新：%s/price-index\n" % (
+        PI["generated_at"][:10], round(L["all"]["ratio"] * 100), fmt(L["all"]["price_usd"]), fmt(L["all"]["price_cny"]), parts, L["all"].get("level") or 0, PI["base_date"], BASE)
+
 def post_rank(D, M):
     R = D["rank"]; st = D["stats"]; wk = R["week"]
     L = ["# 司南榜 %s：%d 个中转站的 7 天测量结果（响应 / 价格 / 可达 / 多模态）" % (wk, R["n_sites"]),
@@ -51,6 +61,7 @@ def post_rank(D, M):
     L.append("")
     au = R.get("audit") or []
     L.append("**本期待核**：%d 条榜首因比第二名低 40%% 以上且只此一家暂不进榜；另有 %d 条报价待核（单位提示不一致 / 价格孤点 / 按规格计价）不参与比对。" % (len(au), R.get("audit_open") or 0))
+    L.append(index_line())
     L.append("\n完整 12 张榜与永久链接：%s/rank/%s" % (BASE, wk))
     return "rank", L[0].lstrip("# "), "\n".join(L[1:]) + FOOT
 
@@ -95,6 +106,7 @@ def post_daily(D, M, min_changes=5):
     for c in ch[:40]: L.append("| %s | %s | %s | %s | %s |" % (c["vendor"], mn.get(c["model"], c["model"]), fmt(c["old"]), fmt(c["new"]), "↑" if c["new"] > c["old"] else "↓"))
     if news: L.append("\n**新收录 %d 站**（经面板指纹确认）：%s%s" % (len(news), "、".join(news[:20]), "…" if len(news) > 20 else ""))
     if dead: L.append("\n**7 天未连通**（页面保留，不进榜）：%s" % "、".join(s["domain"] for s in dead[:20]))
+    L.append(index_line())
     L.append("\n站点总表与每站的实付比率：%s/sites" % BASE)
     return "daily", L[0].lstrip("# "), "\n".join(L[1:]) + FOOT
 
@@ -113,6 +125,7 @@ def strip_links(text):
     text = re.sub(r"https?://compute\.sinanlab\.com/m/[\w.\-]+", "站内该模型页", text)
     text = re.sub(r"https?://compute\.sinanlab\.com/check", "站内「测试模型真伪」页", text)
     text = re.sub(r"https?://compute\.sinanlab\.com/sites", "站内「中转站总表」页", text)
+    text = re.sub(r"https?://compute\.sinanlab\.com/price-index", "站内「Token 价格指数」页", text)
     text = re.sub(r"https?://\S+", "", text)
     text = text.replace("数据与方法：", "站名：Sinan Compute（司南算力），搜索即可；数据与方法见")
     return text

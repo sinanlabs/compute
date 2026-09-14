@@ -1040,7 +1040,7 @@ def build_price_index():
         a, b = (L.get(k) or {}).get("level"), (wk.get(k) or {}).get("level")
         return ("%+.1f%%" % ((a / b - 1) * 100)) if a and b else "—"
     cards = []
-    for k, nm_ in (("all", "全市场"), ("flagship", "旗舰（官方 ≥$20/M）"), ("mid", "中档（$2–20/M）"), ("flash", "快速（<$2/M）")):
+    for k, nm_ in (("all", "全市场"), ("flagship", "旗舰（官方 ≥$20/M）"), ("mid", "中档（$2–20/M）"), ("flash", "快速（低于 $2/M）")):
         v = L.get(k)
         if not v: continue
         cards.append('<div class="card kpi"><div class="k">%s</div><div class="v"><span>%d%%</span><small>官方价的几成</small></div><div class="n">市场中位 $%s/M ≈ ¥%s/M · %d 个模型 · 点位 %.1f · 7 天 %s</div></div>' % (nm_, round(v["ratio"] * 100), fmt(v["price_usd"]), fmt(v["price_cny"]), v["n_models"], v.get("level") or 0, chg(k)))
