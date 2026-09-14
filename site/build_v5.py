@@ -444,6 +444,7 @@ ICONS = {
     "rank": '<path d="M8 21h8M12 17v4M6 3h12v5a6 6 0 0 1-12 0z"/><path d="M6 5H3v2a3 3 0 0 0 3 3M18 5h3v2a3 3 0 0 1-3 3"/>',
     "check": '<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>',
     "pindex": '<path d="M3 17l5-6 4 3 4-5 5 4"/><path d="M3 21h18"/>',
+    "gpu": '<rect x="4" y="6" width="16" height="12" rx="2"/><path d="M8 10h3v4H8zM13 10h3v4h-3zM2 9v6M22 9v6"/>',
     "method": '<path d="M4 6h16M4 12h10M4 18h7"/>',
     "data": '<path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/>',
 }
@@ -456,7 +457,7 @@ def shell(title, desc, path, body, active="", page="", crumbs=None, extra_head="
     st = D["stats"]
     canonical = BASE + path
     nav = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl, ('<span class="badge">%s</span>' % b) if b else "")
-                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("pindex", "/price-index", "Token 价格指数", ""), ("check", "/check", "测试模型真伪", "")])
+                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("pindex", "/price-index", "Token 价格指数", ""), ("gpu", "/gpu", "算力租赁", ""), ("check", "/check", "测试模型真伪", "")])
     nav2 = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl)
                    for k, h, lbl in [("method", "/method", "口径与定义"), ("data", "/method#data", "开放数据")])
     crumb = '<div class="crumb"><a href="https://sinanlab.com">← 司南实验室</a>%s</div>' % "".join(" › " + ('<a href="%s">%s</a>' % (c[1], esc(c[0])) if len(c) > 1 and c[1] else esc(c[0])) for c in (crumbs or []))
@@ -1069,6 +1070,7 @@ def build_price_index():
 <div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">官方参考 $/M</th><th class="num">市场中位</th><th class="num">25–75 分位</th><th class="num">站数</th><th class="num">折价率</th><th class="num">7 天</th></tr></thead><tbody>{{rows}}</tbody></table></div></section>
 <section class="card pad rise" style="--i:4;margin-top:18px"><h2 class="sec">任务成本：同一件事各模型花多少 Token</h2><p class="lead" style="margin-top:4px">Token 有三张账单：生产成本、市场单价、任务成本。前两张这页给了，第三张来自我们每天对各模型发的同一套 30 道小题：记录每题实际消耗的输出 token，乘上单价，就是"做这件事花多少钱"。</p>{{task}}</section>
 <section class="card pad rise" style="--i:5;margin-top:18px"><h2 class="sec">口径、数据与引用</h2><p class="lead" style="margin-top:4px">{{method}}</p>
+<p class="sub" style="margin-top:10px">成本层：<a href="/gpu" style="color:var(--p-ink)">算力租赁账本</a>（一张显卡租一小时多少钱）。</p>
 <p class="sub" style="margin-top:10px">数据：<a href="/price-index.json" style="color:var(--p-ink)">price-index.json</a>（全部序列，每日更新）· 引用时请写"司南 Token 价格指数（Sinan Token Price Index），compute.sinanlab.com"。</p>
 <div style="margin-top:12px"><img src="/badge/price-index.svg" alt="司南 Token 价格指数" width="360" height="72" style="display:block;margin-bottom:8px"><code style="display:block;font-size:11.5px;background:var(--ground-2);padding:10px 12px;border-radius:10px;word-break:break-all">{{embed}}</code></div></section>
 <script id="d" type="application/json">{{data}}</script>""",
@@ -1089,6 +1091,35 @@ def price_index_badge():
             '<text x="346" y="29" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#B8A4FA">点位 %.1f</text>'
             '<text x="346" y="51" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#F5F5F7">$%s/M</text></svg>'
             % (MARK_SVG, font, PI["generated_at"][:10], font, round(L["all"]["ratio"] * 100), parts, L["all"].get("level") or 0, fmt(L["all"]["price_usd"])))
+
+# ------------------------------------------------------------------ 算力租赁账本
+GPU = json.load(io.open(os.path.join(HERE, "gpu.json"), encoding="utf-8")) if os.path.exists(os.path.join(HERE, "gpu.json")) else None
+
+def build_gpu():
+    if not GPU or not GPU.get("gpus"): return None
+    PF = GPU["platforms"]; cols = [("runpod", "secure"), ("runpod", "community"), ("vast", "min"), ("vast", "median"), ("suanli", "starting")]
+    head = "".join('<th class="num">%s<div class="sub" style="font-weight:400">%s</div></th>' % (esc(PF[pf]["name"]), esc(PF[pf]["kinds"][k])) for pf, k in cols)
+    rows = []
+    for g in GPU["gpus"]:
+        q = {(x["platform"], x["kind"]): x for x in g["quotes"]}
+        cells = ""
+        for pf, k in cols:
+            x = q.get((pf, k))
+            if not x: cells += '<td class="num sub">—</td>'; continue
+            trend = ""
+            if len(x["series"]) >= 2:
+                a, b = x["series"][0][1], x["series"][-1][1]
+                if a: trend = '<div class="sub">%s %+.0f%%</div>' % ("%d 天" % len(x["series"]), (b / a - 1) * 100)
+            cells += '<td class="num"><b>$%s</b><div class="sub">¥%s%s</div>%s</td>' % (fmt(x["usd"]), fmt(x["cny"]), (" · %d 台" % x["n"]) if x["n"] > 1 else "", trend)
+        rows.append('<tr><td><b>%s</b><div class="sub">%d GB 显存</div></td>%s</tr>' % (esc(g["gpu"]), g["vram_gb"], cells))
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">算力租赁账本 · 每日 · {{date}}</div><h1 style="font-size:26px;margin-top:6px">一张显卡租一小时多少钱</h1><p class="lead">Token 的生产成本里，芯片占四到五成。这里每天记录主流 GPU 在公开租赁平台上的单卡时价：RunPod 的安全云与社区云标价、Vast.ai 按需市场的最低价与中位价（只取可靠度 ≥95% 的机器）、共绩算力官网的起步价。每个数字带抓取时间与原文快照。国内平台大多需要登录才能看到价格，接入中。</p></div>
+<section class="card rise" style="--i:1"><div class="tablewrap"><table><thead><tr><th>GPU</th>{{head}}</tr></thead><tbody>{{rows}}</tbody></table></div>
+<div class="tfoot"><span>单位：每卡每小时，美元为原始报价，人民币按当日汇率 {{fx}} 折算 · Vast.ai 为个人机主市场，价格随供需实时变动，中位价比最低价更能代表可得价 · 数据：<a href="/gpu.json" style="color:var(--p-ink)">gpu.json</a></span></div></section>
+<section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">这张账本用来做什么</h2><p class="lead" style="margin-top:4px">和 <a href="/price-index" style="color:var(--p-ink)">Token 价格指数</a> 放在一起看：一边是 Token 卖多少钱，一边是造 Token 的机器租多少钱。我们对中转报价的"低于成本下限"判定，参考的成本地板就来自公开渠道价与这类租赁价，今后会把换算假设逐条写在口径与定义里。这里只记录，不做推测。</p></section>
+<script id="d" type="application/json">{{data}}</script>""",
+        date=GPU["generated_at"][:10], head=head, rows="".join(rows), fx="%.2f" % GPU["fx"],
+        data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+    return shell("算力租赁账本 · 一张显卡租一小时多少钱 · Sinan Compute", "主流 GPU（4090 / 5090 / A100 / H100 / H200 / B200）在 RunPod、Vast.ai、共绩算力等公开租赁平台的单卡时价，每日记录，带快照。", "/gpu", body, active="gpu", page="gpu", crumbs=[("算力租赁",)])
 
 def build_check():
     body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">自测 · 登录后可用</div><h1 style="font-size:26px;margin-top:6px">测试模型真伪</h1><p class="lead">填一个中转站地址和你在该站的 Key，浏览器直接向该站发 8 条固定探针请求（每条只要 4 个输出 token，一次自测通常不到一分钱），把返回的 token 计数、回显模型名、首字节延迟，和我们从多个渠道得到的参考计数逐位比对。<b>Key 只在你的浏览器里，不上传、不落库、不经过我们的服务器。</b></p><p class="callout">当前提供一致性检测，不能单凭测试结果判定模型真伪。</p></div>
@@ -1201,6 +1232,8 @@ def main():
     if PI and PI.get("latest"):
         W("price-index.html", build_price_index()); shutil.copy(os.path.join(HERE, "price_index.json"), os.path.join(DIST, "price-index.json"))
         os.makedirs(os.path.join(DIST, "badge"), exist_ok=True); W("badge/price-index.svg", price_index_badge())
+    if GPU and GPU.get("gpus"):
+        W("gpu.html", build_gpu()); shutil.copy(os.path.join(HERE, "gpu.json"), os.path.join(DIST, "gpu.json"))
     if os.path.exists(os.path.join(HERE, "tokref.json")): shutil.copy(os.path.join(HERE, "tokref.json"), os.path.join(DIST, "assets", "tokref.json"))
     rank_snapshots = []
     if D.get("rank"):
@@ -1245,7 +1278,7 @@ def main():
             else: shutil.copy(src_, dst_)
     W("assets/ledger.json", jsdata({"models": D["models"], "snaps": D["snaps"]}))
     W("robots.txt", "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n" % BASE)
-    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily")] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
+    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily"), ("/gpu", "daily")] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
     W("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join('  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq></url>\n' % (BASE, u, GEN_DATE, c) for u, c in urls) + "</urlset>\n")
     W("favicon.svg", FAVICON)
     W("_headers", "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/assets/*\n  Cache-Control: public, max-age=604800\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n/img/*\n  Cache-Control: public, max-age=2592000\n")
