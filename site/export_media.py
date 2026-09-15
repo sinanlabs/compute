@@ -18,12 +18,15 @@ FAMILY_NAME = {"veo": "Veo（Google）", "kling": "Kling 可灵（快手）", "h
                "grok-vid": "Grok Imagine 视频（xAI）", "omni": "Gemini Omni Flash（Google）", "happyhorse": "HappyHorse", "luma": "Luma",
                "nano-banana": "Nano Banana / Gemini Image（Google）", "gpt-image": "GPT Image（OpenAI）", "seedream": "Seedream（字节）",
                "flux": "FLUX（BFL）", "qwen-image": "Qwen-Image（阿里）", "midjourney": "Midjourney", "grok-image": "Grok Imagine 图像（xAI）",
-               "kling-image": "Kling Image（快手）", "ideogram": "Ideogram", "recraft": "Recraft", "sd": "Stable Diffusion", "hidream": "HiDream"}
+               "kling-image": "Kling Image（快手）", "ideogram": "Ideogram", "recraft": "Recraft", "sd": "Stable Diffusion", "hidream": "HiDream",
+               "wan-image": "Wan 万相图像（阿里）", "z-image": "Z-Image（阿里）", "cogview": "CogView（智谱）", "cogvideo": "CogVideoX（智谱）", "jimeng-image": "即梦图像（字节）", "jimeng-video": "即梦视频（字节）",
+               "mj-video": "Midjourney 视频", "hunyuan": "混元视频（腾讯）", "hunyuan-img": "混元图像（腾讯）", "pika": "Pika", "generic": "其他 / 未归族"}
 REF_SOURCE = {"veo": "ai.google.dev 定价页（按秒）", "kling": "kling.ai/dev/pricing（按秒）", "hailuo": "platform.minimax.io 按量计费页（按秒）",
-              "nano-banana": "ai.google.dev 定价页（按张等价价）", "flux": "bfl.ai/pricing（按百万像素，1 张按 1MP）", "kling-image": "kling.ai/dev/pricing（按张）"}
+              "nano-banana": "ai.google.dev 定价页（按张等价价）", "flux": "bfl.ai/pricing（按百万像素，1 张按 1MP）", "kling-image": "kling.ai/dev/pricing（按张）",
+              "sora": "platform.openai.com/docs/pricing 视频表（按秒，720p 起）", "grok-vid": "docs.x.ai 定价（按秒，480p 起）", "grok-image": "docs.x.ai 定价（按张，1K 起）", "wan-image": "阿里百炼刊例价（按张）"}
 REF_MISSING = {"seedance": "火山方舟价格页为前端异步渲染，未能读取", "vidu": "Vidu 开放平台定价页为前端渲染，未能读取", "wan": "阿里百炼计费页为前端渲染，未能读取",
-               "sora": "OpenAI 定价页拒绝抓取（403）", "gpt-image": "OpenAI 定价页拒绝抓取（403）", "midjourney": "Midjourney 官方无按次 API 定价（订阅制）",
-               "seedream": "火山方舟价格页为前端异步渲染，未能读取", "qwen-image": "阿里百炼计费页为前端渲染，未能读取", "grok-image": "xAI 定价页未接入", "grok-vid": "xAI 定价页未接入"}
+               "gpt-image": "OpenAI 按图像 token 计价，无官方每张价，不折算", "midjourney": "Midjourney 官方无按次 API 定价（订阅制）",
+               "seedream": "火山方舟价格页为前端异步渲染，未能读取", "qwen-image": "阿里百炼计费页为前端渲染，未能读取"}
 
 
 def main():
@@ -59,14 +62,16 @@ def main():
     for lst in fam_rows.values():
         for x in lst:
             reason = QH.get((x["site"], x["name"])) or ("variable_price" if x.get("variable_price") else None)
+            if not reason and x.get("ratio") is not None and (x["ratio"] < 0.05 or x["ratio"] > 5): reason = "extreme_ratio"   # 口径 §3 极端值门：先核对再发布
             if reason: x["hold_reason"] = reason
     out = {"image": [], "video": []}
     for (mod, fam), lst in fam_rows.items():
         for x in lst: x["held"] = (x["site"] in HELD) or bool(x.get("hold_reason"))
         cmp_rows = [x for x in lst if x.get("ratio") is not None and not x["held"]]
         ref = None
-        for (m, u), (price, region, sid, vendor) in refs.items():
-            pass
+        for k_, v_ in refs.items():
+            if len(k_) != 2: continue   # ("__res__", model, unit) 是按分辨率的子表
+            (m, u), (price, region, sid, vendor) = k_, v_
         # 官方参考：取该族第一条比对里的 ref
         if cmp_rows:
             r0 = cmp_rows[0]
