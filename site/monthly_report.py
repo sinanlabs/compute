@@ -44,7 +44,7 @@ def main(month=None):
             movers.append({"id": mid, "name": mm["name"], "tier": mm["tier"], "from": s_[0]["median"], "to": s_[-1]["median"], "pct": (s_[-1]["median"] / s_[0]["median"] - 1) * 100, "n": s_[-1]["n"], "ratio": s_[-1]["ratio"]})
     movers.sort(key=lambda x: x["pct"])
     # 可达 / 检测 / 榜单
-    Dv = J(os.path.join(HERE, "dist", "data_v2.json")) or J(os.path.join(HERE, "data_v2.json")) or {}
+    Dv = J(os.path.join(HERE, "data_v2.json")) or J(os.path.join(HERE, "dist", "data_v2.json")) or {}   # 先读刚导出的，dist 里是上次构建的旧副本
     stt = Dv.get("stats", {}); R = Dv.get("rank", {})
     holds = {r[0]: r[1] for r in db.execute("SELECT reason, COUNT(*) FROM quality_hold WHERE cleared IS NULL GROUP BY 1")}
     cleared = q("SELECT COUNT(*) FROM quality_hold WHERE cleared IS NOT NULL AND cleared>=?", start.isoformat())
