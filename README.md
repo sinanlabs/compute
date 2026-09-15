@@ -5,6 +5,19 @@
 
 🌐 https://compute.sinanlab.com · 🇬🇧 https://compute.sinanlab.com/en/ · 📡 [RSS](https://compute.sinanlab.com/feed.xml) · 🧾 [Methodology](https://compute.sinanlab.com/method) · 📦 [Raw data](https://compute.sinanlab.com/data_v2.json)
 
+[![司南 Token 价格指数](https://compute.sinanlab.com/badge/price-index.svg)](https://compute.sinanlab.com/price-index)
+
+| | |
+|---|---|
+| 📈 **Token Price Index / Token 价格指数** | market median effective price ÷ official price, three tiers, daily · [page](https://compute.sinanlab.com/price-index) · [JSON](https://compute.sinanlab.com/price-index.json) |
+| 🏆 **Sinan Rankings / 司南榜** | 12 measured boards, weekly, permanent links · [page](https://compute.sinanlab.com/rank) |
+| 📰 **Monthly report / 月报** | market size, structure, prices, reachability, probes, multimodal, compute · [page](https://compute.sinanlab.com/report) · [Releases](https://github.com/sinanlabs/compute/releases) |
+| 🧪 **sinan-probe CLI** | test a relay with your own key, stdlib only · [cli/](cli/) |
+| ✅ **Verified by Sinan / 经司南核验** | free, criteria public, auto-granted and auto-revoked · [apply](https://compute.sinanlab.com/verify) |
+| 📣 **Press & researchers / 媒体与研究者** | citable data and formats · [page](https://compute.sinanlab.com/press) |
+
+Data files in `site/reports/`, `site/rank/`, `site/weekly/` are committed nightly by the pipeline.
+
 ---
 
 ## What it does / 这是什么

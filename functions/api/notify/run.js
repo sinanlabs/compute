@@ -4,7 +4,7 @@
 //   weekly payload = { week, from, to, n_changes, up, down, n_new, best:[{name, site, out, ratio}], url }
 // 收件人：登录用户里开了邮件提醒且关注命中的（daily）；订阅者（daily 档收全部变动，weekly 档收周报）。
 // 每次运行最多发 MAX 封（Resend 免费档每日 100）。措辞：只陈述变动，不推荐。
-import { json, sha256, bump } from "../_lib.js";
+import { json, sha256, hmac, bump } from "../_lib.js";
 import { sendMail, layout, table, btn, esc, mailReady } from "../_mail.js";
 import { unsubToken } from "../subscribe.js";
 import { offToken } from "../prefs.js";
@@ -118,6 +118,48 @@ export async function onRequestPost({ request, env }) {
       await send(u.email, { subject: `中转站价格周报 ${P.week || ""} · Sinan Compute`, tags: ["weekly"], text: url,
         html: layout({ title: `价格周报 ${P.week || ""}`, intro: "由每日抓取自动生成；只陈述测量，不含推荐。", body: bodyZh, footer: `<a href="${off}" style="color:#9AA0B8">关闭邮件提醒</a>` }) });
     }
+  }
+
+  if (b.kind === "owner") {
+    // 站长通知：payload.items = [{to, domain, name, kind: rank|verified|hold, ...}]。每封先查 KV optout。措辞只陈述测量与事实。
+    const items = Array.isArray(P.items) ? P.items.slice(0, 40) : [];
+    const code = (u, href, alt) => esc(`<a href="${href}"><img src="${u}" width="360" height="72" alt="${alt}"></a>`);
+    const pre = (t) => `<pre style="font-size:12px;background:#F3F3F8;padding:10px 12px;border-radius:10px;white-space:pre-wrap;word-break:break-all">${t}</pre>`;
+    const bottom = "司南实验室是 AI 基础设施的独立第三方测量者：不收被测方一分钱、不卖排位、出站链接不带推广参数。这封信只陈述测量结果，不是推荐，也没有任何付费项目。";
+    for (const it of items) {
+      const h = await sha256(String(it.to).toLowerCase());
+      if (await env.KV.get("optout:" + h)) { skipped++; continue; }
+      const off = `${site}/api/notify/optout?t=${h}.${await hmac(env.SESSION_SECRET, "optout:" + h)}`;
+      const footer = `<a href="${off}" style="color:#9AA0B8">不再接收站长通知</a> · 回复本邮件可直接联系我们 · <a href="${site}/method" style="color:#9AA0B8">口径与定义</a>`;
+      const sp = `${site}/s/${esc(it.domain)}`;
+      if (it.kind === "rank") {
+        await send(it.to, { subject: `${it.domain} 进入本周司南榜 · ${esc(it.board_name)}第 ${it.pos} 名 · ${it.week}`, tags: ["owner"], text: `${it.domain} 在 ${it.week} 司南榜 ${it.board_name} 第 ${it.pos} 名（${it.value || ""}）。榜单：${it.rank_url}；徽章：${it.badge}`,
+          html: layout({ title: `${esc(it.domain)} 进入本周司南榜`, intro: `你好，这是发给 ${esc(it.domain)} 站长的自动通知。本周（${esc(it.week)}）的司南榜里，你的站在<b>${esc(it.board_name)}</b>排第 <b>${it.pos}</b> 名，测量值 ${esc(it.value || "")}。榜单按 7 天自动测量值排序，不含任何商业变量。`,
+            body: `<p style="font-size:14px;line-height:1.7">如果愿意，可以把带期号的徽章嵌到你的网站上，点击会回到当期榜单，读者能自己核对数字：</p>${pre(code(it.badge, it.rank_url, it.board_name + " 第 " + it.pos + " 名 · " + it.week))}<p style="font-size:14px;line-height:1.7">徽章只显示榜名、名次、测量值和期号；下周名次变了，图片会自动更新。</p>${btn(sp, "看你的站点页")}<p style="font-size:13px;color:#5B5F73;margin-top:16px">${bottom}</p>`, footer }) });
+      } else if (it.kind === "verified") {
+        await send(it.to, { subject: `${it.domain} 已获得"经司南核验"标识`, tags: ["owner"], text: `${it.domain} 连续 7 天通过一致性探针、能力抽样与可达测量。徽章：${it.badge}`,
+          html: layout({ title: `${esc(it.domain)} 已获得"经司南核验"标识`, intro: `你好，这是发给 ${esc(it.domain)} 站长的自动通知。过去 7 天里，你的站在一致性探针、能力抽样、可达率三项测量上全部满足公开条件，站点页已显示"经司南核验"标识。`,
+            body: `<p style="font-size:14px;line-height:1.7">可嵌入的徽章：</p>${pre(code(it.badge, sp, "经司南核验 · " + it.domain))}<p style="font-size:14px;line-height:1.7">标识按每天的测量自动判定：任何一天不满足会自动摘除，满足后自动恢复。条件见 <a href="${site}/verify">${site}/verify</a>。</p>${btn(sp, "看你的站点页")}<p style="font-size:13px;color:#5B5F73;margin-top:16px">${bottom}</p>`, footer }) });
+      } else if (it.kind === "hold") {
+        const why = { unit_hint: "原始条目文字里带有按秒/按张一类的单位提示，与我们解析出的计价单位可能不一致", lone_outlier: "该报价低于同族市场中位的 35%，且比第二便宜的站低一半以上，暂未见第二家相近价", board_margin: "该报价若进榜会比第二名低 40% 以上且只此一家", extreme_ratio: "该报价与官方参考价的比率超出常见区间", field_drift: "你的定价接口出现了我们解析器不认识的字段" }[it.reason] || it.reason;
+        await send(it.to, { subject: `${it.domain} 有一条报价待核对 · ${esc(it.model)}`, tags: ["owner"], text: `${it.domain} ${it.model} ${it.unit || ""}：${why}。请回复本邮件确认实际计价。`,
+          html: layout({ title: `${esc(it.domain)} 有一条报价我们没有把握`, intro: `你好，这是发给 ${esc(it.domain)} 站长的自动通知。我们 ${esc(it.created || "")} 抓到你站上 <b>${esc(it.model)}</b> 的报价（${esc(it.unit || "单位未定")}），核查规则把它标成了"待核"，原因：${esc(why)}。`,
+            body: `${it.detail ? pre(esc(it.detail)) : ""}<p style="font-size:14px;line-height:1.7">待核期间这条报价不参与任何比对和榜单。如果你能回复一句实际的计价方式（每百万 token / 每次 / 每秒，含币种），我们核对后当天放行或修正解析器。这不是指控，只是我们不确定。</p>${btn(sp, "看你的站点页")}<p style="font-size:13px;color:#5B5F73;margin-top:16px">${bottom}</p>`, footer }) });
+      }
+    }
+  }
+
+  if (b.kind === "cite") {
+    // 引用监测周报：只发管理员。payload = { week, github:[{repo,path,url,new}], hn:[{title,url,new}], referrers:[{host,n}], totals }
+    const admins = (await env.DB.prepare("SELECT email, handle FROM users WHERE role='admin' AND email IS NOT NULL").all()).results || [];
+    const gh = (P.github || []).slice(0, 25).map((x) => [`${x.new ? "🆕 " : ""}<a href="${esc(x.url)}" style="color:#3A2AA8">${esc(x.repo)}</a>`, esc(x.path || "")]);
+    const hn = (P.hn || []).slice(0, 15).map((x) => [`${x.new ? "🆕 " : ""}<a href="${esc(x.url)}" style="color:#3A2AA8">${esc(x.title || x.url)}</a>`, esc(x.date || "")]);
+    const rf = (P.referrers || []).slice(0, 25).map((x) => [esc(x.host), String(x.n)]);
+    const body = `<p style="font-size:14px;line-height:1.7">${esc(P.summary || "")}</p>`
+      + `<h3 style="font-size:14px;margin:18px 0 6px">外部来源访问（本周，按来源站点）</h3>` + (rf.length ? table(["来源", "次数"], rf) : "<p style='font-size:13px;color:#9AA0B8'>本周没有记录到外部来源访问。</p>")
+      + `<h3 style="font-size:14px;margin:18px 0 6px">GitHub 上提到 sinanlab.com 的代码与文档</h3>` + (gh.length ? table(["仓库", "文件"], gh) : "<p style='font-size:13px;color:#9AA0B8'>无。</p>")
+      + `<h3 style="font-size:14px;margin:18px 0 6px">Hacker News</h3>` + (hn.length ? table(["条目", "日期"], hn) : "<p style='font-size:13px;color:#9AA0B8'>无。</p>");
+    for (const a of admins) await send(a.email, { subject: `被引用监测 · ${P.week || ""} · Sinan Lab`, tags: ["cite"], text: P.summary || "", html: layout({ title: `被引用监测 · ${esc(P.week || "")}`, intro: "每周一自动汇总：谁在链接我们、谁在代码里用我们的数据。这是判断推广有没有用的尺子。", body, footer: "只发管理员。" }) });
   }
 
   const result = { kind: b.kind, sent, failed, skipped, errors };
