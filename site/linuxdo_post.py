@@ -123,7 +123,7 @@ def variants(kind, title, text, D):
     import re as _r
     st = D["stats"]; R = D["rank"]; day = D["generated_at"][:10]
     plain = strip_links(text).replace("**", "")
-    first = next((l for l in plain.splitlines() if l.strip() and not l.startswith("#")), "")[:160]
+    first = next((l for l in plain.splitlines() if l.strip() and not l.startswith("#") and not l.startswith("【") and not l.startswith("**")), "")[:160]
     xen = {"rank": "Sinan Rankings %s: 7-day measurements of %d Chinese LLM API relay sites (latency, effective price, uptime, multimodal). Sorted by measured value, no commercial variables. %s/rank/%s" % (R["week"], R["n_sites"], BASE, R["week"]),
            "daily": "Relay market %s: %d price changes across %d confirmed sites; median effective price vs official. %s" % (day, len([c for c in D.get("changes", []) if c["t"][:10] == day]), st["confirmed"], BASE),
            "model": "Effective price of one model across %d Chinese relay sites, as a ratio to the official price, updated daily by Sinan Lab. %s" % (st["confirmed"], BASE),
