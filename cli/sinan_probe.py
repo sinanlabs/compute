@@ -16,7 +16,8 @@ TOKREF = "https://compute.sinanlab.com/assets/tokref.json"
 REPORT = "https://compute.sinanlab.com/api/check/report"
 
 def get_json(url, data=None, headers=None, timeout=30):
-    req = urllib.request.Request(url, data=(json.dumps(data).encode() if data is not None else None), headers=headers or {}, method="POST" if data is not None else "GET")
+    h = {"User-Agent": "sinan-probe/0.1 (+https://compute.sinanlab.com/check)", "Accept": "application/json"}; h.update(headers or {})
+    req = urllib.request.Request(url, data=(json.dumps(data).encode() if data is not None else None), headers=h, method="POST" if data is not None else "GET")
     if data is not None: req.add_header("Content-Type", "application/json")
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8", "ignore"))
