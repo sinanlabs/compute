@@ -540,6 +540,22 @@ HTML = {
 "把结果（不含 Key）提交给司南，帮助扩大检测覆盖": "Submit results (no key) to Sinan to widen probe coverage",
 "判定只有四种：一致 / 含固定前缀 / 不一致 / 无参考。\"不一致\"表示该渠道对同一输入返回的 token 计数与多渠道共识不同，成因很多（上游分流、系统提示注入、量化、缓存），本站不推测。这是一致性测量，不是真伪判定。": "Only four verdicts: consistent / fixed prefix / differs / no reference. \"Differs\" means the channel returns token counts for the same input that differ from the multi-channel consensus; causes vary (upstream routing, injected system prompts, quantisation, caching) and we do not speculate. This is a consistency measurement, not a verdict on authenticity.",
 
+# ---------- 月报 / 媒体 / 核验 / 底线 / 引用 ----------
+"月报": "Monthly report", "申请核验": "Get verified", "媒体与研究者": "Press & researchers", "引用本页": "Cite this page",
+"数据可自由引用与转载，请注明来源并保留链接。我们不收任何被测渠道的钱、不卖排位、出站链接不带推广参数，引用时可放心标注为独立第三方测量。": "Data may be freely cited and republished with attribution and a link. We take no money from measured channels, sell no rankings and add no referral parameters, so you can cite us as an independent third-party measurement.",
+"不收被测方一分钱": "Not a cent from those we measure", "没有付费收录、付费核验、付费加速": "No paid listing, paid verification or paid fast-track",
+"不卖排位": "Rankings are not for sale", "所有榜按测量值排序，没有任何商业变量": "Every board is sorted by the measured value; no commercial variable",
+"不带推广参数": "No referral parameters", "出站链接只记点击数，不拿返佣": "Outbound links only count clicks; no commissions",
+"中国模型 API 中转市场月报": "China Model API Relay Market Monthly", "中国模型 API 中转市场月报 · {s}": "China Model API Relay Market Monthly · {s}",
+"中国模型 API 中转市场月报（创刊号）": "China Model API Relay Market Monthly (inaugural issue)",
+"司南实验室 · 月报": "Sinan Lab · Monthly", "司南实验室 · 月报 · {s}": "Sinan Lab · Monthly · {s}", "滚动更新": "rolling update", "（滚动更新）": "(rolling update)", "（定稿）": "(final)",
+"已确认中转站": "Confirmed relay sites", "本期新收录": "Newly indexed this period", "Token 价格指数（全市场折价率）": "Token Price Index (market-wide discount)", "主流模型变价": "Mainstream model price changes", "{n} 次": "{n}",
+"一、价格：Token 价格指数": "1. Prices: Token Price Index", "市场中位实付 ÷ 官方参考价，分三档。": "Market median effective price ÷ official reference, in three tiers.",
+"期内市场中位价下降最多": "Largest falls in market median", "期内市场中位价上升最多": "Largest rises in market median", "期初 → 期末 $/M": "Start → end $/M", "变化": "Change", "样本": "Sample",
+"二、市场结构：谁在卖、怎么卖": "2. Market structure: who sells, and how", "三、可达与检测": "3. Reachability and probes", "四、图像与视频": "4. Image and video", "五、算力成本层": "5. Compute cost layer", "口径": "Definitions",
+"每月一期，全部来自每日自动测量，月中滚动更新、月底定稿。价格指数、市场结构、可达与检测、多模态、算力成本五个部分，附原始数据下载与引用格式。": "One issue a month, built entirely from daily automated measurement; rolling mid-month, final at month end. Five parts: price index, market structure, reachability and probes, multimodal, compute cost, plus raw data and citation format.",
+"可引用的数据、口径与联系方式": "Citable data, definitions and contact", "可直接引用的公开数据（每日更新）": "Public data you can cite directly (updated daily)", "引用格式": "Citation format", "我们能提供的": "What we can provide", "联系方式与素材": "Contact and assets", "数据": "Data", "说明": "Notes", "页面 / 文件": "Page / file",
+"经司南核验": "Verified by Sinan", "经司南核验 · 免费 · 面向站长": "Verified by Sinan · free · for site operators", "让你的站带上\"经司南核验\"标识": "Put the \"Verified by Sinan\" mark on your site", "核验条件（公开、可复核）": "Verification criteria (public, reproducible)", "申请": "Apply", "提交申请": "Submit", "站点域名": "Site domain", "联系方式（邮箱或 Telegram，用来对接 Key）": "Contact (email or Telegram, for the key hand-off)", "备注（可选）": "Notes (optional)", "正在读取登录状态…": "Checking login…", "订阅型（Sub2API）· 套餐价需登录": "Subscription (Sub2API) · plan prices behind login",
 # ---------- 司南榜 ----------
 "多模态 · 图像与视频": "Multimodal · image & video", "按秒、按张，对着官方价比": "Per second, per image, against official prices",
 "Seedance、Kling、Veo、Hailuo、Vidu、Wan 与 Nano Banana、Seedream、Qwen-Image、FLUX 在中转站的实付，与官方按秒 / 按张价放在同一把尺上。这是别处没有的数据。": "Effective relay prices for Seedance, Kling, Veo, Hailuo, Vidu, Wan and Nano Banana, Seedream, Qwen-Image, FLUX, on the same ruler as official per-second / per-image prices. Data you will not find elsewhere.",

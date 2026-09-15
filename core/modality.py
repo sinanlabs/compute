@@ -11,33 +11,40 @@ VIDEO = [
     ("veo",      r"veo"),
     ("kling",    r"kling|可灵"),
     ("seedance", r"seedance"),
-    ("hailuo",   r"hailuo|海螺|minimax-h3|minimax.*video|t2v|i2v|video-01"),
-    ("vidu",     r"vidu(?!-image)|viduq"),
     ("wan",      r"\bwan(?:x)?[-_.]?\d|wan2|wan-?3|万相.*视频|wanx-v"),
-    ("sora",     r"sora"),
+    ("happyhorse", r"happyhorse"),
+    ("vidu",     r"vidu(?!-image)|viduq"),
+    ("hailuo",   r"hailuo|海螺|minimax-h3|minimax.*video|video-01"),   # 2026-09-14 教训：t2v/i2v 曾放在这里，把 wan/happyhorse 全判成海螺
+    ("sora",     r"sora(?!.?image)"),
     ("runway",   r"runway|gen-?[34]"),
     ("luma",     r"luma|ray-?2|dream-machine"),
     ("pika",     r"pika"),
     ("hunyuan",  r"hunyuan.*video|hunyuanvideo"),
+    ("cogvideo", r"cogvideo"),
+    ("jimeng-video", r"jimeng.*(video|视频|v\d)|即梦.*视频"),
     ("grok-vid", r"grok-?imagine-?video|grok.*video"),
-    ("pixverse", r"pixverse"),
+    ("pixverse", r"pixverse(?!.*(lipsync|lip-sync|template|extend|sound))"),
     ("omni",     r"omni-flash|gemini-omni"),        # Gemini Omni Flash：toapis 标为视频生成
-    ("happyhorse", r"happyhorse"),
-    ("generic",  r"video|视频|-vid\b"),
+    ("mj-video", r"mj[-_].*video|midjourney.*video"),
+    ("generic",  r"video|视频|-vid\b|t2v|i2v|r2v"),
 ]
 IMAGE = [
-    ("gpt-image",   r"gpt-image|dall-?e|gpt-4o-image|gpt-?5.*image"),
+    ("gpt-image",   r"gpt-image|dall-?e|gpt-4o-image|gpt-?5.*image|sora[-_]?image"),
     ("nano-banana", r"nano-?banana|gemini.*image|imagen"),
     ("seedream",    r"seedream"),
+    ("jimeng-image", r"jimeng|即梦|dreamina"),
     ("flux",        r"flux"),
-    ("qwen-image",  r"qwen-?image|wanx.*(t2i|image)|万相.*图"),
+    ("wan-image",   r"wan(?:x)?[-_.]?\d.*(image|t2i|i2i)|wan.*image"),
+    ("z-image",     r"z-?image"),
+    ("qwen-image",  r"qwen-?image|万相.*图"),
     ("kling-image", r"kling.*image|kolors"),
+    ("cogview",     r"cogview"),
     ("midjourney",  r"midjourney|mj[-_]|niji"),
     ("sd",          r"stable-?diffusion|sdxl|sd3|sd-?3"),
     ("ideogram",    r"ideogram"),
     ("recraft",     r"recraft"),
     ("hidream",     r"hidream"),
-    ("grok-image",  r"grok-?imagine-?image|grok.*image"),
+    ("grok-image",  r"grok-?imagine(?!-?video)|grok.*image"),
     ("hunyuan-img", r"hunyuan.*image"),
     ("generic",     r"image|img|图像|图片|绘图|-i2i\b|-t2i\b"),
 ]
@@ -54,7 +61,7 @@ def classify(name):
         for fam, rx in IMAGE:
             if re.search(rx, n): return "image", fam
     # 音频/工具类先剔（kling-audio、custom-voices、lip-sync 不是视频生成）
-    if re.search(r"audio|voice|lip-?sync|speech|tts", n): return "audio", "tts"
+    if re.search(r"audio|voice|lip-?sync|lipsync|speech|tts|template|voices-list|extend", n): return "audio", "tts"
     for fam, rx in VIDEO:
         if re.search(rx, n): return "video", fam
     for fam, rx in IMAGE:

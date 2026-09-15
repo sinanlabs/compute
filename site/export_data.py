@@ -92,10 +92,17 @@ def site_gate(per_site_ratios):
             if med > 3 or wild > 0.10 or med < 0.01: held.add(v)
     return held
 
+OUR_OUTAGE_ROUNDS = set()   # 全市场同一轮可达率 <50% 的轮次 = 我方网络故障，不算任何站的账
+
 def availability(db, hours=24):
     out = {}
+    # 先按轮（小时）算全市场可达率，<50% 的轮次剔除：2026-09-11 18:00–09-12 02:00 我方断网 9 轮，1801 站全部 0%，否则每站都被扣到 93%
+    bad = set(r["h"] for r in db.execute("SELECT substr(window_from,1,13) h, AVG(p50) up FROM metric_ts WHERE metric='availability' "
+                                          "AND window_from >= datetime('now','-%d hours') GROUP BY h HAVING COUNT(*) >= 50 AND up < 0.5" % hours))
+    OUR_OUTAGE_ROUNDS.update(bad)
     for r in db.execute("SELECT entity, metric, p50, window_from FROM metric_ts WHERE metric IN ('availability','ttfb_ms') "
                         "AND window_from >= datetime('now','-%d hours') ORDER BY window_from" % hours):
+        if r["window_from"][:13] in bad: continue
         d = out.setdefault(r["entity"], {"up": [], "ms": [], "last": r["window_from"]})
         (d["up"] if r["metric"] == "availability" else d["ms"]).append(r["p50"]); d["last"] = r["window_from"]
     res = {}
@@ -334,6 +341,14 @@ def main():
     # 退场规则：7 天里探测 ≥100 次且一次都没连上 → 视为已下线（页面保留、标"7 天未连通"，不进任何榜、不计入可达统计）
     DEAD = {d_ for d_, v in AV7.items() if v["n"] >= 100 and (v["uptime"] or 0) == 0}
     for s_ in sites: s_["dead"] = s_["domain"] in DEAD
+    # 经司南核验：有 Key 的站，7 天里 ≥5 个模型一致性探针全部"一致"、无"不一致"、能力抽样无"低于中位"、7 天可达 ≥99%、注册开放
+    for s_ in sites:
+        pbs = [r.get("probe") for r in s_["models"] if r.get("probe")]
+        t1 = [p_ for p_ in pbs if p_["status"] in ("consistent", "divergent")]
+        caps = [p_.get("cap") for p_ in pbs if p_.get("cap")]
+        av7 = AV7.get(s_["domain"]) or {}
+        s_["verified"] = bool(len(t1) >= 5 and all(p_["status"] == "consistent" for p_ in t1) and not any((c or {}).get("status") == "below" for c in caps)
+                             and (av7.get("uptime") or 0) >= 99 and s_["domain"] not in CLOSED and s_["domain"] not in DEAD)
     CLOSED = CLOSED | DEAD   # 榜单排除口径：注册已关 ∪ 已下线
     site_by = {s_["domain"]: s_ for s_ in sites}
     def _nm(d_):
@@ -441,7 +456,7 @@ def main():
     rank = {"week": week_id, "media": media_rank, "date": D.now8()[:10], "window_days": 7, "n_sites": len(sites), "n_quotes": stats_quotes if False else None,
             "uptime": up_board, "fast": fast_board, "flagship": flagship, "dual": dual, "volatility": vol_board, "zero_change": zero_change, "n_big": len(big),
             "coverage": cov_board, "probe": probe_cov, "audit": rank_audit, "audit_open": (lambda: (db.execute("SELECT COUNT(*) c FROM quality_hold WHERE cleared IS NULL").fetchone()["c"]))() if True else 0, "eligible_uptime": len(elig), "dist_up": dist_up, "low": low_board, "price": price_board,
-            "dead": len(DEAD), "register": {"closed": len(CLOSED - DEAD), "open": sum(1 for v in REG.values() if v[0] == "open"), "unknown": sum(1 for v in REG.values() if v[0] not in ("open", "closed"))}}
+            "dead": len(DEAD), "verified": sum(1 for s_ in sites if s_.get("verified")), "outage_rounds_excluded": len(OUR_OUTAGE_ROUNDS), "register": {"closed": len(CLOSED - DEAD), "open": sum(1 for v in REG.values() if v[0] == "open"), "unknown": sum(1 for v in REG.values() if v[0] not in ("open", "closed"))}}
     stats = {"confirmed": len(sites), "with_quotes": sum(1 for s_ in sites if s_["n_models"]), "quotes": db.execute("SELECT COUNT(*) c FROM offer_norm WHERE vendor_kind='relay' AND superseded_by IS NULL").fetchone()["c"],
              "seen_domains": db.execute("SELECT COUNT(*) c FROM seen_domain").fetchone()["c"], "held": len(HELD),
              "clusters": {k: sum(1 for s_ in sites if s_["cluster"] and s_["cluster"]["code"] == k) for k in ("ultra", "cheap", "near", "high", "held")},
