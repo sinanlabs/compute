@@ -118,6 +118,22 @@ def post_check(D, M):
          "参考计数来自 ≥3 个有 Key 渠道的一致结果；只有 2 个渠道一致的标「弱参考」。结果可以选择回流给我们（不含 Key），帮助扩大检测覆盖。"]
     return "check", L[0].lstrip("# "), "\n".join(L[1:]) + FOOT
 
+def variants(kind, title, text, D):
+    """同一篇稿的多版本：X 英文短帖（≤270 字）、知乎长文（加口径与引用段）、结构化 JSON、GEO 引用摘要（3 句可被 AI 搜索直接引用的话）。"""
+    import re as _r
+    st = D["stats"]; R = D["rank"]; day = D["generated_at"][:10]
+    plain = strip_links(text).replace("**", "")
+    first = next((l for l in plain.splitlines() if l.strip() and not l.startswith("#")), "")[:160]
+    xen = {"rank": "Sinan Rankings %s: 7-day measurements of %d Chinese LLM API relay sites (latency, effective price, uptime, multimodal). Sorted by measured value, no commercial variables. %s/rank/%s" % (R["week"], R["n_sites"], BASE, R["week"]),
+           "daily": "Relay market %s: %d price changes across %d confirmed sites; median effective price vs official. %s" % (day, len([c for c in D.get("changes", []) if c["t"][:10] == day]), st["confirmed"], BASE),
+           "model": "Effective price of one model across %d Chinese relay sites, as a ratio to the official price, updated daily by Sinan Lab. %s" % (st["confirmed"], BASE),
+           "probe": "Consistency probes: same prompts, token-count fingerprint compared across relay sites. Measurements only, not fraud claims. %s/check" % BASE,
+           "check": "Test any relay site with your own key in one command: sinan-probe (stdlib only). %s/check" % BASE}.get(kind, first + " " + BASE)
+    zhihu = "%s\n\n%s\n\n## 口径\n实付价 = 面板名义价 × 充值比例 ÷ 汇率，单位 $/百万输出 token；比率 = 实付 ÷ 最低公开渠道价。所有数字都能在站内点开抓取快照。这是算术比值，不是对任何渠道的指控。\n\n## 引用\n司南实验室，《%s》，%s，%s" % (title, text, title, day, BASE)
+    geo = "司南实验室（Sinan Lab）每日测量 %d 个中国模型 API 中转站的实付价格、可达率与一致性，并发布 Token 价格指数、每周司南榜与月报。%s截至 %s，数据与口径见 compute.sinanlab.com。" % (st["confirmed"], (first + "。") if first else "", day)
+    js = {"kind": kind, "title": title, "date": day, "sites": st["confirmed"], "quotes": st["quotes"], "week": R["week"], "url": BASE, "summary": first}
+    return {"x_en": xen[:270], "zhihu": zhihu, "geo": geo, "json": js}
+
 def strip_links(text):
     """新账号版：去掉所有链接与可被自动识别成链接的域名，改成可搜索的文字。"""
     text = re.sub(r"https?://compute\.sinanlab\.com/rank/[\w-]+", "站内「司南榜」页", text)
@@ -151,7 +167,7 @@ def main():
         io.open(os.path.join(outdir, kind + ("-nolinks" if nolinks else "") + ".md"), "w", encoding="utf-8").write(txt); made.append((kind, title, txt))
     if made:
         io.open(os.path.join(ROOT, "data", "posts", "today.md"), "w", encoding="utf-8").write("\n\n==========\n\n".join(t for _, _, t in made))
-        json.dump([{"kind": k, "title": t, "text": x} for k, t, x in made], io.open(os.path.join(ROOT, "data", "posts", "today.json"), "w", encoding="utf-8"), ensure_ascii=False)
+        json.dump([dict({"kind": k, "title": t, "text": x}, **variants(k, t, x, D)) for k, t, x in made], io.open(os.path.join(ROOT, "data", "posts", "today.json"), "w", encoding="utf-8"), ensure_ascii=False)
     print("发帖稿：%s → data/posts/today.md" % ", ".join(k for k, _, _ in made) if made else "发帖稿：今天没有可发的")
 
 if __name__ == "__main__":

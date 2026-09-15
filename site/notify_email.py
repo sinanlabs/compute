@@ -69,7 +69,13 @@ def audit_payload():
     if not (A.get("unit_hint_new") or A.get("lone_outlier_new") or ba or new_fields): return None
     summary = "扫 %d 站 · 单位改判作废旧行 %d · 单位提示新增待核 %d · 价格孤点新增待核 %d · 榜首差距待核 %d · 新出现字段 %d · 未放行待核共 %d" % (
         A.get("sites_scanned", 0), A.get("unit_switch_retired", 0), A.get("unit_hint_new", 0), A.get("lone_outlier_new", 0), len(ba), len(new_fields), A.get("open_holds", 0))
-    return {"date": A.get("date", "")[:10], "summary": summary, "unknown_fields": new_fields, "lone_outliers": A.get("lone_outliers", []), "board_audit": ba, "open_holds": A.get("open_holds", 0)}
+    reports = []
+    try:
+        r = subprocess.run(["npx", "wrangler", "d1", "execute", "sinan-users", "--remote", "--json", "--command", "SELECT id, handle, kind, key, note, url, created_at FROM user_report WHERE status='open' ORDER BY id DESC LIMIT 30"], cwd=ROOT, capture_output=True, text=True, timeout=120)
+        reports = json.loads(r.stdout)[0]["results"]
+    except Exception as e: print("user_report 读取失败", e)
+    if not reports and not (new_fields or A.get("lone_outliers") or ba): return None
+    return {"date": A.get("date", "")[:10], "summary": summary + ("；用户报错待处理 %d 条" % len(reports) if reports else ""), "unknown_fields": new_fields, "lone_outliers": A.get("lone_outliers", []), "board_audit": ba, "open_holds": A.get("open_holds", 0), "reports": reports}
 
 def main():
     arg = sys.argv[1] if len(sys.argv) > 1 else "auto"

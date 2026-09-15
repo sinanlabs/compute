@@ -66,6 +66,7 @@ def main():
         if detail: print("   " + detail + " · 本机计数 " + str(counts) + " · 参考 " + str(rf))
         results.append({"model": m, "counts": counts, "ttfb": ttfb, "echo": echo, "ok": ok, "verdict": {"一致": "consistent", "不一致": "divergent", "无参考": "no_ref", "请求失败": "failed"}.get(v.split("（")[0], "prefix")})
     print("\n判定只有四种：一致 / 含固定前缀 / 不一致 / 无参考。不一致 = 该渠道对同一输入返回的 token 计数与多渠道共识不同，成因很多，本工具不推测。这是一致性测量，不是真伪判定。")
+    print("如果你希望司南提供统一调用入口（你自己带 Key，我们只负责测量与选择），到 %s/check 底部投一票；我们按票数决定要不要做。" % "https://compute.sinanlab.com")
     if a.report:
         print("--report 需要登录态，网页版 %s/check 可直接回流；命令行回流将在下一版支持。" % "https://compute.sinanlab.com")
 

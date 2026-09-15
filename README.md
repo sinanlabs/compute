@@ -13,6 +13,9 @@
 | 🏆 **Sinan Rankings / 司南榜** | 12 measured boards, weekly, permanent links · [page](https://compute.sinanlab.com/rank) |
 | 📰 **Monthly report / 月报** | market size, structure, prices, reachability, probes, multimodal, compute · [page](https://compute.sinanlab.com/report) · [Releases](https://github.com/sinanlabs/compute/releases) |
 | 🧪 **sinan-probe CLI** | test a relay with your own key, stdlib only · [cli/](cli/) |
+| 🤖 **GitHub Action · price watch** | copy one workflow, get an Issue when your models' relay-market price moves · [templates/github-action](templates/github-action/) |
+| 📚 **Open data & API docs** | every file, field, update cadence and the stability promise · [page](https://compute.sinanlab.com/api-docs) |
+| 🛠 **Corrections log** | user reports, verification results, credited · [page](https://compute.sinanlab.com/corrections) |
 | ✅ **Verified by Sinan / 经司南核验** | free, criteria public, auto-granted and auto-revoked · [apply](https://compute.sinanlab.com/verify) |
 | 📣 **Press & researchers / 媒体与研究者** | citable data and formats · [page](https://compute.sinanlab.com/press) |
 

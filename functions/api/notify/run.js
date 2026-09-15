@@ -78,6 +78,7 @@ export async function onRequestPost({ request, env }) {
       + (ba.length ? `<h3 style="font-size:14px;margin:18px 0 6px">榜首差距待核</h3>` + table(["站", "榜", "型号", "榜首", "第二"], ba) : "")
       + (lo.length ? `<h3 style="font-size:14px;margin:18px 0 6px">价格孤点待核</h3>` + table(["站", "族", "型号", "该站", "第二", "族中位"], lo) : "")
       + (uf.length ? `<h3 style="font-size:14px;margin:18px 0 6px">解析器不认识的字段</h3>` + table(["字段", "站数", "例"], uf) : "")
+      + ((P.reports || []).length ? `<h3 style="font-size:14px;margin:18px 0 6px">用户报错（待处理 ${P.reports.length} 条）</h3>` + table(["谁", "对象", "说明", "佐证"], P.reports.slice(0, 15).map((r) => [esc(r.handle || "匿名"), esc(r.kind + " · " + r.key), esc(r.note), r.url ? `<a href="${esc(r.url)}">链接</a>` : "—"])) : "")
       + `<p style="font-size:12px;color:#9AA0B8;margin-top:16px">放行：python3 core/quality_audit.py --clear ID 备注 · 未放行待核共 ${Number(P.open_holds || 0)} 条</p>`;
     for (const a of admins) {
       await send(a.email, { subject: `数据核查 ${P.date || ""} · 待核 ${Number(P.open_holds || 0)} · 新孤点 ${lo.length} · 榜首待核 ${ba.length}`, tags: ["audit"],
@@ -89,10 +90,12 @@ export async function onRequestPost({ request, env }) {
     // linux.do 发帖稿：payload = { date, posts:[{kind, title, text}] }，只发管理员，正文原样放 <pre> 里方便复制
     const admins = (await env.DB.prepare("SELECT email, handle FROM users WHERE role='admin' AND email IS NOT NULL").all()).results || [];
     const posts = Array.isArray(P.posts) ? P.posts.slice(0, 6) : [];
-    const body = posts.map((p) => `<h3 style="font-size:14px;margin:18px 0 6px">${esc(p.kind)} · ${esc(p.title)}</h3><pre style="white-space:pre-wrap;font:13px/1.6 ui-monospace,Menlo,monospace;background:#F5F5F7;border-radius:10px;padding:14px">${esc(p.text)}</pre>`).join("");
+    const vbox = (label, t) => `<details style="margin:6px 0"><summary style="font-size:12.5px;color:#5B5F73;cursor:pointer">${label}</summary><pre style="white-space:pre-wrap;font:12.5px/1.6 ui-monospace,Menlo,monospace;background:#F3F3F8;padding:10px 12px;border-radius:10px">${esc(typeof t === "string" ? t : JSON.stringify(t, null, 1))}</pre></details>`;
+    const body = posts.map((p) => `<h3 style="font-size:14px;margin:18px 0 6px">${esc(p.kind)} · ${esc(p.title)}</h3><pre style="white-space:pre-wrap;font:13px/1.6 ui-monospace,Menlo,monospace;background:#F5F5F7;border-radius:10px;padding:14px">${esc(p.text)}</pre>`
+      + (p.x_en ? vbox("X 英文短帖", p.x_en) : "") + (p.zhihu ? vbox("知乎长文（含口径与引用段）", p.zhihu) : "") + (p.geo ? vbox("GEO 引用摘要（给 AI 搜索抓的三句话）", p.geo) : "") + (p.json ? vbox("结构化 JSON", p.json) : "")).join("");
     for (const a of admins) {
       await send(a.email, { subject: `今日发帖稿 ${P.date || ""} · ${posts.length} 篇（${posts.map((p) => p.kind).join(" / ")}）`, tags: ["post"],
-        text: posts.map((p) => p.text).join("\n\n==========\n\n"), html: layout({ title: "今日发帖稿（复制即可）", intro: "由当天数据自动生成，已过措辞自检。复制【标题】与【正文】到 linux.do 对应分类即可。", body, footer: "只发管理员，不对外。" }) });
+        text: posts.map((p) => p.text).join("\n\n==========\n\n"), html: layout({ title: "今日发帖稿（复制即可）", intro: "由当天数据自动生成，已过措辞自检。主稿复制到 linux.do；每篇下面折叠着 X 英文短帖、知乎长文、GEO 摘要与 JSON 版本。", body, footer: "只发管理员，不对外。" }) });
     }
   }
 
@@ -158,7 +161,8 @@ export async function onRequestPost({ request, env }) {
     const body = `<p style="font-size:14px;line-height:1.7">${esc(P.summary || "")}</p>`
       + `<h3 style="font-size:14px;margin:18px 0 6px">外部来源访问（本周，按来源站点）</h3>` + (rf.length ? table(["来源", "次数"], rf) : "<p style='font-size:13px;color:#9AA0B8'>本周没有记录到外部来源访问。</p>")
       + `<h3 style="font-size:14px;margin:18px 0 6px">GitHub 上提到 sinanlab.com 的代码与文档</h3>` + (gh.length ? table(["仓库", "文件"], gh) : "<p style='font-size:13px;color:#9AA0B8'>无。</p>")
-      + `<h3 style="font-size:14px;margin:18px 0 6px">Hacker News</h3>` + (hn.length ? table(["条目", "日期"], hn) : "<p style='font-size:13px;color:#9AA0B8'>无。</p>");
+      + `<h3 style="font-size:14px;margin:18px 0 6px">Hacker News</h3>` + (hn.length ? table(["条目", "日期"], hn) : "<p style='font-size:13px;color:#9AA0B8'>无。</p>")
+      + (P.poll ? `<h3 style="font-size:14px;margin:18px 0 6px">需求探针 · "需要司南代你统一调用（自带 Key）吗"（累计）</h3>` + table(["需要", "不需要", "说不准"], [[String(P.poll.need || 0), String(P.poll.no || 0), String(P.poll.unsure || 0)]]) : "");
     for (const a of admins) await send(a.email, { subject: `被引用监测 · ${P.week || ""} · Sinan Lab`, tags: ["cite"], text: P.summary || "", html: layout({ title: `被引用监测 · ${esc(P.week || "")}`, intro: "每周一自动汇总：谁在链接我们、谁在代码里用我们的数据。这是判断推广有没有用的尺子。", body, footer: "只发管理员。" }) });
   }
 

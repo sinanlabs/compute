@@ -65,6 +65,8 @@ a{color:inherit;text-decoration:none}button{font:inherit;color:inherit}::selecti
 .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 22px}
 .brand .mark{width:36px;height:36px;border-radius:10px;background:#07070B url(/brand/sinanlab-mark.svg) center/28px 28px no-repeat;box-shadow:0 8px 18px -10px rgba(7,7,11,.6);flex:none}
 .subbox{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-top:44px;padding:22px 26px;border:1px solid var(--hair);border-radius:18px;background:var(--card)}.subbox>div{flex:1 1 320px}.subform{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1 1 320px;justify-content:flex-end}.subform input{flex:1 1 220px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit;font-size:14px;background:var(--card);color:var(--ink)}.subform .sub{flex-basis:100%;text-align:right}
+.repfoot{margin-top:18px;padding-top:12px;border-top:1px dashed var(--hair-2);display:flex;gap:10px;align-items:center;flex-wrap:wrap}.rep{background:none;border:1px solid var(--hair-2);border-radius:999px;padding:4px 10px;font:inherit;font-size:12px;color:var(--ink-2);cursor:pointer}.rep:hover{border-color:var(--ink);color:var(--ink)}.repform{flex-basis:100%;display:grid;gap:8px;margin-top:6px}.repform textarea,.repform input{width:100%;padding:8px 10px;border:1px solid var(--hair-2);border-radius:10px;font:inherit;font-size:13px;background:var(--card);color:var(--ink)}
+.pollrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}.pollrow .btn[disabled]{opacity:.5;cursor:default}
 .pledge{display:flex;flex-wrap:wrap;gap:8px 22px;margin:14px 0 0;padding:12px 16px;border:1px dashed var(--hair-2);border-radius:14px;font-size:12.5px;color:var(--ink-2)}.pledge b{color:var(--ink);margin-right:6px}
 .brandband{background:#07070B;border-radius:18px;padding:26px 32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:44px}.brandband img{width:480px;max-width:100%;height:auto;display:block}.brandband span{color:#B8A4FA;font-size:13px;letter-spacing:.08em;margin-left:auto}
 .rkmini{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}.rkmini .card{padding:16px 18px}.rkmini h4{margin:0;font-size:13.5px}.rkmini .q{font-size:11.5px;color:var(--ink-3);margin-top:3px;line-height:1.5;min-height:34px}.rkmini ol{list-style:none;margin:12px 0 0;padding:0}.rkmini li{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-top:1px solid var(--hair);font-size:13px}.rkmini li .no{font-family:var(--mono);font-size:11px;color:var(--ink-3);width:18px}.rkmini li a{font-weight:600}.rkmini li .val{margin-left:auto;font-family:var(--mono);font-size:12px}
@@ -257,7 +259,12 @@ function settleNeedles(root){requestAnimationFrame(function(){requestAnimationFr
 function countUp(el,to,suffix){if(!el)return;if(reduce){el.textContent=to.toLocaleString()+(suffix||"");return;}var t0=performance.now(),dur=1100;function f(t){var k=Math.min(1,(t-t0)/dur);k=1-Math.pow(1-k,4);el.textContent=Math.round(to*k).toLocaleString()+(suffix||"");if(k<1)requestAnimationFrame(f);}requestAnimationFrame(f);}
 /* 抽屉 */
 var drawer=document.getElementById("drawer"),scrim=document.getElementById("scrim");
-function openD(eye,title,html){document.getElementById("deye").textContent=eye;document.getElementById("dtitle").textContent=title;document.getElementById("dbody").innerHTML=html;drawer.classList.add("on");scrim.classList.add("on");settleNeedles(drawer);}
+var REPFOOT='<div class="repfoot"><button class="rep" data-kind="quote">这条数据有误？报错</button><span class="sub" id="repmsg"></span></div>';
+function openD(eye,title,html){document.getElementById("deye").textContent=eye;document.getElementById("dtitle").textContent=title;document.getElementById("dbody").innerHTML=html+REPFOOT;drawer.classList.add("on");scrim.classList.add("on");settleNeedles(drawer);}
+document.addEventListener("click",function(e){var b=e.target.closest?e.target.closest(".rep"):null;if(!b)return;var host=b.parentNode;if(host.querySelector("textarea"))return;var ctx=b.dataset.ctx||(document.getElementById("dtitle")||{}).textContent||document.title;var key=b.dataset.key||ctx;
+host.insertAdjacentHTML("beforeend",'<div class="repform"><textarea rows="3" placeholder="哪里不对？例如：该站 9 月 15 日面板显示 2.5 元/$，你们记的是 1.5。"></textarea><input placeholder="佐证链接（可选，http 开头）"><div style="display:flex;gap:8px;align-items:center"><button class="btn p" type="button">提交</button><span class="sub"></span></div></div>');
+var f=host.querySelector(".repform"),ta=f.querySelector("textarea"),url=f.querySelector("input"),go=f.querySelector("button"),M=f.querySelector("span");
+go.addEventListener("click",function(){var n=ta.value.trim();if(n.length<4){M.textContent="写一句哪里不对。";return;}M.textContent="提交中…";fetch("/api/report",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind:b.dataset.kind||"other",key:key,context:ctx,note:n,url:url.value.trim()})}).then(function(r){return r.json();}).then(function(j){if(j.ok){f.innerHTML='<span class="sub">已收到，核对后会记进 <a href="/corrections">修正日志</a>，署你的名。谢谢。</span>';}else if(j.error==="login_required"){M.innerHTML='报错需要登录（防刷）。<a href="/login?return_to='+encodeURIComponent(location.pathname)+'">登录 →</a>';}else{M.textContent={too_many_requests:"今天提交太多了",bad_url:"佐证链接要以 http 开头",note_too_short:"再多写几个字"}[j.error]||"出错了";}}).catch(function(){M.textContent="网络错误";});});});
 function closeD(){drawer.classList.remove("on");scrim.classList.remove("on");}
 if(scrim){scrim.addEventListener("click",closeD);document.getElementById("dx").addEventListener("click",closeD);}
 document.addEventListener("keydown",function(e){if(e.key==="Escape")closeD();if(e.key==="/"&&document.activeElement.tagName!=="INPUT"){var q=document.getElementById("q");if(q){e.preventDefault();q.focus();}}});
@@ -450,6 +457,8 @@ ICONS = {
     "report": '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h6M9 16h6M9 8h3"/>',
     "verify": '<path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
     "press": '<path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/>',
+    "api": '<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>',
+    "fix": '<path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/>',
     "method": '<path d="M4 6h16M4 12h10M4 18h7"/>',
     "data": '<path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/>',
 }
@@ -464,7 +473,7 @@ def shell(title, desc, path, body, active="", page="", crumbs=None, extra_head="
     nav = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl, ('<span class="badge">%s</span>' % b) if b else "")
                   for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("pindex", "/price-index", "Token 价格指数", ""), ("gpu", "/gpu", "算力租赁", ""), ("report", "/report", "月报", ""), ("check", "/check", "测试模型真伪", ""), ("verify", "/verify", "申请核验", "")])
     nav2 = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl)
-                   for k, h, lbl in [("method", "/method", "口径与定义"), ("data", "/method#data", "开放数据"), ("press", "/press", "媒体与研究者")])
+                   for k, h, lbl in [("method", "/method", "口径与定义"), ("api", "/api-docs", "开放数据与接口"), ("fix", "/corrections", "修正日志"), ("press", "/press", "媒体与研究者")])
     crumb = '<div class="crumb"><a href="https://sinanlab.com">← 司南实验室</a>%s</div>' % "".join(" › " + ('<a href="%s">%s</a>' % (c[1], esc(c[0])) if len(c) > 1 and c[1] else esc(c[0])) for c in (crumbs or []))
     head = tpl(u"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{title}}</title><meta name="description" content="{{desc}}"><link rel="canonical" href="{{canonical}}"><meta property="og:site_name" content="Sinan Compute"><meta property="og:type" content="website"><meta property="og:title" content="{{title}}"><meta property="og:description" content="{{desc}}"><meta property="og:url" content="{{canonical}}"><meta property="og:image" content="{{og}}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{{og}}">{{ld}}<meta name="theme-color" content="#07070B"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="sitemap" href="/sitemap.xml"><link rel="stylesheet" href="/assets/app.css?v={{v}}">{{extra}}</head><body data-page="{{page}}">""",
                title=esc(title), desc=esc(desc), canonical=canonical, v=_asset_v(), extra=extra_head, page=page, og=BASE + og_image,
@@ -674,6 +683,7 @@ def build_sites():
         pic = ('<span class="pill %s">%s%s</span>' % (code, esc(cl["name"]), (" · 中位 %s" % pct(s["median"])) if s["median"] is not None and code != "held" else "")) if cl else '<span class="pill none">定价接口未公开</span>'
         if s.get("panel") == "sub2api" and not cl: pic = '<span class="pill none">订阅型（Sub2API）· 套餐价需登录</span>'
         if s.get("verified"): pic = '<span class="pill" style="background:#07070B;color:#F5F5F7;margin-right:6px" title="7 天内一致性探针、能力抽样、可达均通过">经司南核验</span>' + pic
+        pic += ' <span class="repfoot" style="display:inline-flex;margin:0;padding:0;border:0"><button class="rep" data-kind="site" data-key="%s" data-ctx="站点 %s">这个站的信息有误？报错</button></span>' % (esc(s["domain"]), esc(s["domain"]))
         if s.get("dead"): pic += '<span class="pill" style="background:#EEF0F6;color:var(--ink-2);margin-left:6px">7 天未连通</span>'
         rows.append('<tr data-cl="%s" data-nm="%d"><td><a class="dom" href="/s/%s">%s</a>%s</td><td>%s</td><td class="num">%s</td><td class="num">%s</td><td>%s</td><td class="num">%s</td><td class="mono" style="font-size:12px">%s</td></tr>'
                     % (code, s["n_models"], esc(s["domain"]), esc(s["domain"]), ('<div class="sub">%s</div>' % esc(s["name"])) if s.get("name") else "", pic, s["n_models"] if s["n_models"] else "—",
@@ -775,7 +785,7 @@ def build_method():
     src = io.open(md_path, encoding="utf-8").read() if os.path.exists(md_path) else "# 方法论\n\n（docs/METHOD.md 缺失）"
     html_ = markdown.markdown(src, extensions=["tables", "fenced_code"]) if markdown else "<pre>%s</pre>" % esc(src)
     st = D["stats"]
-    data = u"""<h2 id="data">开放数据</h2><p>我们承诺原始数据可下载。以下文件与站点同批次生成（%s）：</p><ul>
+    data = u"""<h2 id="data">开放数据</h2><p>我们承诺原始数据可下载。完整的文件清单、字段说明与稳定性承诺见 <a href="/api-docs">开放数据与接口</a>。以下文件与站点同批次生成（%s）：</p><ul>
 <li><a href="/data_v2.json">data_v2.json</a> —— 模型账本、%d 个站点的报价与画像、快照索引、汇率</li>
 <li><a href="/media.json">media.json</a> —— 图像 / 视频报价与官方参考</li>
 <li><a href="/go_links.json">go_links.json</a> —— 出站链接表（含推广参数字段，当前全部为空）</li></ul>
@@ -1081,9 +1091,9 @@ def build_price_index():
 <p class="sub" style="margin-top:10px">数据：<a href="/price-index.json" style="color:var(--p-ink)">price-index.json</a>（全部序列，每日更新）· 引用时请写"司南 Token 价格指数（Sinan Token Price Index），compute.sinanlab.com"。</p>
 <div style="margin-top:12px"><img src="/badge/price-index.svg" alt="司南 Token 价格指数" width="360" height="72" style="display:block;margin-bottom:8px"><code style="display:block;font-size:11.5px;background:var(--ground-2);padding:10px 12px;border-radius:10px;word-break:break-all">{{embed}}</code></div></section>
 {{cite}}
-<script id="d" type="application/json">{{data}}</script>""",
+{{poll}}<script id="d" type="application/json">{{data}}</script>""",
         date=PI["generated_at"][:10], n_sites=D["stats"]["confirmed"], base=PI["base_date"], cards="".join(cards), chart=chart, min_sites=PI["min_sites"], rows="".join(rows), task=task_html, method=esc(PI["method"]), embed=embed, cite=cite_block("司南 Token 价格指数", "/price-index", PI["generated_at"][:10]),
-        data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+        poll=POLL_BOX, data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
     return shell("司南 Token 价格指数 · 每百万 Token 多少钱 · Sinan Compute", "中国模型 API 中转市场每日 Token 价格指数：各主流模型跨站中位实付价、相对官方价的折价率、链式点位，可引用可下载。", "/price-index", body, active="pindex", page="pindex", crumbs=[("Token 价格指数",)])
 
 def price_index_badge():
@@ -1099,6 +1109,72 @@ def price_index_badge():
             '<text x="346" y="29" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#B8A4FA">点位 %.1f</text>'
             '<text x="346" y="51" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#F5F5F7">$%s/M</text></svg>'
             % (MARK_SVG, font, PI["generated_at"][:10], font, round(L["all"]["ratio"] * 100), parts, L["all"].get("level") or 0, fmt(L["all"]["price_usd"])))
+
+# ------------------------------------------------------------------ 需求探针（只计数，不推荐）
+POLL_BOX = ('<section class="card pad rise" id="poll" style="margin-top:18px"><div class="eyebrow" style="color:var(--p)">一个问题 · 只计数</div><h2 class="sec" style="margin-top:4px">你需要司南代你统一调用吗？</h2>'
+            '<p class="lead" style="margin-top:4px">设想：你自己持有各家的 Key，司南只负责测量、按你的条件筛选、把请求转到你选的渠道并记录延迟与成本。我们现在<b>不做</b>这件事，票数决定要不要做。</p>'
+            '<div class="pollrow" id="pollrow"><button class="btn o" data-a="need">需要</button><button class="btn o" data-a="no">不需要，我只要数据</button><button class="btn o" data-a="unsure">说不准</button><span class="sub" id="pollmsg"></span></div>'
+            '<script>(function(){var row=document.getElementById("pollrow"),M=document.getElementById("pollmsg");if(!row)return;try{if(localStorage.getItem("poll:byok")){row.querySelectorAll("button").forEach(function(b){b.disabled=true;});M.textContent="已记录，谢谢。";}}catch(e){}'
+            'row.addEventListener("click",function(e){var b=e.target.closest("button");if(!b||b.disabled)return;fetch("/api/poll",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({q:"byok",a:b.dataset.a})}).then(function(){try{localStorage.setItem("poll:byok",b.dataset.a);}catch(e){}row.querySelectorAll("button").forEach(function(x){x.disabled=true;});M.textContent="已记录，谢谢。累计结果每周一在被引用监测里汇总。";}).catch(function(){M.textContent="没记上，稍后再试。";});});})();</script></section>')
+
+def load_open_reports():
+    p_ = os.path.join(HERE, "reports_open.json")
+    return json.load(io.open(p_, encoding="utf-8")) if os.path.exists(p_) else {"open": 0, "items": [], "fixed": []}
+
+DATA_FILES = [
+    ("data_v2.json", "/data_v2.json", "每日", "模型账本主文件：40 个模型 × 每个中转站的实付价（$/百万输出）、比率、区间、抓取快照编号；每站的可达率、注册状态、探针摘要、榜单名次；当天价格变动与新收录。", "generated_at, fx{rate,as_of}, models[{id,name,vendor,floor,rows[{vendor,out,ratio,band,sids,as_of,probe}]}], sites[{domain,name,panel,cluster,median,avail{uptime,ttfb_p50},register,probe,verified,rank_badge}], stats, changes[{t,vendor,model,old,new}], new_sites, rank{...}"),
+    ("price-index.json", "/price-index.json", "每日", "司南 Token 价格指数：全市场与三档（旗舰 / 中档 / 快速）的折价率与链式点位逐日序列，每个模型的市场中位价序列与样本站数。", "version, base_date, tiers, series[{date,all,flagship,mid,flash}], latest, models{id:{name,tier,official,series[{date,median,n}]}}, method"),
+    ("media.json", "/media.json", "每日", "图像与视频账本：按模型族的官方参考价、各站按秒 / 按张实付价、分辨率档、待核标记。", "image[{family,name,ref,rows[...]}], video[...], held_sites, stats"),
+    ("gpu.json", "/gpu.json", "每日", "算力租赁账本：主流 GPU 在 RunPod / Vast.ai / 算力互联的单卡每小时报价（美元与人民币）。", "platforms, gpus[{gpu,quotes[{platform,kind,usd,cny,n,ts}]}]"),
+    ("rank/<期号>.json", "/rank/%s.json", "每周一", "司南榜某一期的完整数据（12 张榜、门槛、样本、待核）。期号形如 2026-w38，永久不变。", "week, date, n_sites, eligible_uptime, fast, price, dual, coverage, uptime, low, media, audit"),
+    ("report/<月份>.json", "/report/%s.json", "每日重算，月底定稿", "月报原始数据：规模、结构、价格指数、涨跌最多的模型、可达分布、探针与核查、多模态、算力。", "month, period, final, scale, prices, reach, probes, audit, boards, media, gpu"),
+    ("changes.json", "/changes.json", "每日", "价格变动的 JSON Feed（JSON Feed 1.1 格式），可被订阅器与脚本直接读取；与 feed.xml 内容相同。", "version, title, items[{id,url,title,date_published,_sinan{vendor,model,old,new}}]"),
+    ("feed.xml", "/feed.xml", "每日", "价格变动 RSS。", ""),
+    ("assets/tokref.json", "/assets/tokref.json", "每日", "一致性探针的公开参考计数：8 条探针串、各模型的多渠道共识计数、弱参考标记。命令行工具 sinan-probe 读它。", "version, probes[], models{id:{ref[],peers,weak}}, how"),
+    ("go_links.json", "/go_links.json", "每日", "全部已确认站的域名与出站链接（不带任何推广参数）。", "{domain: url}"),
+]
+ROBO_FILES = [("robo.sinanlab.com/data/models.json", "https://robo.sinanlab.com/data/models.json", "每次发布", "Robo 模型索引：每个开源具身模型的许可证、参数量、权重与代码地址、输入模态、目标本体，以及每个字段的证据来源。"),
+              ("robo.sinanlab.com/data/compat.json", "https://robo.sinanlab.com/data/compat.json", "每次发布", "模型 × 本体适配矩阵，每格状态（官方 / 社区验证 / 理论可行 / 不支持 / 未知）与证据。"),
+              ("robo.sinanlab.com/data/embodiments.json", "https://robo.sinanlab.com/data/embodiments.json", "每次发布", "本体（机器人）索引：自由度、末端、SDK、价格区间、数据格式。"),
+              ("robo.sinanlab.com/data/hardware.json", "https://robo.sinanlab.com/data/hardware.json", "每次发布", "推理硬件与租赁参考价。")]
+
+def build_api_docs():
+    wk = (load_rank_weeks() or ["2026-w38"])[0]; mo = (load_reports() or [{"month": "2026-09"}])[0]["month"]
+    rows = "".join('<tr><td><b>%s</b><div class="sub">%s</div></td><td>%s</td><td><a href="%s" style="color:var(--p-ink)">%s</a></td>%s</tr>' % (esc(n), esc(d), esc(f), (u % wk) if "rank" in n else (u % mo) if "report" in n else u, ((u % wk) if "rank" in n else (u % mo) if "report" in n else u), ('<td class="sub" style="font-size:11.5px">%s</td>' % esc(k)) if k else '<td class="sub">—</td>') for n, u, f, d, k in DATA_FILES)
+    rrows = "".join('<tr><td><b>%s</b><div class="sub">%s</div></td><td>%s</td><td><a href="%s" style="color:var(--p-ink)">%s</a></td></tr>' % (esc(n), esc(d), esc(f), u, esc(u)) for n, u, f, d in ROBO_FILES)
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">开放数据与接口</div><h1 style="font-size:26px;margin-top:6px">直接拿数据，不用登录，不用 Key</h1><p class="lead">司南的全部测量结果都是静态 JSON 文件，和网页同一批生成，谁都可以下载、抓取、放进自己的脚本。这一页说明每个文件是什么、多久更新、字段长什么样，以及我们对稳定性的承诺。</p>{{pledge}}</div>
+<section class="card pad rise" style="--i:1"><h2 class="sec">稳定性承诺</h2><ul class="lead" style="margin-top:6px;padding-left:18px"><li>已公开的字段<b>不删、不改名、不改含义</b>；只会新增字段。需要变更时先在本页公告 30 天，并同时提供新旧两版。</li><li>每个文件顶部都有 <code>generated_at</code>（北京时间）；口径版本记在 <a href="/method" style="color:var(--p-ink)">口径与定义</a>。</li><li>文件按 Cloudflare 全球缓存分发，抓取频率不限；请在请求头里带上能联系到你的 User-Agent。</li><li>数据可自由引用与转载，注明"数据：司南实验室 compute.sinanlab.com"。不接受任何被测渠道的付费，出站链接不带推广参数。</li></ul></section>
+<section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">Sinan Compute · 中转市场与算力</h2><div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>文件</th><th>更新</th><th>地址</th><th>主要字段</th></tr></thead><tbody>{{rows}}</tbody></table></div></section>
+<section class="card pad rise" style="--i:3;margin-top:18px"><h2 class="sec">Sinan Robo · 开源具身模型</h2><div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>文件</th><th>更新</th><th>地址</th></tr></thead><tbody>{{rrows}}</tbody></table></div><p class="sub" style="margin-top:8px">两站字段的共同约定：所有价格为数字（美元或标注 cny）；所有证据为 <code>{url, fetched, source_type, note}</code>；未核实的字段为 <code>null</code>，不用默认值填空。</p></section>
+<section class="card pad rise" style="--i:4;margin-top:18px"><h2 class="sec">现成的工具</h2><div class="tablewrap" style="margin-top:8px"><table><tbody>
+<tr><td><b>sinan-probe</b><div class="sub">用自己的 Key 在终端测一个中转站：一致性探针、首字节延迟、回显模型名。单文件，只依赖 Python 标准库。</div></td><td><a href="https://github.com/sinanlabs/compute/tree/main/cli" style="color:var(--p-ink)">github.com/sinanlabs/compute/cli</a></td></tr>
+<tr><td><b>GitHub Action · 价格盯梢</b><div class="sub">复制一个工作流文件到你的仓库，改一行模型列表，每天自动检查这些模型在中转市场的市场中位价，变动超过阈值就开 Issue。</div></td><td><a href="https://github.com/sinanlabs/compute/tree/main/templates/github-action" style="color:var(--p-ink)">templates/github-action</a></td></tr>
+<tr><td><b>徽章</b><div class="sub">价格指数徽章每天自动刷新；上榜站与核验站有各自的徽章，站点页可取嵌入代码。</div></td><td><a href="/badge/price-index.svg" style="color:var(--p-ink)">/badge/price-index.svg</a></td></tr></tbody></table></div>
+<p class="lead" style="margin-top:12px">用 Python 三行读价格指数：</p><pre style="font-size:12.5px;background:var(--ground-2);padding:12px 14px;border-radius:12px;overflow:auto">import json, urllib.request
+pi = json.load(urllib.request.urlopen(urllib.request.Request("https://compute.sinanlab.com/price-index.json", headers={"User-Agent": "you@example.com"})))
+print(pi["latest"])</pre>
+<p class="sub" style="margin-top:10px">需要开发包（Python / TypeScript）、按你的口径重算、或全量历史序列：写信到 <a href="mailto:hello@sinanlab.com" style="color:var(--p-ink)">hello@sinanlab.com</a>。有人要我们就做，没人要我们不做空壳。</p></section>
+{{poll}}{{cite}}<script id="d" type="application/json">{{data}}</script>""", pledge=PLEDGE, rows=rows, rrows=rrows, poll=POLL_BOX, cite=cite_block("开放数据与接口", "/api-docs", GEN_DATE), data=jsdata(LIGHT_INDEX()))
+    return shell("开放数据与接口 · Sinan Compute", "司南实验室全部测量数据的文件清单、字段说明、更新频率与稳定性承诺；命令行工具与 GitHub Action 模板。", "/api-docs", body, active="api", page="api", crumbs=[("开放数据与接口",)])
+
+def build_corrections():
+    R = load_open_reports()
+    fixed = R.get("fixed") or []
+    frows = "".join('<tr><td class="sub">%s</td><td>%s</td><td>%s → <b>%s</b></td><td class="sub">%s</td><td class="sub">%s</td></tr>' % (esc(x.get("date", "")[:10]), esc(x.get("target", "")), esc(x.get("original", "")), esc(x.get("corrected", "")), esc(x.get("reason", "")), esc(x.get("credit") or "站内核查")) for x in fixed) or '<tr><td colspan="5" class="sub">还没有已确认的修正记录。数据核查每晚自动跑，命中的行会先标"待核"而不是直接上榜。</td></tr>'
+    orows = "".join('<tr><td class="sub">%s</td><td>%s</td><td>%s</td><td class="sub">%s</td></tr>' % (esc(x.get("created_at", "")[:10]), esc(x.get("kind", "") + " · " + x.get("key", "")), esc(x.get("note", "")), esc(x.get("handle") or "匿名")) for x in R.get("items") or []) or '<tr><td colspan="4" class="sub">目前没有待处理的报错。</td></tr>'
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">修正日志 · 永久公开</div><h1 style="font-size:26px;margin-top:6px">我们改过什么，谁指出的</h1><p class="lead">每个数字旁边都有"报错"。用户提交的报错进核查队列，我们核对原始快照后，要么修正并在这里署名记录，要么说明为什么维持原判。这是数据网络的开始：你指出的错，会带着你的名字留在这里。</p>{{pledge}}</div>
+<section class="card pad rise" style="--i:1"><h2 class="sec">已确认的修正</h2><div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>日期</th><th>对象</th><th>修正</th><th>原因</th><th>指出者</th></tr></thead><tbody>{{frows}}</tbody></table></div></section>
+<section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">待处理的报错 · {{n}} 条</h2><p class="sub" style="margin-top:4px">用户提交后 3 个工作日内核对。核对期间相关数字照常显示，但你可以在证据链里看到"有人报错"。</p><div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>提交</th><th>对象</th><th>说明</th><th>提交者</th></tr></thead><tbody>{{orows}}</tbody></table></div></section>
+<section class="card pad rise" style="--i:3;margin-top:18px"><h2 class="sec">怎么报错</h2><p class="lead" style="margin-top:4px">在任何一个实付价、比率或站点信息旁，点开证据链，底部有"这条数据有误？报错"。需要登录（只是为了防刷），写一句哪里不对、最好附上你看到的原文链接。我们不接受"这家站很好/很差"一类的评价，只接受可核对的事实。</p></section>
+<script id="d" type="application/json">{{data}}</script>""", pledge=PLEDGE, frows=frows, orows=orows, n=R.get("open", 0), data=jsdata(LIGHT_INDEX()))
+    return shell("修正日志 · Sinan Compute", "司南实验室的公开修正日志：用户报错、核对结果、署名记录。", "/corrections", body, active="fix", page="fix", crumbs=[("修正日志",)])
+
+def build_changes_json():
+    items = []
+    for c in (D.get("changes") or [])[:500]:
+        mid = c["model"]; mname = next((m["name"] for m in D["models"] if m["id"] == mid), mid)
+        items.append({"id": "%s|%s|%s" % (c["t"], c["vendor"], mid), "url": "%s/m/%s" % (BASE, mid), "title": "%s · %s：$%s → $%s /百万输出" % (c["vendor"], mname, fmt(c["old"]), fmt(c["new"])), "date_published": c["t"], "_sinan": {"vendor": c["vendor"], "model": mid, "old": c["old"], "new": c["new"], "kind": c.get("kind")}})
+    return json.dumps({"version": "https://jsonfeed.org/version/1.1", "title": "Sinan Compute · 中转站价格变动", "home_page_url": BASE, "feed_url": BASE + "/changes.json", "description": "连续两次抓取一致才计的实付价变动；只陈述测量，不含推荐。", "items": items}, ensure_ascii=False)
 
 # ------------------------------------------------------------------ 订阅框（全站页脚）
 SUBSCRIBE_BOX = ('<section class="subbox" id="subscribe"><div><div class="eyebrow" style="color:var(--p)">每周一封</div><h2 class="sec" style="margin-top:4px">订阅司南周报</h2><p class="sub" style="margin-top:4px">本周司南榜、价格指数、主流模型变价、新收录与失联的站。只陈述测量，不含推荐，随时一键退订。</p></div>'
@@ -1273,7 +1349,7 @@ def build_check():
 <datalist id="qlist"></datalist>
 </section>
 <section class="card rise" id="ck-out" style="--i:2;margin-top:16px;display:none"><div class="pad" style="padding-bottom:6px"><h2 class="sec">结果</h2><p class="lead" id="ck-lead"></p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th>回显模型名</th><th class="num">成功</th><th class="num">首字节 p50</th><th>计数比对</th><th>判定</th></tr></thead><tbody id="ck-rows"></tbody></table></div><div class="pad" style="padding-top:8px"><button class="btn o" id="ck-report">把结果（不含 Key）提交给司南，帮助扩大检测覆盖</button> <span class="sub" id="ck-rep-status"></span><p class="disc" style="margin-top:10px">判定只有四种：一致 / 含固定前缀 / 不一致 / 无参考。标"弱参考"的模型，参考计数只来自 2 个渠道的一致结果，可信度低于 3 个以上渠道。"不一致"表示该渠道对同一输入返回的 token 计数与多渠道共识不同，成因很多（上游分流、系统提示注入、量化、缓存），本站不推测。这是一致性测量，不是真伪判定。</p></div></section>
-<script id="d" type="application/json">{{data}}</script>
+{{poll}}<script id="d" type="application/json">{{data}}</script>
 <script>(function(){
 var D0=JSON.parse(document.getElementById("d").textContent);var gate=document.getElementById("gate"),form=document.getElementById("form");
 var dl=document.getElementById("qlist");D0.site_index.forEach(function(x){var o=document.createElement("option");o.value=x.d;dl.appendChild(o);});
@@ -1307,7 +1383,7 @@ fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).cat
    window.__CK.push({base:base,model:m,raw_model:m,counts:counts,echo:echo,ttfb_ms:tt,ok:ok,verdict:verdict});}
   st.textContent="完成。";});
  document.getElementById("ck-report").addEventListener("click",function(){var s=document.getElementById("ck-rep-status");if(!window.__CK||!window.__CK.length){s.textContent="先测一次。";return;}s.textContent="提交中…";Promise.all(window.__CK.map(function(x){return fetch("/api/check/report",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(x)});})).then(function(){s.textContent="已提交 "+window.__CK.length+" 条，谢谢。结果进入待审核队列，审核后计入该站的检测覆盖。";}).catch(function(){s.textContent="提交失败，稍后再试。";});});
-});})();</script>""", data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "models": [{"id": m["id"], "name": m["name"]} for m in D["models"] if m["is_latest"]]}))
+});})();</script>""", poll=POLL_BOX, data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "models": [{"id": m["id"], "name": m["name"]} for m in D["models"] if m["is_latest"]]}))
     return shell("测试模型真伪 · Sinan Compute", "登录后用你自己的 Key 在浏览器里测一个中转站：8 条固定探针，比对 token 计数、回显模型名与延迟。Key 不上传。", "/check", body, active="check", page="check", crumbs=[("测试模型真伪",)], extra_head='<meta name="robots" content="noindex">')
 
 def build_weekly_index(all_weeks):
@@ -1380,7 +1456,7 @@ def main():
         os.makedirs(os.path.join(DIST, "report"), exist_ok=True); W("report.html", build_report_index(REPS))
         for i, r_ in enumerate(REPS):
             W("report/%s.html" % r_["month"], build_report(r_, first_issue=(i == len(REPS) - 1))); shutil.copy(os.path.join(HERE, "reports", r_["month"] + ".json"), os.path.join(DIST, "report", r_["month"] + ".json"))
-    W("press.html", build_press()); W("verify.html", build_verify())
+    W("press.html", build_press()); W("verify.html", build_verify()); W("api-docs.html", build_api_docs()); W("corrections.html", build_corrections()); W("changes.json", build_changes_json())
     os.makedirs(os.path.join(DIST, "badge", "verified"), exist_ok=True)
     for s_ in D["sites"]:
         if s_.get("verified"): W("badge/verified/%s.svg" % s_["domain"], verified_badge_svg(s_))
@@ -1428,7 +1504,7 @@ def main():
             else: shutil.copy(src_, dst_)
     W("assets/ledger.json", jsdata({"models": D["models"], "snaps": D["snaps"]}))
     W("robots.txt", "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n" % BASE)
-    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily"), ("/gpu", "daily"), ("/report", "weekly"), ("/press", "monthly"), ("/verify", "monthly")] + [("/report/%s" % r_["month"], "weekly") for r_ in load_reports()] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
+    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily"), ("/gpu", "daily"), ("/report", "weekly"), ("/press", "monthly"), ("/verify", "monthly"), ("/api-docs", "weekly"), ("/corrections", "weekly")] + [("/report/%s" % r_["month"], "weekly") for r_ in load_reports()] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
     W("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join('  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq></url>\n' % (BASE, u, GEN_DATE, c) for u, c in urls) + "</urlset>\n")
     W("favicon.svg", FAVICON)
     W("_headers", "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/assets/*\n  Cache-Control: public, max-age=604800\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n/img/*\n  Cache-Control: public, max-age=2592000\n")

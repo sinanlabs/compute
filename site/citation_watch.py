@@ -44,10 +44,15 @@ def main():
     for x in gh: x["new"] = x["url"] not in seen["github"]
     for x in hs: x["new"] = x["url"] not in seen["hn"]
     rf = referrers()
+    poll = {}
+    try:
+        r = subprocess.run(["npx", "wrangler", "d1", "execute", "sinan-users", "--remote", "--json", "--command", "SELECT key a, SUM(n) n FROM events WHERE name='poll:byok' GROUP BY key"], cwd=ROOT, capture_output=True, text=True, timeout=120)
+        poll = {x["a"]: x["n"] for x in json.loads(r.stdout)[0]["results"]}
+    except Exception as e: print("poll 读取失败", e)
     wk = "%d-w%02d" % today.isocalendar()[:2]
     summary = "%s：GitHub 提到我们的文件 %d 个（新 %d）· Hacker News %d 条（新 %d）· 本周外部来源访问 %d 次，来自 %d 个站点。" % (wk, len(gh), sum(x["new"] for x in gh), len(hs), sum(x["new"] for x in hs), sum(int(x["n"]) for x in rf), len(rf))
     print(summary)
-    mail_run("cite", {"week": wk, "summary": summary, "github": sorted(gh, key=lambda x: not x["new"]), "hn": sorted(hs, key=lambda x: not x["new"]), "referrers": rf})
+    mail_run("cite", {"week": wk, "summary": summary, "github": sorted(gh, key=lambda x: not x["new"]), "hn": sorted(hs, key=lambda x: not x["new"]), "referrers": rf, "poll": poll})
     seen = {"github": sorted(set(seen["github"]) | set(x["url"] for x in gh)), "hn": sorted(set(seen["hn"]) | set(x["url"] for x in hs)), "last": today.isoformat()}
     json.dump(seen, io.open(SEEN, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
