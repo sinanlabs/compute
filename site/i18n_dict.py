@@ -561,6 +561,7 @@ HTML = {
 "一个问题 · 只计数": "One question · counted only", "你需要司南代你统一调用吗？": "Do you want Sinan to route your calls for you?", "需要": "Yes", "不需要，我只要数据": "No, data is enough", "说不准": "Not sure", "已记录，谢谢。": "Recorded, thanks.",
 "这条数据有误？报错": "Something wrong here? Report it", "这个站的信息有误？报错": "Wrong info about this site? Report it", "我们改过什么，谁指出的": "What we corrected, and who pointed it out", "已确认的修正": "Confirmed corrections", "怎么报错": "How to report", "日期": "Date", "对象": "Target", "修正": "Correction", "原因": "Reason", "指出者": "Reported by", "提交": "Submitted", "提交者": "Reporter", "待处理的报错 · {n} 条": "Open reports · {n}",
 "Sinan Compute · 中转市场与算力": "Sinan Compute · relay market & compute", "Sinan Robo · 开源具身模型": "Sinan Robo · open embodied models",
+"模型供给榜": "Model supply board", "个站在卖": "sites selling", "站间离散": "Spread", "上期": "previous issue", "新": "new", "上周未上榜": "not on last week's board", "与上周相同": "same as last week", "探针待 Key": "probe awaits key",
 # ---------- 司南榜 ----------
 "多模态 · 图像与视频": "Multimodal · image & video", "按秒、按张，对着官方价比": "Per second, per image, against official prices",
 "Seedance、Kling、Veo、Hailuo、Vidu、Wan 与 Nano Banana、Seedream、Qwen-Image、FLUX 在中转站的实付，与官方按秒 / 按张价放在同一把尺上。这是别处没有的数据。": "Effective relay prices for Seedance, Kling, Veo, Hailuo, Vidu, Wan and Nano Banana, Seedream, Qwen-Image, FLUX, on the same ruler as official per-second / per-image prices. Data you will not find elsewhere.",

@@ -22,6 +22,7 @@ BASE = "https://compute.sinanlab.com"
 D = json.load(io.open(os.path.join(HERE, "data_v2.json"), encoding="utf-8"))
 MEDIA = json.load(io.open(os.path.join(HERE, "media.json"), encoding="utf-8")) if os.path.exists(os.path.join(HERE, "media.json")) else None
 GEN_DATE = D["generated_at"][:10]
+D_MODELS = {m["id"]: m for m in D["models"]}
 
 LABEL = {"unsustainable": "数学上不可持续", "below_bulk": "低于常见批量折扣", "explainable": "价格说得通", "normal": "与公开价接近", "premium": "高于公开价", "far_above": "显著高于公开价"}
 BANDC = {"unsustainable": "#F04438", "below_bulk": "#F79009", "explainable": "#17B26A", "normal": "#17B26A", "premium": "#6E56F5", "far_above": "#9AA0B8"}
@@ -65,6 +66,7 @@ a{color:inherit;text-decoration:none}button{font:inherit;color:inherit}::selecti
 .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 22px}
 .brand .mark{width:36px;height:36px;border-radius:10px;background:#07070B url(/brand/sinanlab-mark.svg) center/28px 28px no-repeat;box-shadow:0 8px 18px -10px rgba(7,7,11,.6);flex:none}
 .subbox{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-top:44px;padding:22px 26px;border:1px solid var(--hair);border-radius:18px;background:var(--card)}.subbox>div{flex:1 1 320px}.subform{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1 1 320px;justify-content:flex-end}.subform input{flex:1 1 220px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit;font-size:14px;background:var(--card);color:var(--ink)}.subform .sub{flex-basis:100%;text-align:right}
+.mv{font-family:var(--mono);font-size:11px;border-radius:999px;padding:2px 7px;flex:none;background:var(--ground-2);color:var(--ink-2)}.mv.up{background:#DCFAE6;color:#067647}.mv.down{background:#FEE4E2;color:#B42318}.mv.new{background:#EDE9FE;color:#5B3FD6}.mv.same{opacity:.7}
 .repfoot{margin-top:18px;padding-top:12px;border-top:1px dashed var(--hair-2);display:flex;gap:10px;align-items:center;flex-wrap:wrap}.rep{background:none;border:1px solid var(--hair-2);border-radius:999px;padding:4px 10px;font:inherit;font-size:12px;color:var(--ink-2);cursor:pointer}.rep:hover{border-color:var(--ink);color:var(--ink)}.repform{flex-basis:100%;display:grid;gap:8px;margin-top:6px}.repform textarea,.repform input{width:100%;padding:8px 10px;border:1px solid var(--hair-2);border-radius:10px;font:inherit;font-size:13px;background:var(--card);color:var(--ink)}
 .pollrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}.pollrow .btn[disabled]{opacity:.5;cursor:default}
 .pledge{display:flex;flex-wrap:wrap;gap:8px 22px;margin:14px 0 0;padding:12px 16px;border:1px dashed var(--hair-2);border-radius:14px;font-size:12.5px;color:var(--ink-2)}.pledge b{color:var(--ink);margin-right:6px}
@@ -922,12 +924,20 @@ def build_weekly(W, all_weeks):
 
 
 # ------------------------------------------------------------------ 司南榜（测量榜）
-def rank_rows(items, val, sub=None, bar=None, href="/s/%s"):
+def mv_tag(prev, key, pos):
+    """与上周同一张榜比：↑n / ↓n / 新 / ＝。prev = {key: 上周名次}；prev 为 None 表示没有上周数据，不标。"""
+    if prev is None: return ""
+    q = prev.get(key)
+    if q is None: return '<span class="mv new" title="上周未上榜">新</span>'
+    d = q - pos
+    if d == 0: return '<span class="mv same" title="与上周相同">＝</span>'
+    return '<span class="mv %s" title="上周第 %d">%s%d</span>' % ("up" if d > 0 else "down", q, "↑" if d > 0 else "↓", abs(d))
+
+def rank_rows(items, val, sub=None, bar=None, href="/s/%s", prev=None):
     out = []
     for i, x in enumerate(items):
-        w = ""
-        if bar is not None:
-            v = bar(x); w = '<span class="bar" aria-hidden="true"><i style="width:%d%%"></i></span>' % max(2, min(100, int(v)))
+        w = mv_tag(prev, x["domain"], i + 1)
+        if bar is not None: w += '<span class="bar" aria-hidden="true"><i style="width:%d%%"></i></span>' % max(2, min(100, int(bar(x))))
         out.append('<li%s><span class="no">%02d</span><span class="who"><a href="%s">%s</a>%s</span>%s<span class="val">%s%s</span></li>' % (
             ' class="top"' if i < 3 else "", i + 1, href % esc(x["domain"]), esc(x["domain"]), ('<small>%s</small>' % esc(x["name"])) if x.get("name") else "", w, val(x), ('<small>%s</small>' % sub(x)) if sub else ""))
     return '<ol class="rk">%s</ol>' % "".join(out) if out else '<div class="callout">样本不足，本期空缺</div>'
@@ -947,16 +957,50 @@ def relbar(items, key, lower_better=False):
         return 8 + 92 * ((1 - t) if lower_better else t)
     return f
 
+def prev_rank(R, all_weeks):
+    """上一期榜单 JSON（若有）。"""
+    ws = sorted(set(all_weeks) | {R["week"]}); i = ws.index(R["week"])
+    if i == 0: return None
+    p_ = os.path.join(HERE, "rank", ws[i - 1] + ".json")
+    return json.load(io.open(p_, encoding="utf-8")) if os.path.exists(p_) else None
+
+def supply_board():
+    """模型供给榜：被最多中转站上架（有效报价）的模型，附上周对比、市场中位 7 天变化、一致性探针。数据来自价格指数的逐日序列。"""
+    if not PI or not PI.get("models"): return "", []
+    rows = []
+    for mid, m in PI["models"].items():
+        ser = m["series"]; t = ser[-1]; t7 = ser[-8] if len(ser) >= 8 else ser[0]
+        dm = D_MODELS.get(mid) or {}
+        pbs = [r.get("probe") for r in (dm.get("rows") or []) if r.get("probe")]
+        cons = sum(1 for p_ in pbs if p_["status"] == "consistent"); div = sum(1 for p_ in pbs if p_["status"] == "divergent")
+        rows.append({"id": mid, "name": m["name"], "tier": m["tier"], "n": t["n"], "n7": t7["n"], "median": t["median"], "d7": ((t["median"] / t7["median"] - 1) * 100) if t7.get("median") else None, "ratio": t["ratio"], "cons": cons, "div": div})
+    rows.sort(key=lambda x: (-x["n"], x["id"]))
+    TZ = {"flagship": "旗舰", "mid": "中档", "flash": "快速"}
+    lis = []
+    for i, x in enumerate(rows[:14]):
+        dn = x["n"] - x["n7"]; mv = ('<span class="mv %s">%s%d 站</span>' % ("up" if dn > 0 else "down", "+" if dn > 0 else "−", abs(dn))) if dn else '<span class="mv same">＝</span>'
+        d7 = ("%+.0f%%" % x["d7"]) if x["d7"] is not None else "—"
+        probe = ("一致 %d · 不一致 %d" % (x["cons"], x["div"])) if (x["cons"] or x["div"]) else "探针待 Key"
+        lis.append('<li%s><span class="no">%02d</span><span class="who"><a href="/m/%s">%s</a><small>%s · 市场中位 $%s/M（官方价的 %d%%）· 7 天 %s · %s</small></span>%s<span class="bar" aria-hidden="true"><i style="width:%d%%"></i></span><span class="val">%d<small>个站在卖</small></span></li>'
+                   % (' class="top"' if i < 3 else "", i + 1, esc(x["id"]), esc(x["name"]), TZ.get(x["tier"], ""), fmt(x["median"]), round(x["ratio"] * 100), d7, probe, mv, max(2, int(100 * x["n"] / rows[0]["n"])), x["n"]))
+    html = board("模型供给榜", "被最多中转站上架的模型：站数 = 该模型有有效报价的站；这是供给侧的市场份额，和需求侧的用量份额是两回事。站数变化与上周比；市场中位价变化按 7 天；一致性只对我们有 Key 的站", '<ol class="rk">%s</ol>' % "".join(lis), 0.5)
+    return html, rows
+
 def build_rank(R, all_weeks, path="/rank"):
     st = D["stats"]; wk = R["week"]
+    PR = prev_rank(R, all_weeks)
+    def prevpos(key):
+        if not PR or not isinstance(PR.get(key), list): return None
+        return {x["domain"]: i + 1 for i, x in enumerate(PR[key])}
     seo = rank_metadata(R, path)
     title = seo["title"]; desc = seo["description"]
     head = u"""<div class="rkhead rise" style="--i:0"><div class="eyebrow">司南榜 · 测量榜单 · 每周一出刊</div><h1>司南榜 · %s</h1><p class="lead">过去 7 天的测量结果。每张榜只回答一个可测量的问题，按测量值排序，不含任何商业变量，不构成推荐。名次带样本量与门槛，能复算。<b>已关闭新用户注册的站不进任何榜单</b>（每日探测注册接口）。</p>
-<div class="meta"><span><b>%d</b>已确认中转站</span><span><b>%s</b>实付报价</span><span><b>%d</b>进入榜单门槛的站</span><span><b>%s</b>数据日期</span></div></div>""" % (wk, R["n_sites"], format(R["n_quotes"] or st["quotes"], ","), R["eligible_uptime"], R["date"])
+<div class="meta"><span><b>%d</b>已确认中转站</span><span><b>%s</b>实付报价</span><span><b>%d</b>进入榜单门槛的站</span><span><b>%s</b>数据日期</span><span><b>%s</b>上期</span></div><p class="sub" style="margin-top:10px">出刊：每周一北京时间早间，7 天窗口到周日为止；名次旁的 <span class="mv up">↑</span><span class="mv down">↓</span><span class="mv new">新</span> 是与上一期同一张榜的位次比较。口径见 <a href="/method">口径与定义</a>；本期 JSON：<a href="/rank/%s.json">%s.json</a>。</p></div>""" % (wk, R["n_sites"], format(R["n_quotes"] or st["quotes"], ","), R["eligible_uptime"], R["date"], (PR or {}).get("week") or "—", esc(wk), esc(wk))
+    b_supply, _ = supply_board()
     fast = R["fast"]; b_fast = board("响应榜", "可达率 ≥99% 的站里首字节延迟 p50 最低（美国西部探测节点，≥24 次探测）",
-               rank_rows(fast, lambda x: "%dms" % x["p50"], lambda x: "可达 %.1f%% · %d 次" % (x["uptime"], x["n"]), bar=relbar(fast, lambda x: x["p50"], True)), 1)
+               rank_rows(fast, lambda x: "%dms" % x["p50"], lambda x: "可达 %.1f%% · %d 次" % (x["uptime"], x["n"]), bar=relbar(fast, lambda x: x["p50"], True), prev=prevpos("fast")), 1)
     pr_ = R.get("price", []); b_price = board("价格优势榜", "最新代模型在说得通区间（参考价 40%–125%）内的实付中位数最低；至少 8 个可比模型；数值 = 参考价的几成",
-               rank_rows(pr_, lambda x: "%d%%" % round(x["median"] * 100), lambda x: "%d 个可比模型" % x["n"], bar=relbar(pr_, lambda x: x["median"], True)), 2)
+               rank_rows(pr_, lambda x: "%d%%" % round(x["median"] * 100), lambda x: "%d 个可比模型" % x["n"], bar=relbar(pr_, lambda x: x["median"], True), prev=prevpos("price")), 2)
     fl = []
     for m in R["flagship"]:
         rows = "".join('<li%s><span class="no">%02d</span><span class="who"><a href="/s/%s">%s</a>%s</span><span class="val">$%s<small>参考价的 %d%%</small></span></li>' % (
@@ -964,13 +1008,13 @@ def build_rank(R, all_weeks, path="/rank"):
         fl.append('<div style="margin-top:14px"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><a href="/m/%s" style="font-weight:600">%s</a><span class="sub">参考价 $%s · 说得通区间内 %d 家</span></div><ol class="rk">%s</ol></div>' % (esc(m["id"]), esc(m["name"]), fmt(m["floor"]), m["n_inrange"], rows))
     b3 = board("新旗舰榜", "每个最新代模型，说得通区间（参考价 40%–125%）内最低实付的三家；低于成本下限的不计", "".join(fl) or '<div class="callout">样本不足，本期空缺</div>', 3)
     du = R["dual"]; b4 = board("双旗舰榜", "同时在说得通区间卖 GPT-6 Astra 与 Claude Fable 5.1 的站，按两者实付之和",
-               rank_rows(du, lambda x: "$%s" % fmt(x["sum"]), lambda x: "GPT-6 $%s + Fable 5.1 $%s" % (fmt(x["gpt6"]), fmt(x["fable"])), bar=relbar(du, lambda x: x["sum"], True)), 4)
+               rank_rows(du, lambda x: "$%s" % fmt(x["sum"]), lambda x: "GPT-6 $%s + Fable 5.1 $%s" % (fmt(x["gpt6"]), fmt(x["fable"])), bar=relbar(du, lambda x: x["sum"], True), prev=prevpos("dual")), 4)
     dd = R.get("dist_up", {}); low = R.get("low", [])
     b_up = board("可达榜", "过去 7 天 %d 家过门槛（≥24 次探测，在卖 ≥10 模型）：100%% 有 %d 家 · 99%%–99.9%% 有 %d 家 · 低于 99%% 有 %d 家。下面是可达率最低的 8 家" % (R["eligible_uptime"], dd.get("full", 0), dd.get("hi", 0), dd.get("low", 0)),
                rank_rows(low, lambda x: "%.1f%%" % x["uptime"], lambda x: "%d 次探测 · p50 %sms" % (x["n"], x["p50"] if x["p50"] else "—"), bar=relbar(low, lambda x: x["uptime"], False)), 5)
     vo = R["volatility"]; b5 = board("价格波动榜", "在卖 ≥20 模型的站里，7 天主流模型变价次数最多的（连续两次抓取一致才计一次）；%d/%d 家大站 7 天零变价" % (R["zero_change"], R["n_big"]),
-               rank_rows(vo, lambda x: "%d 次" % x["n"], lambda x: "7 天变价", bar=relbar(vo, lambda x: x["n"], False)), 6)
-    cv = R["coverage"]; b6 = board("覆盖榜", "在卖模型最多的站（有公开定价接口）", rank_rows(cv, lambda x: "%d" % x["n"], lambda x: "个模型", bar=relbar(cv, lambda x: x["n"], False)), 7)
+               rank_rows(vo, lambda x: "%d 次" % x["n"], lambda x: "7 天变价", bar=relbar(vo, lambda x: x["n"], False), prev=prevpos("volatility")), 6)
+    cv = R["coverage"]; b6 = board("覆盖榜", "在卖模型最多的站（有公开定价接口）", rank_rows(cv, lambda x: "%d" % x["n"], lambda x: "个模型", bar=relbar(cv, lambda x: x["n"], False), prev=prevpos("coverage")), 7)
     pr = "".join('<tr><td><a class="dom" href="/s/%s">%s</a>%s</td><td class="num">%d</td><td class="num">%d</td><td class="num">%d</td><td>%s</td></tr>' % (
         esc(x["domain"]), esc(x["domain"]), ('<div class="sub">%s</div>' % esc(x["name"])) if x.get("name") else "", x["pairs"], x["consistent"], x["divergent"], x["ts"]) for x in R["probe"])
     b7 = '<section class="card rise" style="margin-top:16px;--i:8"><div class="pad" style="padding-bottom:6px"><h2 class="sec">检测覆盖</h2><p class="lead" style="margin-top:4px">用我们自己的 Key 做过一致性探针的站。一致 = 12 条探针的 token 计数与同模型其他渠道完全相同；不一致 = 计数不同；其余为样本不足。这是一致性测量，不是真伪判定（方法论第 8 节）。</p></div><div class="tablewrap"><table><thead><tr><th>站</th><th class="num">已测模型</th><th class="num">一致</th><th class="num">不一致</th><th>日期</th></tr></thead><tbody>%s</tbody></table></div></section>' % (pr or '<tr><td class="dim">尚无</td></tr>')
@@ -993,7 +1037,7 @@ def build_rank(R, all_weeks, path="/rank"):
                   % (len(au), "、".join("%s（%s，$%s vs $%s）" % (esc(x["site"]), esc(x["family"]), x["value"], x["second"]) for x in au[:6]) + ("。" if au else ""), R.get("audit_open") or 0)) if (au or R.get("audit_open")) else ""
     hist = "".join('<a href="/rank/%s">%s</a>' % (esc(w), esc(w)) for w in all_weeks)
     foot = '<div class="tfoot" style="margin-top:16px"><span>按测量值排序，不构成推荐；排序不含任何商业变量。数据 %s · 窗口 7 天 · 方法见 <a href="/method">方法论</a>。永久链接 /rank/%s</span></div><div class="callout" style="margin-top:12px"><b>期号徽章</b>：响应榜、价格优势榜、双旗舰榜、覆盖榜、多模态价格优势榜上的站，可在各自站点页拿到带期号的徽章嵌入代码；徽章只显示榜名、名次、测量值与期号，点击回到当期榜单。</div><div class="mlinks card" style="margin-top:12px"><span class="vn">历次榜单</span>%s</div>' % (R["date"], esc(wk), hist)
-    body = head + PLEDGE + '<div class="rkgrid">%s%s</div>%s<div class="rkgrid">%s%s%s%s</div>%s%s%s%s' % (b_fast, b_price, b3, b4, b_up, b5, b6, media_html, audit_html, b7, foot) + cite_block("司南榜 %s" % wk, path, R["date"])
+    body = head + PLEDGE + b_supply + '<div class="rkgrid">%s%s</div>%s<div class="rkgrid">%s%s%s%s</div>%s%s%s%s' % (b_fast, b_price, b3, b4, b_up, b5, b6, media_html, audit_html, b7, foot) + cite_block("司南榜 %s" % wk, path, R["date"])
     image_head = '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="%s"><meta name="twitter:image:alt" content="%s">' % (esc(seo["image_alt"]), esc(seo["image_alt"]))
     return shell(title, desc, path, body, active="rank", page="rank", crumbs=[("司南榜",)], og_image=seo["image"], jsonld=[seo["jsonld"]], extra_head=image_head + '<link rel="alternate" type="application/rss+xml" title="Sinan Compute 价格变动" href="/feed.xml">')
 
@@ -1053,22 +1097,29 @@ def pi_chart(series, keys, w=860, h=260):
 
 def build_price_index():
     if not PI or not PI.get("latest"): return None
-    L = PI["latest"]; S = PI["series"]; wk = S[-8] if len(S) >= 8 else S[0]
-    def chg(k):
-        a, b = (L.get(k) or {}).get("level"), (wk.get(k) or {}).get("level")
+    L = PI["latest"]; S = PI["series"]; wk = S[-8] if len(S) >= 8 else S[0]; m30 = S[-31] if len(S) >= 31 else S[0]
+    def chg(k, base=None):
+        a, b = (L.get(k) or {}).get("level"), ((base or wk).get(k) or {}).get("level")
         return ("%+.1f%%" % ((a / b - 1) * 100)) if a and b else "—"
+    def disp(tier=None):
+        """站间离散度：每个模型 (p75−p25)/中位 的中位数。越大，同一模型在不同站的价差越大，比价越有价值。"""
+        vals = [(m["series"][-1]["p75"] - m["series"][-1]["p25"]) / m["series"][-1]["median"] for m in PI["models"].values() if (tier is None or m["tier"] == tier) and m["series"] and m["series"][-1].get("median") and m["series"][-1].get("p75") is not None]
+        return (sorted(vals)[len(vals) // 2]) if vals else None
     cards = []
     for k, nm_ in (("all", "全市场"), ("flagship", "旗舰（官方 ≥$20/M）"), ("mid", "中档（$2–20/M）"), ("flash", "快速（低于 $2/M）")):
         v = L.get(k)
         if not v: continue
+        dsp = disp(None if k == "all" else k)
+        cards.append('<div class="card kpi"><div class="k">%s</div><div class="v"><span>%d%%</span><small>官方价的几成</small></div><div class="n">市场中位 $%s/M ≈ ¥%s/M · %d 个模型 · 点位 %.1f · 7 天 %s · 30 天 %s · 站间离散 %s</div></div>' % (nm_, round(v["ratio"] * 100), fmt(v["price_usd"]), fmt(v["price_cny"]), v["n_models"], v["level"], chg(k), chg(k, m30), ("%d%%" % round(dsp * 100)) if dsp is not None else "—"))
+        continue
         cards.append('<div class="card kpi"><div class="k">%s</div><div class="v"><span>%d%%</span><small>官方价的几成</small></div><div class="n">市场中位 $%s/M ≈ ¥%s/M · %d 个模型 · 点位 %.1f · 7 天 %s</div></div>' % (nm_, round(v["ratio"] * 100), fmt(v["price_usd"]), fmt(v["price_cny"]), v["n_models"], v.get("level") or 0, chg(k)))
     chart = pi_chart(S, [("all", "全市场", "#07070B"), ("flagship", "旗舰", "#6E56F5"), ("mid", "中档", "#B54708"), ("flash", "快速", "#067647")])
     rows = []
     for mid, m in sorted(PI["models"].items(), key=lambda kv: (-{"flagship": 3, "mid": 2, "flash": 1}[kv[1]["tier"]], -kv[1]["floor"])):
         t = m["series"][-1]; t7 = m["series"][-8] if len(m["series"]) >= 8 else m["series"][0]
         d7 = ("%+.0f%%" % ((t["median"] / t7["median"] - 1) * 100)) if t7["median"] else "—"
-        rows.append('<tr><td><a href="/m/%s"><b>%s</b></a><div class="sub">%s</div></td><td class="num">$%s</td><td class="num"><b>$%s</b><div class="sub">¥%s</div></td><td class="num sub">$%s – $%s</td><td class="num">%d</td><td class="num"><span class="r">%d%%</span></td><td class="num sub">%s</td></tr>' % (
-            esc(mid), esc(m["name"]), {"flagship": "旗舰", "mid": "中档", "flash": "快速"}[m["tier"]], fmt(m["floor"]), fmt(t["median"]), fmt(t["median"] * PI["fx"]), fmt(t["p25"]), fmt(t["p75"]), t["n"], round(t["ratio"] * 100), d7))
+        rows.append('<tr><td><a href="/m/%s"><b>%s</b></a><div class="sub">%s</div></td><td class="num">$%s</td><td class="num"><b>$%s</b><div class="sub">¥%s</div></td><td class="num sub">$%s – $%s</td><td class="num sub">%s</td><td class="num">%d</td><td class="num"><span class="r">%d%%</span></td><td class="num sub">%s</td></tr>' % (
+            esc(mid), esc(m["name"]), {"flagship": "旗舰", "mid": "中档", "flash": "快速"}[m["tier"]], fmt(m["floor"]), fmt(t["median"]), fmt(t["median"] * PI["fx"]), fmt(t["p25"]), fmt(t["p75"]), ("%d%%" % round((t["p75"] - t["p25"]) / t["median"] * 100)) if t.get("median") and t.get("p75") is not None else "—", t["n"], round(t["ratio"] * 100), d7))
     TT = D.get("task_tokens") or {}
     if TT:
         trs = []
@@ -1084,7 +1135,7 @@ def build_price_index():
 <div class="kpis rise" style="--i:1">{{cards}}</div>
 <section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">折价率走势</h2><p class="lead" style="margin-top:4px">市场中位实付 ÷ 官方参考价。旗舰模型长期在 15% 左右，因为多数站按"1 元充 1 美元额度"卖、名义价照抄官方价；快速档接近官方价。这是测量结果，不是对哪一档的推荐。</p>{{chart}}</section>
 <section class="card rise" style="--i:3;margin-top:18px"><div class="pad" style="padding-bottom:6px"><h2 class="sec">今日各模型</h2><p class="lead" style="margin-top:4px">只计入当天有 ≥{{min_sites}} 个站报价的最新两代模型；"7 天"为市场中位价相对 7 天前的变化。</p></div>
-<div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">官方参考 $/M</th><th class="num">市场中位</th><th class="num">25–75 分位</th><th class="num">站数</th><th class="num">折价率</th><th class="num">7 天</th></tr></thead><tbody>{{rows}}</tbody></table></div></section>
+<div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">官方参考 $/M</th><th class="num">市场中位</th><th class="num">25–75 分位</th><th class="num">站间离散</th><th class="num">站数</th><th class="num">折价率</th><th class="num">7 天</th></tr></thead><tbody>{{rows}}</tbody></table></div></section>
 <section class="card pad rise" style="--i:4;margin-top:18px"><h2 class="sec">任务成本：同一件事各模型花多少 Token</h2><p class="lead" style="margin-top:4px">Token 有三张账单：生产成本、市场单价、任务成本。前两张这页给了，第三张来自我们每天对各模型发的同一套 30 道小题：记录每题实际消耗的输出 token，乘上单价，就是"做这件事花多少钱"。</p>{{task}}</section>
 <section class="card pad rise" style="--i:5;margin-top:18px"><h2 class="sec">口径、数据与引用</h2><p class="lead" style="margin-top:4px">{{method}}</p>
 <p class="sub" style="margin-top:10px">成本层：<a href="/gpu" style="color:var(--p-ink)">算力租赁账本</a>（一张显卡租一小时多少钱）。</p>
