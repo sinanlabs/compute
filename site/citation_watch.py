@@ -19,7 +19,8 @@ def gh_search(q):
 def hn():
     try:
         d = httpx.get("https://hn.algolia.com/api/v1/search?query=sinanlab.com&tags=(story,comment)", timeout=30).json()
-        hits = [h for h in d.get("hits", []) if "sinanlab" in json.dumps(h, ensure_ascii=False).lower()]   # Algolia 会模糊匹配，只留真提到的
+        # Algolia 会模糊匹配（还会命中叫 sinanlab 的用户名），只留正文/链接里真写了 sinanlab.com 的
+        hits = [h for h in d.get("hits", []) if "sinanlab.com" in " ".join(str(h.get(k) or "") for k in ("url", "story_url", "title", "story_text", "comment_text")).lower()]
         return [dict(title=h.get("title") or (h.get("comment_text") or "")[:80], url="https://news.ycombinator.com/item?id=%s" % h["objectID"], date=(h.get("created_at") or "")[:10]) for h in hits]
     except Exception as e:
         print("HN 失败", e); return []
