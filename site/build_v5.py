@@ -1155,11 +1155,11 @@ def price_index_badge():
     return ('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="72" viewBox="0 0 360 72" role="img" aria-label="司南 Token 价格指数">'
             '<rect width="360" height="72" rx="14" fill="#07070B"/><rect x=".5" y=".5" width="359" height="71" rx="13.5" fill="none" stroke="#F5F5F7" stroke-opacity=".14"/>'
             '<g transform="translate(14 14) scale(.6875)">%s</g><line x1="68" y1="18" x2="68" y2="54" stroke="#B8A4FA" stroke-width="1"/>'
-            '<text x="80" y="29" font-family="%s" font-size="11" fill="#B8A4FA">司南 Token 价格指数 · %s</text>'
-            '<text x="80" y="51" font-family="%s" font-size="15" font-weight="600" fill="#F5F5F7">全市场 %d%% · %s</text>'
-            '<text x="346" y="29" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#B8A4FA">点位 %.1f</text>'
-            '<text x="346" y="51" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#F5F5F7">$%s/M</text></svg>'
-            % (MARK_SVG, font, PI["generated_at"][:10], font, round(L["all"]["ratio"] * 100), parts, L["all"].get("level") or 0, fmt(L["all"]["price_usd"])))
+            '<text x="80" y="23" font-family="%s" font-size="11" fill="#B8A4FA">司南 Token 价格指数 · %s</text>'
+            '<text x="80" y="43" font-family="%s" font-size="15" font-weight="600" fill="#F5F5F7">全市场 %d%% <tspan font-family="ui-monospace,Menlo,monospace" font-size="12" font-weight="400" fill="#B8A4FA">· 市场中位 $%s/M</tspan></text>'
+            '<text x="80" y="61" font-family="%s" font-size="10.5" fill="#B8A4FA">%s</text>'
+            '<text x="346" y="61" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#B8A4FA">点位 %.1f</text></svg>'
+            % (MARK_SVG, font, PI["generated_at"][:10], font, round(L["all"]["ratio"] * 100), fmt(L["all"]["price_usd"]), font, parts, L["all"].get("level") or 0))
 
 # ------------------------------------------------------------------ 需求探针（只计数，不推荐）
 POLL_BOX = ('<section class="card pad rise" id="poll" style="margin-top:18px"><div class="eyebrow" style="color:var(--p)">一个问题 · 只计数</div><h2 class="sec" style="margin-top:4px">你需要司南代你统一调用吗？</h2>'
