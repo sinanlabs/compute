@@ -732,6 +732,8 @@ def build_site(s):
          ("用本站 Key 测 %d 个模型的 token 计数，与同模型其他渠道比对 · %s" % (s["probe"]["pairs"], s["probe"]["ts"])) if s.get("probe") else "尚未用 Key 探测；只有拿到该站 Key 才能测", "" if s.get("probe") else "t"),
         ("能力抽样", ("%d 个模型 · 低于中位 %d" % (len([r for r in s["models"] if (r.get("probe") or {}).get("cap")]), len([r for r in s["models"] if ((r.get("probe") or {}).get("cap") or {}).get("status") == "below"]))) if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "—",
          "30 道机器判分小题，本站答对数与同模型其他渠道中位数比" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "尚未用 Key 抽样", "" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "t"),
+        ("上游自述", " · ".join((s.get("upstream") or {}).get("tags") or []) or "—",
+         ("站方面板公开文字里出现的说法，原文：" + " ｜ ".join("%s「%s」" % (k, v[:60]) for k, v in ((s.get("upstream") or {}).get("snippets") or {}).items() if k != "订阅制面板")[:300]) if (s.get("upstream") and any(k != "订阅制面板" for k in s["upstream"]["snippets"])) else ("按面板类型判定：Sub2API 面板按套餐转售订阅席位" if s.get("upstream") else "面板公开文字里没有关于上游来源的说法"), "" if s.get("upstream") else "t"),
         ("众测", ("%d 次 · %d 个来源" % (s["crowd"]["n"], s["crowd"]["srcs"])) if s.get("crowd") else "—",
          ("一致 %d · 含前缀 %d · 不一致 %d · 失败 %d · 最近 %s" % (s["crowd"]["consistent"], s["crowd"]["prefix"], s["crowd"]["divergent"], s["crowd"]["failed"], s["crowd"]["last"] or "")) if s.get("crowd") else "还没有人用自己的 Key 测过这个站；到测试页测一次，结果匿名回流到这里", "" if s.get("crowd") else "t"),
         ("存续信号", (("域名 %s 注册" % sv["created"]) if sv.get("created") else "域名年龄未知") if sv else "—", svn, "t"),
