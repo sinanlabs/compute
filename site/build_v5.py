@@ -1259,49 +1259,98 @@ def _idx_pc(snap, k):
     v = ((snap or {}).get(k) or {}).get("ratio") if snap else None
     return "—" if v is None else "%d%%" % round(v * 100)
 
+def md_html(md):
+    """极简 Markdown → HTML：段落、**粗体**、有序/无序列表、[链接](url)。用于月报叙述稿。"""
+    def inline(t):
+        t = esc(t); t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
+        return re.sub(r"\[([^\]]+)\]\((https?://[^)]+|/[^)]*)\)", r'<a href="\2" style="color:var(--p-ink)">\1</a>', t)
+    out, buf, lst = [], [], None
+    def flush():
+        nonlocal buf, lst
+        if buf: out.append('<p class="lead" style="margin-top:10px">%s</p>' % inline(" ".join(buf))); buf = []
+        if lst: out.append("</%s>" % lst); lst = None
+    for line in md.splitlines():
+        t = line.strip()
+        if not t: flush(); continue
+        m = re.match(r"^(\d+)\.\s+(.*)", t); b = re.match(r"^[-*]\s+(.*)", t)
+        if m or b:
+            kind = "ol" if m else "ul"
+            if buf: out.append('<p class="lead" style="margin-top:10px">%s</p>' % inline(" ".join(buf))); buf = []
+            if lst != kind:
+                if lst: out.append("</%s>" % lst)
+                out.append('<%s class="lead" style="margin-top:8px;padding-left:22px">' % kind); lst = kind
+            out.append("<li style=\"margin:6px 0\">%s</li>" % inline(m.group(2) if m else b.group(1)))
+        else:
+            if lst: out.append("</%s>" % lst); lst = None
+            buf.append(t)
+    flush(); return "".join(out)
+
+def load_analysis(month):
+    p_ = os.path.join(HERE, "reports", month + ".analysis.md")
+    if not os.path.exists(p_): return {}
+    sec, cur = {}, None
+    for line in io.open(p_, encoding="utf-8"):
+        m = re.match(r"^## \[(\w+)\]\s*(.*)", line)
+        if m: cur = m.group(1); sec[cur] = {"title": m.group(2).strip(), "md": []}; continue
+        if cur: sec[cur]["md"].append(line.rstrip("\n"))
+    return {k: {"title": v["title"], "html": md_html("\n".join(v["md"]))} for k, v in sec.items()}
+
+def _tbl(head, rows, note=""):
+    return '<div class="tablewrap" style="margin-top:12px"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>%s' % ("".join("<th%s>%s</th>" % (' class="num"' if h.startswith("#") else "", esc(h.lstrip("#"))) for h in head), "".join("<tr>%s</tr>" % "".join("<td%s>%s</td>" % (' class="num"' if head[i].startswith("#") else "", c) for i, c in enumerate(r)) for r in rows), ('<p class="sub" style="margin-top:6px">%s</p>' % note) if note else "")
+
 def build_report(Rp, first_issue=False):
-    m = Rp["month"]; sc = Rp["scale"]; pr = Rp["prices"]; idx = pr["index"]; p0, p1 = Rp["period"]
+    m = Rp["month"]; sc = Rp["scale"]; pr = Rp["prices"]; idx = pr["index"]; p0, p1 = Rp["period"]; ST = Rp.get("structure") or {}
+    A = load_analysis(m)
     title = "中国模型 API 中转市场月报 · %s%s" % (MONTH_ZH(m), "（创刊号）" if first_issue else "")
     pn = sc.get("panels") or {}
     one = sum(v for k, v in pn.items() if "one-api" in k or "new-api" in k); sub = pn.get("sub2api", 0); agg = sum(v for k, v in pn.items() if k in ("multimodal-aggregator", "multi-vendor"))
+    org = ST.get("origin") or {}
     kp = [("已确认中转站", "%s" % sc["confirmed_now"], "订阅制（Sub2API 一族）%d · 按量制（one-api 一族）%d" % (sub, one)),
-          ("本期新收录", "%d" % sc["new_sites"], "来源前三：%s" % "、".join("%s %d" % (k.replace("directory:", "名录:"), v) for k, v in list((sc.get("by_channel") or {}).items())[:3])),
-          ("Token 价格指数（全市场折价率）", "%s → %s" % (_idx_pc(idx.get("first"), "all"), _idx_pc(idx.get("last"), "all")), "期末：旗舰 %s · 中档 %s · 快速 %s" % (_idx_pc(idx.get("last"), "flagship"), _idx_pc(idx.get("last"), "mid"), _idx_pc(idx.get("last"), "flash"))),
-          ("主流模型变价", "%d 次" % pr["mainstream_changes"], "涨 %d · 降 %d（连续两次抓取一致才计）" % (pr["ups"], pr["downs"]))]
+          ("海外闭源模型 · 中转中位折价率", _idx_pc({"x": {"ratio": org.get("foreign_median")}}, "x"), "%d 个模型；国产模型中位 %s（%d 个）" % (org.get("n_foreign", 0), _idx_pc({"x": {"ratio": org.get("domestic_median")}}, "x"), org.get("n_domestic", 0))),
+          ("价格指数点位", "%.1f → %.1f" % (((idx.get("first") or {}).get("all") or {}).get("level") or 100, ((idx.get("last") or {}).get("all") or {}).get("level") or 100), "折价率快照 %s → %s（受样本构成影响）" % (_idx_pc(idx.get("first"), "all"), _idx_pc(idx.get("last"), "all"))),
+          ("主流模型变价", "%d 次" % pr["mainstream_changes"], "涨 %d · 降 %d；国产降 %d 涨 %d" % (pr["ups"], pr["downs"], (ST.get("change_dirs") or {}).get("domestic:down", 0), (ST.get("change_dirs") or {}).get("domestic:up", 0)))]
     kpis = "".join('<div class="card kpi"><div class="k">%s</div><div class="v"><span>%s</span></div><div class="n">%s</div></div>' % (k, v, n) for k, v, n in kp)
     chart = pi_chart(idx["series"], [("all", "全市场", "#07070B"), ("flagship", "旗舰", "#6E56F5"), ("mid", "中档", "#B54708"), ("flash", "快速", "#067647")]) if len(idx.get("series") or []) >= 2 else ""
-    def mv(rows):
-        return "".join('<tr><td><b>%s</b><div class="sub">%s</div></td><td class="num">$%s → $%s</td><td class="num"><span class="r">%+.0f%%</span></td><td class="num sub">%d 站 · 官方价的 %d%%</td></tr>' % (esc(x["name"]), TIER_ZH.get(x.get("tier"), ""), fmt(x["from"]), fmt(x["to"]), x["pct"], x["n"], round(x["ratio"] * 100)) for x in rows) or '<tr><td colspan="4" class="sub">本期无</td></tr>'
-    reach = Rp.get("reach") or {}; dd = reach.get("dist") or {}
-    reach_html = ('<p class="lead">过门槛的 %s 家站（≥24 次探测、在卖 ≥10 模型）里：100%% 可达 %s 家 · 99%%–99.9%% %s 家 · 低于 99%% %s 家。首字节最快：%s；最不稳：%s。</p>'
-                  % (reach.get("eligible"), dd.get("full"), dd.get("hi"), dd.get("low"), "、".join("%s %dms" % (x["domain"], x["p50"]) for x in (reach.get("fast") or [])[:3]) or "—", "、".join("%s %.1f%%" % (x["domain"], x["uptime"]) for x in (reach.get("low") or [])[:3]) or "—"))
-    pb = Rp.get("probes") or {}; au = Rp.get("audit") or {"open_by_reason": {}, "cleared_this_month": 0}
-    probe_html = ('<p class="lead">一致性探针 %s 组站×模型：%s 组与其他渠道一致、%s 组不一致；能力抽样 %s 组，%s 组低于同模型中位。数据核查本期放行 %d 条，期末仍待核 %d 条（%s）。</p>'
-                  % (pb.get("pairs", "—"), pb.get("consistent", "—"), pb.get("divergent", "—"), pb.get("cap_pairs", "—"), pb.get("cap_below", "—"), au.get("cleared_this_month", 0), sum(au["open_by_reason"].values()), "、".join("%s %d" % (HOLD_ZH.get(k, k), v) for k, v in au["open_by_reason"].items()) or "无"))
-    med = Rp.get("media") or {}; vids = [f for f in med.get("video", []) if f.get("ref")]; imgs = [f for f in med.get("image", []) if f.get("ref")]
-    bm = (Rp.get("boards") or {}).get("media_price") or []
-    media_html = ('<p class="lead">视频：%d 个模型族有官方参考价，可比报价最多的三族 %s。图像：%d 族有参考价，%s。多模态价格优势榜前三：%s。</p>'
-                  % (len(vids), "、".join("%s（%d 站 %d 条）" % (f["name"], f["sites"], f["cmp"]) for f in sorted(vids, key=lambda f: -f["cmp"])[:3]) or "—", len(imgs), "、".join("%s（%d 站）" % (f["name"], f["sites"]) for f in sorted(imgs, key=lambda f: -f["cmp"])[:3]) or "—",
-                     "、".join("%s %d%%" % (x["domain"], round(x["median"] * 100)) for x in bm[:3]) or "—"))
-    reg = sc.get("register") or {}
-    struct_html = ('<p class="lead">面板结构：按量计费的 one-api 一族 %d 站，订阅套餐制的 Sub2API 一族 %d 站，自研聚合站 %d 站。新用户注册：开放 %d · 关闭或邀请制 %d · 未能判定 %d。本期从总表移除工具站 %d 个、厂商官方域 %d 个；7 天未连通 %d 站。</p>'
-                   % (one, sub, agg, reg.get("open", 0), reg.get("closed", 0), reg.get("unknown", 0), sc.get("tools_excluded", 0), sc.get("official_excluded", 0), sc.get("dead") or 0))
-    gpu_html = ('<p class="lead">算力租赁（期末，单卡每小时美元，Vast.ai 按需中位 / RunPod 安全云）：%s。</p>' % "、".join("%s %s / %s" % (g["gpu"], ("$%.2f" % g["vast_median"]) if g.get("vast_median") else "—", ("$%.2f" % g["runpod_secure"]) if g.get("runpod_secure") else "—") for g in Rp["gpu"][:6])) if Rp.get("gpu") else '<p class="lead">本期无算力数据。</p>'
-    note = ('<div class="callout" style="margin-top:14px">创刊号说明：本站数据从 2026-09-02 起记录，本期区间为 %s 至 %s，"新收录"因此等于全部收录；总表在 9 月 5 日与 9 月 8 日两次批量扩容（名录抓取、Sub2API 面板识别），期内站数曲线的跳变来自此。价格指数的"点位"按共有模型链式计算，不受扩容影响；"折价率"是快照，会随样本扩大而变。</div>' % (p0, p1)) if first_issue else ""
-    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">司南实验室 · 月报 · {{period}}{{final}}</div><h1 style="font-size:26px;margin-top:6px">{{title}}</h1><p class="lead">每月一期，全部数字来自站内每日自动测量：{{n}} 个已确认中转站的实付报价、可达探测、一致性探针与能力抽样、多模态账本、算力租赁账本。按测量值陈述，不含推荐。</p>{{pledge}}{{note}}</div>
+    def sec(key, num, default_title, computed=""):
+        a = A.get(key) or {}
+        return '<section class="card pad rise" style="--i:%d;margin-top:18px"><h2 class="sec">%s</h2>%s%s</section>' % (num + 1, esc(a.get("title") or default_title), a.get("html", ""), computed)
+    # ---- 计算表
+    T = {}
+    T["scale"] = _tbl(["面板家族", "#站数", "#注册开放", "#关闭", "#未判定", "#有公开报价", "#报价中位折价率"], [[esc(x["panel"]), x["n"], x["open"], x["closed"], x["unknown"], x["with_quotes"], ("%d%%" % round(x["median_ratio"] * 100)) if x.get("median_ratio") else "—"] for x in (ST.get("panels") or [])[:6]], "面板家族按公开接口指纹判定；Sub2API 一族的套餐价在登录之后，本期无公开报价。") \
+        + _tbl(["登录方式", "#one-api 一族", "#Sub2API 一族"], [[esc(k), (ST.get("logins") or {}).get("one-api", {}).get(k, 0), (ST.get("logins") or {}).get("sub2api", {}).get(k, 0)] for k in ("邮箱", "GitHub", "LINUX DO", "Google", "OIDC", "Discord", "Telegram", "微信")]) \
+        + _tbl(["顶级域", "#站数"] , [[".%s" % esc(t), n] for t, n in (ST.get("tld") or [])[:8]]) \
+        + _tbl(["收录来源", "#本期站数"], [[esc(k.replace("directory:", "名录：")), v] for k, v in list((sc.get("by_channel") or {}).items())[:8]])
+    orows = sorted(org.get("rows") or [], key=lambda r: r["ratio"])
+    T["prices"] = chart + _tbl(["模型", "厂商", "档", "#官方 $/M", "#中转中位 $/M", "#折价率", "#站数"], [[esc(r["name"]), esc(r["vendor"]), TIER_ZH.get(r["tier"], ""), fmt(r["official"]), fmt(r["median"]), '<span class="r">%d%%</span>' % round(r["ratio"] * 100), r["n"]] for r in orows], "折价率 = 中转市场中位实付 ÷ 官方参考价；国产 / 海外按厂商注册地划分。") \
+        + _tbl(["档", "#报价数", "#低于成本下限", "#低于批量折扣", "#说得通", "#接近公开价", "#高于公开价", "#显著高于"], [[TIER_ZH.get(t, t), v["n"]] + ["%d%%" % round(100 * v["share"].get(k, 0)) for k in ("unsustainable", "below_bulk", "explainable", "normal", "premium", "far_above")] for t, v in (ST.get("bands_by_tier") or {}).items()], "区间定义见口径文档第 3 节：<15% 低于成本下限 · 15–40% 低于常见批量折扣 · 40–80% 说得通 · 80–125% 接近公开价 · 125–200% 高于 · >200% 显著高于。") \
+        + _tbl(["充值比例（元 / 每 1 美元名义额度）", "#站数", "#占比"], [["%.2g" % k, v, "%d%%" % round(100 * v / max(1, (ST.get("topup") or {}).get("sites", 1)))] for k, v in ((ST.get("topup") or {}).get("dist") or [])[:8]], "每站取最常见的充值比例；%d 个有公开报价的站。1.0 = 1 元换 1 美元额度（实付约为官方价的 15%%）；6.8–7.3 ≈ 按真实汇率 1:1。" % (ST.get("topup") or {}).get("sites", 0)) \
+        + '<h3 style="font-size:14px;margin-top:18px">期内市场中位价变化最大的模型</h3>' + _tbl(["模型", "#期初 → 期末 $/M", "#变化", "#站数 · 官方价的"], [[esc(x["name"]) + '<div class="sub">%s</div>' % TIER_ZH.get(x.get("tier"), ""), "$%s → $%s" % (fmt(x["from"]), fmt(x["to"])), '<span class="r">%+.0f%%</span>' % x["pct"], "%d 站 · %d%%" % (x["n"], round(x["ratio"] * 100))] for x in (pr["movers_down"][:5] + pr["movers_up"][:5])])
+    reach = Rp.get("reach") or {}; dd = reach.get("dist") or {}; pb = Rp.get("probes") or {}; au = Rp.get("audit") or {"open_by_reason": {}, "cleared_this_month": 0}
+    T["reach"] = _tbl(["#过门槛站数", "#7 天 100%", "#99%–99.9%", "#低于 99%", "#我方故障轮次剔除"], [[reach.get("eligible"), dd.get("full"), dd.get("hi"), dd.get("low"), Rp.get("scale", {}).get("outage_rounds_excluded") or "—"]]) \
+        + _tbl(["可达率最低", "#7 天可达", "#探测次数", "#握手 p50"], [[esc(x["domain"]), "%.1f%%" % x["uptime"], x["n"], "%sms" % (x["p50"] or "—")] for x in (reach.get("low") or [])[:5]]) \
+        + _tbl(["探针", "#站×模型组", "#一致", "#不一致", "#能力抽样组", "#低于中位"], [["本期", pb.get("pairs", "—"), pb.get("consistent", "—"), pb.get("divergent", "—"), pb.get("cap_pairs", "—"), pb.get("cap_below", "—")]]) \
+        + _tbl(["数据核查 · 待核原因", "#条数"], [[HOLD_ZH.get(k, k), v] for k, v in au["open_by_reason"].items()] + [["本期放行", au.get("cleared_this_month", 0)]])
+    med = ST.get("media") or {}
+    def mrows(mod): return [[esc(f["name"]), f["sites"], f["cmp"], ("$%s" % fmt(f["ref"])) if f.get("ref") else "—", ("$%s" % fmt(f["eff_med"])) if f.get("eff_med") else "—", ('<span class="r">%d%%</span>' % round(f["ratio"] * 100)) if f.get("ratio") else "—", "%d / %d" % ((f.get("bands") or {}).get("unsustainable", 0) + (f.get("bands") or {}).get("below_bulk", 0), (f.get("bands") or {}).get("premium", 0) + (f.get("bands") or {}).get("far_above", 0))] for f in sorted(med.get(mod, []), key=lambda f: -(f.get("cmp") or 0))]
+    T["media"] = _tbl(["视频模型族", "#站数", "#可比报价", "#官方参考 $/秒", "#族中位实付 $/秒", "#中位 ÷ 参考", "#低于折扣线 / 高于公开价"], mrows("video")) + _tbl(["图像模型族", "#站数", "#可比报价", "#官方参考 $/张", "#族中位实付 $/张", "#中位 ÷ 参考", "#低于折扣线 / 高于公开价"], mrows("image"), "参考价取官方最低档（分辩率 / 时长），中转报价按同档折算；无官方公开价的族不出比率。")
+    cf = ST.get("cost_floor") or {}
+    T["gpu"] = _tbl(["GPU", "#Vast.ai 按需中位 $/h", "#RunPod 安全云 $/h"], [[esc(g["gpu"]), ("%.2f" % g["vast_median"]) if g.get("vast_median") else "—", ("%.2f" % g["runpod_secure"]) if g.get("runpod_secure") else "—"] for g in (Rp.get("gpu") or [])[:8]]) \
+        + _tbl(["开源模型", "#官方 $/M", "#中转中位 $/M", "#折价率", "官方价是否低于 H100 单卡成本线（约 $%s/M）" % (fmt(cf["h100_per_m"]) if cf.get("h100_per_m") else "—")], [[esc(r["name"]), fmt(r["official"]), fmt(r["median"]), "%d%%" % round(r["ratio"] * 100), "是" if r.get("below_h100_floor") else "否"] for r in sorted(cf.get("open_models") or [], key=lambda r: r["official"])], "成本线按口径文档第 13 节假设（H100 $%s/h、3000 token/秒）粗算，只说明数量级。" % (fmt(cf["h100_hour"]) if cf.get("h100_hour") else "—"))
+    note = ('<div class="callout" style="margin-top:14px">创刊号说明：本站数据从 2026-09-02 起记录，本期区间为 %s 至 %s。总表在 9 月 5 日与 9 月 8 日两次批量扩容（名录抓取、Sub2API 面板识别），期内站数曲线的跳变与折价率快照的变化均来自此；点位按共有模型链式计算，不受扩容影响。</div>' % (p0, p1)) if first_issue else ""
+    summary = A.get("summary") or {}
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">司南实验室 · 月报 · {{period}}{{final}}</div><h1 style="font-size:26px;margin-top:6px">{{title}}</h1><p class="lead">每月一期。数字来自 {{n}} 个已确认中转站的每日自动测量；判断与分析由司南实验室撰写，只基于这些测量，不含对任何渠道的推荐。</p>{{pledge}}{{note}}</div>
 <div class="kpis rise" style="--i:1">{{kpis}}</div>
-<section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">一、价格：Token 价格指数</h2><p class="lead" style="margin-top:4px">市场中位实付 ÷ 官方参考价，分三档。</p>{{chart}}
-<h3 style="font-size:14px;margin-top:18px">期内市场中位价下降最多</h3><div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">期初 → 期末 $/M</th><th class="num">变化</th><th class="num">样本</th></tr></thead><tbody>{{down}}</tbody></table></div>
-<h3 style="font-size:14px;margin-top:18px">期内市场中位价上升最多</h3><div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">期初 → 期末 $/M</th><th class="num">变化</th><th class="num">样本</th></tr></thead><tbody>{{up}}</tbody></table></div></section>
-<section class="card pad rise" style="--i:3;margin-top:18px"><h2 class="sec">二、市场结构：谁在卖、怎么卖</h2>{{struct}}</section>
-<section class="card pad rise" style="--i:4;margin-top:18px"><h2 class="sec">三、可达与检测</h2>{{reach}}{{probe}}</section>
-<section class="card pad rise" style="--i:5;margin-top:18px"><h2 class="sec">四、图像与视频</h2>{{media}}</section>
-<section class="card pad rise" style="--i:6;margin-top:18px"><h2 class="sec">五、算力成本层</h2>{{gpu}}</section>
-<section class="card pad rise" style="--i:7;margin-top:18px"><h2 class="sec">口径</h2><p class="lead" style="margin-top:4px">本报告所有指标的定义见 <a href="/method" style="color:var(--p-ink)">口径与定义</a>；原始数据：<a href="/report/{{m}}.json" style="color:var(--p-ink)">{{m}}.json</a>、<a href="/price-index.json" style="color:var(--p-ink)">price-index.json</a>、<a href="/data_v2.json" style="color:var(--p-ink)">data_v2.json</a>。月中每天重算，月底定稿并标"定稿"。</p></section>
+<section class="card pad rise" style="--i:1.5;margin-top:18px"><h2 class="sec">{{stitle}}</h2>{{summary}}</section>
+{{s_scale}}{{s_prices}}{{s_reach}}{{s_media}}{{s_gpu}}{{s_impl}}{{s_watch}}
+<section class="card pad rise" style="--i:9;margin-top:18px"><h2 class="sec">{{mtitle}}</h2>{{method}}<p class="lead" style="margin-top:10px">全部指标定义见 <a href="/method" style="color:var(--p-ink)">口径与定义</a>；原始数据：<a href="/report/{{m}}.json" style="color:var(--p-ink)">{{m}}.json</a>、<a href="/price-index.json" style="color:var(--p-ink)">price-index.json</a>、<a href="/data_v2.json" style="color:var(--p-ink)">data_v2.json</a>。月中每天重算数字，月底定稿并标"定稿"；分析文字随定稿一并更新。</p></section>
 {{cite}}<script id="d" type="application/json">{{data}}</script>""",
-        period="%s 至 %s" % (p0, p1), final="（定稿）" if Rp.get("final") else "（滚动更新）", title=title, n=sc["confirmed_now"], pledge=PLEDGE, note=note, kpis=kpis, chart=chart, down=mv(pr["movers_down"][:6]), up=mv(pr["movers_up"][:6]), struct=struct_html, reach=reach_html, probe=probe_html, media=media_html, gpu=gpu_html, m=m,
+        period="%s 至 %s" % (p0, p1), final="（定稿）" if Rp.get("final") else "（滚动更新）", title=title, n=sc["confirmed_now"], pledge=PLEDGE, note=note, kpis=kpis,
+        stitle=summary.get("title") or "本期判断", summary=summary.get("html") or '<p class="lead">本期分析撰写中。</p>',
+        s_scale=sec("scale", 1, "一、规模与结构", T["scale"]), s_prices=sec("prices", 2, "二、价格", T["prices"]), s_reach=sec("reach", 3, "三、可达与检测", T["reach"]), s_media=sec("media", 4, "四、图像与视频", T["media"]), s_gpu=sec("gpu", 5, "五、算力成本层", T["gpu"]),
+        s_impl=sec("implications", 6, "六、含义", "") if A.get("implications") else "", s_watch=sec("watch", 7, "七、下期观察点", "") if A.get("watch") else "",
+        mtitle=(A.get("method") or {}).get("title") or "口径与修正", method=(A.get("method") or {}).get("html", ""), m=m,
         cite=cite_block(title, "/report/%s" % m, Rp["generated_at"][:10]), data=jsdata(LIGHT_INDEX()))
-    return shell(title + " · Sinan Compute", "%s：%d 个中转站的实付价、Token 价格指数、可达与一致性检测、多模态与算力成本，每月一期，按测量值陈述。" % (MONTH_ZH(m), sc["confirmed_now"]), "/report/%s" % m, body, active="report", page="report", crumbs=[("月报", "/report"), (MONTH_ZH(m),)])
+    return shell(title + " · Sinan Compute", "%s：%d 个中转站的实付价、Token 价格指数、可达与一致性检测、多模态与算力成本，附司南实验室的分析与判断。" % (MONTH_ZH(m), sc["confirmed_now"]), "/report/%s" % m, body, active="report", page="report", crumbs=[("月报", "/report"), (MONTH_ZH(m),)])
 
 def LIGHT_INDEX():
     return {"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m_["id"], "name": m_["name"]} for m_ in D["models"]]}
