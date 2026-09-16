@@ -147,17 +147,24 @@ def zh_path_of(rel):
 
 def main(dist, base):
     left_total = 0; n = 0
+    # _en_src/<rel>.html：作者已写好英文正文的页面（如月报），翻译其余文本节点后写到 en/<rel>，并跳过同名中文页的自动翻译
+    handled = set(); jobs = []
     for root, _, files in os.walk(dist):
-        if os.path.relpath(root, dist).startswith("en"): continue
+        rp = os.path.relpath(root, dist)
+        if rp.startswith("en") and not rp.startswith("_en_src"): continue
         for fn in files:
             if not fn.endswith(".html"): continue
             src = os.path.join(root, fn); rel = os.path.relpath(src, dist).replace(os.sep, "/")
+            if rel.startswith("_en_src/"): jobs.insert(0, (src, rel[len("_en_src/"):], True)); handled.add(rel[len("_en_src/"):])
+            else: jobs.append((src, rel, False))
+    for src, rel, native in jobs:
+            if not native and rel in handled: continue
             html = io.open(src, encoding="utf-8").read()
             html = re.sub(r'<a class="lang" [^>]*>EN</a>', "", html)
             html = re.sub(r'<link rel="alternate" hreflang="[^"]*" href="[^"]*">', "", html)
             path_zh = zh_path_of(rel)
             # 中文页加 EN 切换（幂等）
-            if 'hreflang="en"' not in html:
+            if not native and 'hreflang="en"' not in html:
                 en_p = "/en/" if path_zh == "/" else "/en" + path_zh
                 zh_html = switch_link(html, en_p, "EN")
                 zh_html = zh_html.replace("</head>", '<link rel="alternate" hreflang="en" href="%s%s"><link rel="alternate" hreflang="zh-CN" href="%s%s"></head>' % (base, en_p, base, path_zh), 1)
@@ -169,6 +176,8 @@ def main(dist, base):
             dst = os.path.join(dist, "en", rel); os.makedirs(os.path.dirname(dst), exist_ok=True)
             io.open(dst, "w", encoding="utf-8").write(en_html)
             left_total += t.left; n += 1
+    import shutil
+    if os.path.exists(os.path.join(dist, "_en_src")): shutil.rmtree(os.path.join(dist, "_en_src"))
     # app.en.js
     js_src = os.path.join(dist, "assets", "app.js")
     if os.path.exists(js_src):

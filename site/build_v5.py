@@ -460,6 +460,8 @@ ICONS = {
     "verify": '<path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
     "press": '<path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/>',
     "api": '<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>',
+    "life": '<path d="M3 17l5-6 4 3 5-8 4 5"/><path d="M3 21h18"/>',
+    "gov": '<path d="M4 10h16M6 10v8M10 10v8M14 10v8M18 10v8M3 18h18M12 3l9 7H3z"/>',
     "fix": '<path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/>',
     "method": '<path d="M4 6h16M4 12h10M4 18h7"/>',
     "data": '<path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/>',
@@ -473,9 +475,9 @@ def shell(title, desc, path, body, active="", page="", crumbs=None, extra_head="
     st = D["stats"]
     canonical = BASE + path
     nav = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl, ('<span class="badge">%s</span>' % b) if b else "")
-                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("pindex", "/price-index", "Token 价格指数", ""), ("gpu", "/gpu", "算力租赁", ""), ("report", "/report", "月报", ""), ("check", "/check", "测试模型真伪", ""), ("verify", "/verify", "申请核验", "")])
+                  for k, h, lbl, b in [("home", "/", "模型账本", str(len(D["models"]))), ("sites", "/sites", "中转站", str(st["confirmed"])), ("media", "/media", "图像 · 视频", ""), ("rank", "/rank", "司南榜", ""), ("pindex", "/price-index", "Token 价格指数", ""), ("gpu", "/gpu", "算力租赁", ""), ("report", "/report", "月报", ""), ("check", "/check", "测试模型真伪", ""), ("life", "/survival", "站点存续", ""), ("verify", "/verify", "申请核验", "")])
     nav2 = "".join('<a class="nav%s" href="%s"><svg viewBox="0 0 24 24">%s</svg>%s</a>' % (" on" if active == k else "", h, ICONS[k], lbl)
-                   for k, h, lbl in [("method", "/method", "口径与定义"), ("api", "/api-docs", "开放数据与接口"), ("fix", "/corrections", "修正日志"), ("press", "/press", "媒体与研究者")])
+                   for k, h, lbl in [("method", "/method", "口径与定义"), ("api", "/api-docs", "开放数据与接口"), ("gov", "/governance", "指数治理"), ("fix", "/corrections", "修正日志"), ("press", "/press", "媒体与研究者")])
     crumb = '<div class="crumb"><a href="https://sinanlab.com">← 司南实验室</a>%s</div>' % "".join(" › " + ('<a href="%s">%s</a>' % (c[1], esc(c[0])) if len(c) > 1 and c[1] else esc(c[0])) for c in (crumbs or []))
     head = tpl(u"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{title}}</title><meta name="description" content="{{desc}}"><link rel="canonical" href="{{canonical}}"><meta property="og:site_name" content="Sinan Compute"><meta property="og:type" content="website"><meta property="og:title" content="{{title}}"><meta property="og:description" content="{{desc}}"><meta property="og:url" content="{{canonical}}"><meta property="og:image" content="{{og}}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{{og}}">{{ld}}<meta name="theme-color" content="#07070B"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="sitemap" href="/sitemap.xml"><link rel="stylesheet" href="/assets/app.css?v={{v}}">{{extra}}</head><body data-page="{{page}}">""",
                title=esc(title), desc=esc(desc), canonical=canonical, v=_asset_v(), extra=extra_head, page=page, og=BASE + og_image,
@@ -713,6 +715,13 @@ document.getElementById("sub-go").addEventListener("click",function(){var v=docu
 def build_site(s):
     f = s.get("facts") or {}; av = s.get("avail") or {}; cl = s["cluster"]; held = bool(cl and cl["code"] == "held")
     price = ("%s 元 / $1" % f["price"] + ((" · Stripe %s" % f["stripe"]) if f.get("stripe") not in (None, 8) else "")) if f.get("price") is not None else "未暴露"
+    sv = s.get("survive") or {}
+    svn = ""
+    if sv:
+        svn = "%s · %s" % ({"premium": "主流后缀", "budget": "低价后缀", "other": "其他后缀"}.get(sv.get("tld"), "后缀未知"), "有备案" if sv.get("icp") else "无备案")
+        if sv.get("uptime7") is not None: svn += " · 7 天可达 %.1f%%" % sv["uptime7"]
+        if sv.get("trend3d") is not None: svn += " · 近 3 天可达变化 %+.1f" % sv["trend3d"]
+        svn += " · 基率见站点存续页"
     facts = [
         ("价格画像", cl["name"] if cl else ("套餐制" if s.get("panel") == "sub2api" else "无比对"), ("中位 %s" % pct(s["median"])) if (cl and not held and s["median"] is not None) else (cl["help"] if cl else ("按套餐售卖订阅额度，价格需登录，本站不做套餐比价" if s.get("panel") == "sub2api" else "定价接口未公开，没有能对上参考价的模型")), "t" if not (cl and not held and s["median"] is not None) else ""),
         ("24h 可达", ("7 天未连通" if s.get("dead") else (("%.0f%%" % av["uptime"]) if av.get("uptime") is not None else "—")), ("连续 7 天、≥100 次探测一次都没连上；页面保留，不进任何榜" if s.get("dead") else (("延迟 p50 %dms · %d 次探测 · %s" % (av["ttfb_p50"], av["n"], D["probe_node"])) if av.get("ttfb_p50") else "尚无探测")), "t" if s.get("dead") else ""),
@@ -722,6 +731,9 @@ def build_site(s):
          ("用本站 Key 测 %d 个模型的 token 计数，与同模型其他渠道比对 · %s" % (s["probe"]["pairs"], s["probe"]["ts"])) if s.get("probe") else "尚未用 Key 探测；只有拿到该站 Key 才能测", "" if s.get("probe") else "t"),
         ("能力抽样", ("%d 个模型 · 低于中位 %d" % (len([r for r in s["models"] if (r.get("probe") or {}).get("cap")]), len([r for r in s["models"] if ((r.get("probe") or {}).get("cap") or {}).get("status") == "below"]))) if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "—",
          "30 道机器判分小题，本站答对数与同模型其他渠道中位数比" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "尚未用 Key 抽样", "" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "t"),
+        ("众测", ("%d 次 · %d 个来源" % (s["crowd"]["n"], s["crowd"]["srcs"])) if s.get("crowd") else "—",
+         ("一致 %d · 含前缀 %d · 不一致 %d · 失败 %d · 最近 %s" % (s["crowd"]["consistent"], s["crowd"]["prefix"], s["crowd"]["divergent"], s["crowd"]["failed"], s["crowd"]["last"] or "")) if s.get("crowd") else "还没有人用自己的 Key 测过这个站；到测试页测一次，结果匿名回流到这里", "" if s.get("crowd") else "t"),
+        ("存续信号", (("域名 %s 注册" % sv["created"]) if sv.get("created") else "域名年龄未知") if sv else "—", svn, "t"),
         ("登录方式", "、".join(f.get("login") or []) or "未暴露", ("需人机验证" if f.get("turnstile") else "无人机验证") + ("，有签到" if f.get("checkin") else ""), "t"),
         ("新用户注册", {"open": "开放", "closed": "已关闭", "unknown": "未能判定"}.get((s.get("register") or {}).get("state"), "未能判定"),
          {"open": "注册接口可用（可能需要邮箱验证或人机验证）", "closed": "站方已关闭新用户注册，新用户无法使用 · %s" % ((s.get("register") or {}).get("checked") or ""), "unknown": "非标准面板或未暴露注册接口，请到站上确认"}.get((s.get("register") or {}).get("state"), "未能判定"),
@@ -1015,9 +1027,13 @@ def build_rank(R, all_weeks, path="/rank"):
     vo = R["volatility"]; b5 = board("价格波动榜", "在卖 ≥20 模型的站里，7 天主流模型变价次数最多的（连续两次抓取一致才计一次）；%d/%d 家大站 7 天零变价" % (R["zero_change"], R["n_big"]),
                rank_rows(vo, lambda x: "%d 次" % x["n"], lambda x: "7 天变价", bar=relbar(vo, lambda x: x["n"], False), prev=prevpos("volatility")), 6)
     cv = R["coverage"]; b6 = board("覆盖榜", "在卖模型最多的站（有公开定价接口）", rank_rows(cv, lambda x: "%d" % x["n"], lambda x: "个模型", bar=relbar(cv, lambda x: x["n"], False), prev=prevpos("coverage")), 7)
+    CRS = D.get("crowd_sites") or {}
     pr = "".join('<tr><td><a class="dom" href="/s/%s">%s</a>%s</td><td class="num">%d</td><td class="num">%d</td><td class="num">%d</td><td>%s</td></tr>' % (
         esc(x["domain"]), esc(x["domain"]), ('<div class="sub">%s</div>' % esc(x["name"])) if x.get("name") else "", x["pairs"], x["consistent"], x["divergent"], x["ts"]) for x in R["probe"])
-    b7 = '<section class="card rise" style="margin-top:16px;--i:8"><div class="pad" style="padding-bottom:6px"><h2 class="sec">检测覆盖</h2><p class="lead" style="margin-top:4px">用我们自己的 Key 做过一致性探针的站。一致 = 12 条探针的 token 计数与同模型其他渠道完全相同；不一致 = 计数不同；其余为样本不足。这是一致性测量，不是真伪判定（方法论第 8 节）。</p></div><div class="tablewrap"><table><thead><tr><th>站</th><th class="num">已测模型</th><th class="num">一致</th><th class="num">不一致</th><th>日期</th></tr></thead><tbody>%s</tbody></table></div></section>' % (pr or '<tr><td class="dim">尚无</td></tr>')
+    crowd_rows = sorted(CRS.items(), key=lambda kv: -kv[1]["n"])[:20]
+    crowd_html = ('<div class="pad" style="padding-top:14px;padding-bottom:6px"><h3 style="font-size:14px">众测 · 用户用自己的 Key 测过的站（30 天）</h3><p class="sub">%d 次回流 · %d 个站 · 匿名，只收计数与判定；只显示，不进核验标识。</p></div><div class="tablewrap"><table><thead><tr><th>站</th><th class="num">次数</th><th class="num">来源数</th><th class="num">一致</th><th class="num">含前缀</th><th class="num">不一致</th><th class="num">失败</th></tr></thead><tbody>%s</tbody></table></div>'
+                  % (sum(v["n"] for v in CRS.values()), len(CRS), "".join('<tr><td><a class="dom" href="/s/%s">%s</a></td><td class="num">%d</td><td class="num">%d</td><td class="num">%d</td><td class="num">%d</td><td class="num">%d</td><td class="num">%d</td></tr>' % (esc(d_), esc(d_), v["n"], v["srcs"], v["consistent"], v["prefix"], v["divergent"], v["failed"]) for d_, v in crowd_rows))) if CRS else '<div class="pad" style="padding-top:12px"><p class="sub">众测：还没有回流结果。到 <a href="/check">测试页</a> 用自己的 Key 测一次，结果匿名进池子。</p></div>'
+    b7 = ('<section class="card rise" style="margin-top:16px;--i:8"><div class="pad" style="padding-bottom:6px"><h2 class="sec">检测覆盖</h2><p class="lead" style="margin-top:4px">用我们自己的 Key 做过一致性探针的站。一致 = 12 条探针的 token 计数与同模型其他渠道完全相同；不一致 = 计数不同；其余为样本不足。这是一致性测量，不是真伪判定（方法论第 8 节）。</p></div><div class="tablewrap"><table><thead><tr><th>站</th><th class="num">已测模型</th><th class="num">一致</th><th class="num">不一致</th><th>日期</th></tr></thead><tbody>%s</tbody></table></div>' % (pr or '<tr><td class="dim">尚无</td></tr>')) + crowd_html + '</section>'
     MR = R.get("media") or {}
     def fam_block(items, unit_zh):
         out = []
@@ -1140,7 +1156,7 @@ def build_price_index():
 <section class="card pad rise" style="--i:5;margin-top:18px"><h2 class="sec">口径、数据与引用</h2><p class="lead" style="margin-top:4px">{{method}}</p>
 <p class="sub" style="margin-top:10px">成本层：<a href="/gpu" style="color:var(--p-ink)">算力租赁账本</a>（一张显卡租一小时多少钱）。</p>
 <p class="sub" style="margin-top:10px">数据：<a href="/price-index.json" style="color:var(--p-ink)">price-index.json</a>（全部序列，每日更新）· 引用时请写"司南 Token 价格指数（Sinan Token Price Index），compute.sinanlab.com"。</p>
-<div style="margin-top:12px"><img src="/badge/price-index.svg" alt="司南 Token 价格指数" width="360" height="72" style="display:block;margin-bottom:8px"><code style="display:block;font-size:11.5px;background:var(--ground-2);padding:10px 12px;border-radius:10px;word-break:break-all">{{embed}}</code></div></section>
+<div style="margin-top:12px"><img src="/badge/price-index.svg" alt="司南 Token 价格指数" width="360" height="72" style="display:block;margin-bottom:8px"><code style="display:block;font-size:11.5px;background:var(--ground-2);padding:10px 12px;border-radius:10px;word-break:break-all">{{embed}}</code></div><p class="sub" style="margin-top:10px">治理规则（口径、发布节律、变更流程、利益冲突）：<a href="/governance" style="color:var(--p-ink)">/governance</a></p></section>
 {{cite}}
 {{poll}}<script id="d" type="application/json">{{data}}</script>""",
         date=PI["generated_at"][:10], n_sites=D["stats"]["confirmed"], base=PI["base_date"], cards="".join(cards), chart=chart, min_sites=PI["min_sites"], rows="".join(rows), task=task_html, method=esc(PI["method"]), embed=embed, cite=cite_block("司南 Token 价格指数", "/price-index", PI["generated_at"][:10]),
@@ -1208,6 +1224,39 @@ print(pi["latest"])</pre>
 {{poll}}{{cite}}<script id="d" type="application/json">{{data}}</script>""", pledge=PLEDGE, rows=rows, rrows=rrows, poll=POLL_BOX, cite=cite_block("开放数据与接口", "/api-docs", GEN_DATE), data=jsdata(LIGHT_INDEX()))
     return shell("开放数据与接口 · Sinan Compute", "司南实验室全部测量数据的文件清单、字段说明、更新频率与稳定性承诺；命令行工具与 GitHub Action 模板。", "/api-docs", body, active="api", page="api", crumbs=[("开放数据与接口",)])
 
+def build_survival():
+    SV = D.get("survival") or {}; W_ = SV.get("windows") or {}
+    DIM_ZH = {"tld": "域名后缀", "icp": "ICP 备案", "register": "注册状态", "family": "面板家族", "age": "域名年龄", "uptime": "7 天可达"}
+    VAL_ZH = {"premium": "主流后缀（.com .net .cn .ai …）", "budget": "低价后缀（.top .cc .xyz .vip …）", "other": "其他", "open": "开放", "closed": "关闭 / 邀请", "unknown": "未判定", "one-api": "one-api 一族", "sub2api": "Sub2API 一族", "<180d": "不满半年", "180–730d": "半年到两年", ">730d": "两年以上"}
+    parts = []
+    for N in ("7", "14", "30", "90"):
+        w = W_.get(N)
+        if not w:
+            parts.append('<div class="callout" style="margin-top:12px"><b>%s 天窗口</b>：观察满 %s 天的站还不到 30 个，暂不出数。数据从 2026-09-02 起，这一栏会随时间自动填上。</div>' % (N, N)); continue
+        o = w["overall"]; rows = []
+        for dim, bs in w["buckets"].items():
+            for k, v in bs.items():
+                rows.append([DIM_ZH.get(dim, dim), VAL_ZH.get(k, k), v["n"] if v else "<30", v["dead"] if v else "—", ('<span class="r">%.1f%%</span>' % (v["rate"] * 100)) if v else "样本不足"])
+        parts.append('<h3 style="font-size:15px;margin-top:20px">%s 天窗口 · 观察满 %s 天的 %d 个站里，%d 个已消失（%.1f%%）</h3>' % (N, N, o["n"], o["dead"], o["rate"] * 100) + _tbl(["特征", "取值", "#站数", "#已消失", "#比例"], rows))
+    ev = SV.get("events") or []
+    ev_html = _tbl(["日期", "站", "事件"], [[esc(e["at"]), '<a href="/s/%s">%s</a>' % (esc(e["domain"]), esc(e["domain"])), "消失" if e["event"] == "dead" else "恢复"] for e in ev[:50]]) if ev else '<p class="sub" style="margin-top:8px">2026-09-02 以来还没有记录到"连续 7 天未连通"的站。</p>'
+    ch = SV.get("churn") or {}
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">站点存续 · 历史基率 · 每日更新</div><h1 style="font-size:26px;margin-top:6px">中转站会消失吗？消失前有什么可测的特征</h1><p class="lead">买家最怕的不是贵，是钱充进去站没了。这一页只做一件事：记录哪些站消失了（连续 7 天、80 轮以上有效探测一次都没连上），把它们消失前可以测量的特征摆出来，算出"有这种特征的站，N 天里消失了多大比例"。这是历史基率，不是对任何一家站的预测，也不是指控。样本不满 30 的桶不出数。</p>{{pledge}}</div>
+<div class="kpis rise" style="--i:1"><div class="card kpi"><div class="k">已确认中转站</div><div class="v"><span>{{sites}}</span></div><div class="n">观察起点 2026-09-02</div></div><div class="card kpi"><div class="k">本月消失</div><div class="v"><span>{{dead}}</span></div><div class="n">恢复 {{rev}} · 消失 = 连续 7 天未连通</div></div><div class="card kpi"><div class="k">已知域名年龄</div><div class="v"><span>{{age}}</span></div><div class="n">按注册局公开记录或首张证书日期，每天补 150 个</div></div></div>
+<section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">按特征看消失比例</h2><p class="lead" style="margin-top:4px">特征都是在站点页上能看到的：域名后缀、有没有备案、注册开不开、面板家族、域名年龄、7 天可达率。窗口越长越有意义，但也需要更长的观察期；现在只有短窗口有数。</p>{{parts}}</section>
+<section class="card pad rise" style="--i:3;margin-top:18px"><h2 class="sec">消失与恢复记录</h2>{{ev}}</section>
+<section class="card pad rise" style="--i:4;margin-top:18px"><h2 class="sec">口径</h2><p class="lead" style="margin-top:4px">{{defn}} 域名年龄取注册局 RDAP 公开记录的注册日期；没有 RDAP 的后缀（如 .cn）退回证书透明度日志里该域名的首张证书日期，会比真实注册日期晚。每个站点页有一张"存续信号"卡，列出该站的这些特征。我们不把这些特征加权成分数，因为权重就是观点。</p></section>
+<script id="d" type="application/json">{{data}}</script>""", pledge=PLEDGE, sites=ch.get("sites", D["stats"]["confirmed"]), dead=ch.get("dead_this_month", 0), rev=ch.get("revived_this_month", 0), age=SV.get("age_coverage", 0), parts="".join(parts), ev=ev_html, defn=esc(SV.get("definition") or ""), data=jsdata(LIGHT_INDEX()))
+    return shell("站点存续 · 中转站消失的历史基率 · Sinan Compute", "记录消失的中转站与消失前可测的特征，给出按特征分桶的历史基率。不预测、不指控。", "/survival", body, active="life", page="life", crumbs=[("站点存续",)])
+
+def build_governance():
+    gp = os.path.join(ROOT, "docs", "INDEX-GOVERNANCE.md")
+    md = io.open(gp, encoding="utf-8").read() if os.path.exists(gp) else ""
+    md = "\n".join(l for l in md.splitlines() if not l.startswith("# "))
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">指数治理 · v1 · 2026-09-16 起</div><h1 style="font-size:26px;margin-top:6px">司南 Token 价格指数 · 治理规则</h1><p class="lead">为什么可以把这个指数写进合同、报告和政策里：规则先定，改规则也按规则。以下每一条都是对外承诺。</p>{{pledge}}</div>
+<section class="card pad rise" style="--i:1">{{md}}</section>{{cite}}<script id="d" type="application/json">{{data}}</script>""", pledge=PLEDGE, md=md_html(md), cite=cite_block("司南 Token 价格指数治理规则", "/governance", GEN_DATE), data=jsdata(LIGHT_INDEX()))
+    return shell("指数治理规则 · 司南 Token 价格指数 · Sinan Compute", "司南 Token 价格指数的口径、发布节律、变更流程、异常处理与利益冲突规则。", "/governance", body, active="gov", page="gov", crumbs=[("指数治理",)])
+
 def build_corrections():
     R = load_open_reports()
     fixed = R.get("fixed") or []
@@ -1272,6 +1321,9 @@ def md_html(md):
     for line in md.splitlines():
         t = line.strip()
         if not t: flush(); continue
+        h = re.match(r"^(#{1,3})\s+(.*)", t)
+        if h:
+            flush(); lvl = len(h.group(1)); out.append('<h%d class="%s" style="margin-top:%dpx">%s</h%d>' % (min(lvl + 1, 4), "sec" if lvl <= 2 else "", 22 if lvl <= 2 else 14, inline(h.group(2)), min(lvl + 1, 4))); continue
         m = re.match(r"^(\d+)\.\s+(.*)", t); b = re.match(r"^[-*]\s+(.*)", t)
         if m or b:
             kind = "ol" if m else "ul"
@@ -1285,8 +1337,8 @@ def md_html(md):
             buf.append(t)
     flush(); return "".join(out)
 
-def load_analysis(month):
-    p_ = os.path.join(HERE, "reports", month + ".analysis.md")
+def load_analysis(month, lang="zh"):
+    p_ = os.path.join(HERE, "reports", month + (".analysis.en.md" if lang == "en" else ".analysis.md"))
     if not os.path.exists(p_): return {}
     sec, cur = {}, None
     for line in io.open(p_, encoding="utf-8"):
@@ -1298,9 +1350,9 @@ def load_analysis(month):
 def _tbl(head, rows, note=""):
     return '<div class="tablewrap" style="margin-top:12px"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>%s' % ("".join("<th%s>%s</th>" % (' class="num"' if h.startswith("#") else "", esc(h.lstrip("#"))) for h in head), "".join("<tr>%s</tr>" % "".join("<td%s>%s</td>" % (' class="num"' if head[i].startswith("#") else "", c) for i, c in enumerate(r)) for r in rows), ('<p class="sub" style="margin-top:6px">%s</p>' % note) if note else "")
 
-def build_report(Rp, first_issue=False):
+def build_report(Rp, first_issue=False, lang="zh"):
     m = Rp["month"]; sc = Rp["scale"]; pr = Rp["prices"]; idx = pr["index"]; p0, p1 = Rp["period"]; ST = Rp.get("structure") or {}
-    A = load_analysis(m)
+    A = load_analysis(m, lang)
     title = "中国模型 API 中转市场月报 · %s%s" % (MONTH_ZH(m), "（创刊号）" if first_issue else "")
     pn = sc.get("panels") or {}
     one = sum(v for k, v in pn.items() if "one-api" in k or "new-api" in k); sub = pn.get("sub2api", 0); agg = sum(v for k, v in pn.items() if k in ("multimodal-aggregator", "multi-vendor"))
@@ -1439,22 +1491,22 @@ def build_gpu():
     return shell("算力租赁账本 · 一张显卡租一小时多少钱 · Sinan Compute", "主流 GPU（4090 / 5090 / A100 / H100 / H200 / B200）在 RunPod、Vast.ai、共绩算力等公开租赁平台的单卡时价，每日记录，带快照。", "/gpu", body, active="gpu", page="gpu", crumbs=[("算力租赁",)])
 
 def build_check():
-    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">自测 · 登录后可用</div><h1 style="font-size:26px;margin-top:6px">测试模型真伪</h1><p class="lead">填一个中转站地址和你在该站的 Key，浏览器直接向该站发 8 条固定探针请求（每条只要 4 个输出 token，一次自测通常不到一分钱），把返回的 token 计数、回显模型名、首字节延迟，和我们从多个渠道得到的参考计数逐位比对。<b>Key 只在你的浏览器里，不上传、不落库、不经过我们的服务器。</b></p><p class="callout">当前提供一致性检测，不能单凭测试结果判定模型真伪。</p></div>
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">自测 · 众测 · 不需登录</div><h1 style="font-size:26px;margin-top:6px">测试模型真伪</h1><p class="lead">填一个中转站地址和你在该站的 Key，浏览器直接向该站发 8 条固定探针请求（每条只要 4 个输出 token，一次自测通常不到一分钱），把返回的 token 计数、回显模型名、首字节延迟，和我们从多个渠道得到的参考计数逐位比对。<b>Key 只在你的浏览器里，不上传、不落库、不经过我们的服务器。</b></p><p class="callout">当前提供一致性检测，不能单凭测试结果判定模型真伪。</p></div>
 <div id="gate" class="card pad rise" style="--i:1"><div class="callout">正在读取登录状态…</div></div>
 <section class="card pad rise" id="form" style="--i:1;display:none">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label style="display:block"><span class="sub">中转站地址（域名或 https://…）</span><input id="ck-base" list="qlist" placeholder="例如 toapis.cn" style="width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit"></label>
 <label style="display:block"><span class="sub">你在该站的 API Key（只在本页内存里用，刷新即忘）</span><input id="ck-key" type="password" autocomplete="off" placeholder="sk-…" style="width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit"></label></div>
 <div style="margin-top:14px"><span class="sub">要测的模型（默认用归一后的模型 id 作为请求里的 model；站方原名不同时可改）</span><div id="ck-models" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div></div>
-<div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap"><button class="btn p" id="ck-run">开始测试</button><span class="sub" id="ck-status"></span></div>
+<div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap"><button class="btn p" id="ck-run">开始测试</button><label class="sub" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="ck-consent" checked> 测完把结果（不含 Key、匿名）回流到司南众测池</label><span class="sub" id="ck-status"></span></div>
+<div class="sub" id="ck-crowd" style="margin-top:10px"></div>
 <datalist id="qlist"></datalist>
 </section>
-<section class="card rise" id="ck-out" style="--i:2;margin-top:16px;display:none"><div class="pad" style="padding-bottom:6px"><h2 class="sec">结果</h2><p class="lead" id="ck-lead"></p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th>回显模型名</th><th class="num">成功</th><th class="num">首字节 p50</th><th>计数比对</th><th>判定</th></tr></thead><tbody id="ck-rows"></tbody></table></div><div class="pad" style="padding-top:8px"><button class="btn o" id="ck-report">把结果（不含 Key）提交给司南，帮助扩大检测覆盖</button> <span class="sub" id="ck-rep-status"></span><p class="disc" style="margin-top:10px">判定只有四种：一致 / 含固定前缀 / 不一致 / 无参考。标"弱参考"的模型，参考计数只来自 2 个渠道的一致结果，可信度低于 3 个以上渠道。"不一致"表示该渠道对同一输入返回的 token 计数与多渠道共识不同，成因很多（上游分流、系统提示注入、量化、缓存），本站不推测。这是一致性测量，不是真伪判定。</p></div></section>
+<section class="card rise" id="ck-out" style="--i:2;margin-top:16px;display:none"><div class="pad" style="padding-bottom:6px"><h2 class="sec">结果</h2><p class="lead" id="ck-lead"></p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th>回显模型名</th><th class="num">成功</th><th class="num">首字节 p50</th><th>计数比对</th><th>判定</th></tr></thead><tbody id="ck-rows"></tbody></table></div><div class="pad" style="padding-top:8px"><button class="btn o" id="ck-report">手动回流这次结果</button> <span class="sub" id="ck-rep-status"></span><p class="disc" style="margin-top:10px">判定只有四种：一致 / 含固定前缀 / 不一致 / 无参考。标"弱参考"的模型，参考计数只来自 2 个渠道的一致结果，可信度低于 3 个以上渠道。"不一致"表示该渠道对同一输入返回的 token 计数与多渠道共识不同，成因很多（上游分流、系统提示注入、量化、缓存），本站不推测。这是一致性测量，不是真伪判定。</p></div></section>
 {{poll}}<script id="d" type="application/json">{{data}}</script>
 <script>(function(){
 var D0=JSON.parse(document.getElementById("d").textContent);var gate=document.getElementById("gate"),form=document.getElementById("form");
 var dl=document.getElementById("qlist");D0.site_index.forEach(function(x){var o=document.createElement("option");o.value=x.d;dl.appendChild(o);});
 fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).catch(function(){return {};}).then(function(me){
- if(!me||!me.user){gate.innerHTML='<h2 class="sec">登录后可用</h2><p class="lead">自测需要登录（邮箱验证码或 Google / GitHub 账号，不设密码），用来防滥用和让你可以把结果回流给我们。你的 Key 始终只在你自己的浏览器里。</p><a class="btn p" style="margin-top:12px" href="/login?return_to=/check">登录 →</a>';return;}
  gate.style.display="none";form.style.display="block";
  var TR=null;fetch("/assets/tokref.json").then(function(r){return r.json();}).then(function(t){TR=t;var box=document.getElementById("ck-models");
   D0.models.forEach(function(m){var has=TR.models[m.id]&&TR.models[m.id].ref;var lab=document.createElement("label");lab.className="chip";lab.style.cssText="display:inline-flex;gap:6px;align-items:center;cursor:pointer";lab.innerHTML='<input type="checkbox" value="'+m.id+'" '+(has?'checked':'')+'> <span>'+m.name+'</span>'+(has?'<small class="sub">参考 '+TR.models[m.id].peers+' 渠道'+(TR.models[m.id].weak?'（弱）':'')+'</small>':'<small class="sub">无参考</small>');box.appendChild(lab);});
@@ -1481,10 +1533,12 @@ fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).cat
    var cls={consistent:"explainable",prefix:"below_bulk",divergent:"unsustainable",no_ref:"held",failed:"held"}[verdict];
    rows.insertAdjacentHTML("beforeend",'<tr><td><b>'+name+'</b><div class="sub">'+m+'</div></td><td class="sub">'+(echo||"—")+'</td><td class="num">'+ok+'/'+TR.probes.length+'</td><td class="num">'+(p50==null?"—":p50+"ms")+'</td><td class="sub" style="font-family:var(--mono);font-size:11px">'+detail+'</td><td><span class="pill '+cls+'">'+vt+'</span></td></tr>');
    window.__CK.push({base:base,model:m,raw_model:m,counts:counts,echo:echo,ttfb_ms:tt,ok:ok,verdict:verdict});}
-  st.textContent="完成。";});
- document.getElementById("ck-report").addEventListener("click",function(){var s=document.getElementById("ck-rep-status");if(!window.__CK||!window.__CK.length){s.textContent="先测一次。";return;}s.textContent="提交中…";Promise.all(window.__CK.map(function(x){return fetch("/api/check/report",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(x)});})).then(function(){s.textContent="已提交 "+window.__CK.length+" 条，谢谢。结果进入待审核队列，审核后计入该站的检测覆盖。";}).catch(function(){s.textContent="提交失败，稍后再试。";});});
-});})();</script>""", poll=POLL_BOX, data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "models": [{"id": m["id"], "name": m["name"]} for m in D["models"] if m["is_latest"]]}))
-    return shell("测试模型真伪 · Sinan Compute", "登录后用你自己的 Key 在浏览器里测一个中转站：8 条固定探针，比对 token 计数、回显模型名与延迟。Key 不上传。", "/check", body, active="check", page="check", crumbs=[("测试模型真伪",)], extra_head='<meta name="robots" content="noindex">')
+  st.textContent="完成。";if(document.getElementById("ck-consent").checked)report(true);});
+ function report(auto){var s=document.getElementById("ck-rep-status");if(!window.__CK||!window.__CK.length){s.textContent="先测一次。";return;}s.textContent="回流中…";Promise.all(window.__CK.map(function(x){x.source="web";return fetch("/api/check/report",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(x)});})).then(function(){s.textContent=(auto?"已自动回流 ":"已回流 ")+window.__CK.length+" 条（匿名，不含 Key），谢谢。明早起在该站点页的"众测"里可见。";}).catch(function(){s.textContent="回流失败，稍后再试。";});}
+ document.getElementById("ck-report").addEventListener("click",function(){report(false);});
+ document.getElementById("ck-base").addEventListener("change",function(){var b=this.value.trim().replace(/^https?:\/\//,"").replace(/\/.*$/,"");var c=(D0.crowd||{})[b];document.getElementById("ck-crowd").innerHTML=c?("这个站已有众测 "+c.n+" 次（来自 "+c.srcs+" 个来源）：一致 "+c.consistent+" · 含前缀 "+c.prefix+" · 不一致 "+c.divergent+" · 失败 "+c.failed+"。<a href=\"/s/"+b+"\">站点页 →</a>"):(b?"这个站还没有众测结果，你会是第一个。":"");});
+});})();</script>""", poll=POLL_BOX, data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "models": [{"id": m["id"], "name": m["name"]} for m in D["models"] if m["is_latest"]], "crowd": D.get("crowd_sites") or {}}))
+    return shell("测试模型真伪 · 众测 · Sinan Compute", "用你自己的 Key 在浏览器里测一个中转站：8 条固定探针，比对 token 计数、回显模型名与延迟。Key 不上传；结果匿名回流到众测池。", "/check", body, active="check", page="check", crumbs=[("测试模型真伪",)])
 
 def build_weekly_index(all_weeks):
     rows = "".join('<tr><td><a class="name" href="/weekly/%s">%s</a></td><td>%s – %s</td><td class="num">%d</td><td class="num">%d</td></tr>' % (esc(w["week"]), esc(w["week"]), min(w["days"]), max(w["days"]), len(w["changes"]), sum(len(v) for v in w["new_sites"].values())) for w in all_weeks)
@@ -1556,6 +1610,9 @@ def main():
         os.makedirs(os.path.join(DIST, "report"), exist_ok=True); W("report.html", build_report_index(REPS))
         for i, r_ in enumerate(REPS):
             W("report/%s.html" % r_["month"], build_report(r_, first_issue=(i == len(REPS) - 1))); shutil.copy(os.path.join(HERE, "reports", r_["month"] + ".json"), os.path.join(DIST, "report", r_["month"] + ".json"))
+            if os.path.exists(os.path.join(HERE, "reports", r_["month"] + ".analysis.en.md")):
+                os.makedirs(os.path.join(DIST, "_en_src", "report"), exist_ok=True); W("_en_src/report/%s.html" % r_["month"], build_report(r_, first_issue=(i == len(REPS) - 1), lang="en"))
+    W("survival.html", build_survival()); W("governance.html", build_governance())
     W("press.html", build_press()); W("verify.html", build_verify()); W("api-docs.html", build_api_docs()); W("corrections.html", build_corrections()); W("changes.json", build_changes_json())
     os.makedirs(os.path.join(DIST, "badge", "verified"), exist_ok=True)
     for s_ in D["sites"]:
@@ -1604,7 +1661,7 @@ def main():
             else: shutil.copy(src_, dst_)
     W("assets/ledger.json", jsdata({"models": D["models"], "snaps": D["snaps"]}))
     W("robots.txt", "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n" % BASE)
-    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily"), ("/gpu", "daily"), ("/report", "weekly"), ("/press", "monthly"), ("/verify", "monthly"), ("/api-docs", "weekly"), ("/corrections", "weekly")] + [("/report/%s" % r_["month"], "weekly") for r_ in load_reports()] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
+    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily"), ("/gpu", "daily"), ("/report", "weekly"), ("/press", "monthly"), ("/verify", "monthly"), ("/api-docs", "weekly"), ("/corrections", "weekly"), ("/survival", "daily"), ("/governance", "monthly")] + [("/report/%s" % r_["month"], "weekly") for r_ in load_reports()] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
     W("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join('  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq></url>\n' % (BASE, u, GEN_DATE, c) for u, c in urls) + "</urlset>\n")
     W("favicon.svg", FAVICON)
     W("_headers", "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/assets/*\n  Cache-Control: public, max-age=604800\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n/img/*\n  Cache-Control: public, max-age=2592000\n/badge/*\n  Cache-Control: public, max-age=900, must-revalidate\n")

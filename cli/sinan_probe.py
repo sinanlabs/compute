@@ -4,7 +4,7 @@
   1) 一致性探针：向指定模型发 8 条公开探针串，比对返回的 token 计数与司南多渠道参考计数（/assets/tokref.json）
   2) 首字节延迟：每条请求的 TTFB p50
   3) 回显模型名：返回的 model 字段是否与请求一致
-只依赖 Python 3.8+ 标准库。Key 只在本机使用，不上传；--report 才会把结果（不含 Key）提交给司南帮助扩大检测覆盖。
+只依赖 Python 3.8+ 标准库。Key 只在本机使用，不上传；--report 会把结果（不含 Key、匿名）提交给司南的众测池，帮助扩大检测覆盖。
 
 用法：
   python3 sinan_probe.py https://toapis.cn sk-xxxx --models gpt-5.6-luna,claude-sonnet-5
@@ -21,6 +21,12 @@ def get_json(url, data=None, headers=None, timeout=30):
     if data is not None: req.add_header("Content-Type", "application/json")
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8", "ignore"))
+
+def http_post(url, data):
+    req = urllib.request.Request(url, data=json.dumps(data).encode(), headers={"User-Agent": "sinan-probe/0.1", "Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r: return r.status, r.read()[:200]
+    except urllib.error.HTTPError as e: return e.code, e.read()[:200]
 
 def probe_model(base, key, model, probes):
     counts, ttfb, echo, ok, err = [], [], None, 0, None
@@ -68,7 +74,13 @@ def main():
     print("\n判定只有四种：一致 / 含固定前缀 / 不一致 / 无参考。不一致 = 该渠道对同一输入返回的 token 计数与多渠道共识不同，成因很多，本工具不推测。这是一致性测量，不是真伪判定。")
     print("如果你希望司南提供统一调用入口（你自己带 Key，我们只负责测量与选择），到 %s/check 底部投一票；我们按票数决定要不要做。" % "https://compute.sinanlab.com")
     if a.report:
-        print("--report 需要登录态，网页版 %s/check 可直接回流；命令行回流将在下一版支持。" % "https://compute.sinanlab.com")
+        sent = 0
+        for r in results:
+            try:
+                st_, _ = http_post(REPORT, {"base": base.replace("https://", "").replace("http://", ""), "model": r["model"], "raw_model": r["model"], "counts": r["counts"], "echo": r["echo"], "ttfb_ms": [round(x) for x in r["ttfb"]], "ok": r["ok"], "verdict": r["verdict"], "source": "cli"})
+                sent += 1 if st_ in (200, 201) else 0
+            except Exception as e: print("回流失败", r["model"], type(e).__name__)
+        print("已匿名回流 %d/%d 条结果到司南（不含 Key），谢谢。众测汇总见 %s/s/%s" % (sent, len(results), "https://compute.sinanlab.com", base.replace("https://", "").replace("http://", "")))
 
 if __name__ == "__main__":
     main()

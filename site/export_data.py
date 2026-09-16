@@ -111,6 +111,29 @@ def availability(db, hours=24):
                   "ttfb_p50": round(st.median(d["ms"])) if d["ms"] else None, "last": d["last"]}
     return res
 
+def crowd_summary(db, days=30):
+    """众测回流汇总（来自 pull_crowd 拉下来的 crowd_probe）：每个 站×模型 {n, srcs, consistent, prefix, divergent, failed, ttfb_p50, last}。"""
+    out = {}
+    try:
+        rows = db.execute("SELECT base, model, src_hash, user_id, source, verdict, ttfb_json, created_at FROM crowd_probe WHERE created_at >= datetime('now','-%d days')" % days).fetchall()
+    except Exception:
+        return out
+    for r in rows:
+        k = (r["base"], r["model"]); d = out.setdefault(k, {"n": 0, "srcs": set(), "consistent": 0, "prefix": 0, "divergent": 0, "failed": 0, "no_ref": 0, "tt": [], "last": None, "cli": 0})
+        d["n"] += 1; d["srcs"].add(r["src_hash"] or r["user_id"] or "?"); d[r["verdict"] if r["verdict"] in d else "failed"] += 1
+        if r["source"] == "cli": d["cli"] += 1
+        try: d["tt"] += [x for x in json.loads(r["ttfb_json"] or "[]") if x]
+        except Exception: pass
+        d["last"] = max(d["last"] or "", r["created_at"][:10])
+    for d in out.values():
+        d["srcs"] = len(d["srcs"]); d["ttfb_p50"] = round(st.median(d["tt"])) if d["tt"] else None; del d["tt"]
+    return out
+
+def survival_index():
+    p_ = os.path.join(HERE, "survival.json")
+    if not os.path.exists(p_): return {}
+    return json.load(open(p_, encoding="utf-8"))
+
 def status_facts(db):
     facts = {}
     for r in db.execute("SELECT c.domain, s.raw_key FROM relay_candidate c LEFT JOIN source_snapshot s ON s.id=c.snapshot_id WHERE c.level>=1"):
@@ -239,7 +262,7 @@ def price_changes(db, days=7):
 def main():
     global FX
     db = D.connect(); FX = fx(db)
-    F = floors(db); R = relay_rows(db); AV = availability(db); SF = status_facts(db); PB = probe_summary(db); t2_summary(db, PB); TT = task_tokens(db)
+    F = floors(db); R = relay_rows(db); AV = availability(db); SF = status_facts(db); PB = probe_summary(db); t2_summary(db, PB); TT = task_tokens(db); CR = crowd_summary(db); SV = survival_index(); SVS = SV.get("sites") or {}
     try: REG = {r["domain"]: (r["register_state"], r["register_msg"], r["register_checked"]) for r in db.execute("SELECT domain, register_state, register_msg, register_checked FROM relay_candidate WHERE level>=1")}
     except Exception: REG = {}
     CLOSED = {d_ for d_, v in REG.items() if v[0] == "closed"}
@@ -302,7 +325,7 @@ def main():
             code, label = band(row["ratio"]) if row.get("ratio") is not None else (None, None)
             mrows.append({"model": m, "name": pretty(m), "raw": row["raw"], "in": row["in"], "out": row["out"], "call": row["call"], "sec": row["sec"],
                           "ratio": row.get("ratio"), "band": code, "floor_vendor": (row.get("floor") or {}).get("vendor"),
-                          "floor_out": (row.get("floor") or {}).get("usd"), "mtype": row["mtype"], "sids": sorted(row["sids"]), "as_of": row["as_of"][:16], "probe": PB.get((v, m))})
+                          "floor_out": (row.get("floor") or {}).get("usd"), "mtype": row["mtype"], "sids": sorted(row["sids"]), "as_of": row["as_of"][:16], "probe": PB.get((v, m)), "crowd": CR.get((v, m))})
         mrows.sort(key=lambda x: (0 if x["ratio"] is not None else 1, x["ratio"] or 0))
         sf = SF.get(v) or {}
         sites.append({"domain": v, "name": sf.get("system_name") or r["entity_name"], "site_url": r["site_url"], "first_seen": r["first_seen_at"][:10],
@@ -339,8 +362,13 @@ def main():
     week_id = "%d-w%02d" % _t.isocalendar()[:2]
     AV7 = availability(db, hours=168)
     # 退场规则：7 天里探测 ≥100 次且一次都没连上 → 视为已下线（页面保留、标"7 天未连通"，不进任何榜、不计入可达统计）
-    DEAD = {d_ for d_, v in AV7.items() if v["n"] >= 100 and (v["uptime"] or 0) == 0}
-    for s_ in sites: s_["dead"] = s_["domain"] in DEAD
+    DEAD = {d_ for d_, v in AV7.items() if v["n"] >= 80 and (v["uptime"] or 0) == 0}   # 7 天 ≥80 轮有效探测（剔除我方故障轮后）且一次没连上
+    for s_ in sites:
+        s_["dead"] = s_["domain"] in DEAD
+        cr = [d for (v_, m_), d in CR.items() if v_ == s_["domain"]]
+        s_["crowd"] = {"n": sum(d["n"] for d in cr), "srcs": max([d["srcs"] for d in cr] or [0]), "models": len(cr), "consistent": sum(d["consistent"] for d in cr), "prefix": sum(d["prefix"] for d in cr), "divergent": sum(d["divergent"] for d in cr), "failed": sum(d["failed"] for d in cr), "last": max([d["last"] for d in cr if d["last"]] or [None])} if cr else None
+        sv = SVS.get(s_["domain"])
+        s_["survive"] = {k: sv.get(k) for k in ("created", "age_src", "age_days", "age_bucket", "tld", "icp", "register", "family", "uptime7", "trend3d", "price_changes7", "observed_days")} if sv else None
     # 经司南核验：有 Key 的站，7 天里 ≥5 个模型一致性探针全部"一致"、无"不一致"、能力抽样无"低于中位"、7 天可达 ≥99%、注册开放
     for s_ in sites:
         pbs = [r.get("probe") for r in s_["models"] if r.get("probe")]
@@ -463,7 +491,10 @@ def main():
              "reachable": sum(1 for s_ in sites if (s_["avail"] or {}).get("uptime", 0) and s_["avail"]["uptime"] >= 50),
              "reg_closed": len(CLOSED), "reg_open": sum(1 for v in REG.values() if v[0] == "open"),
              "probed_sites": sum(1 for s_ in sites if s_["probe"]), "probed_pairs": len(PB), "probe_consistent": sum(1 for v in PB.values() if v["status"] == "consistent"), "cap_pairs": sum(1 for v in PB.values() if v.get("cap")), "cap_below": sum(1 for v in PB.values() if (v.get("cap") or {}).get("status") == "below"), "probe_divergent": sum(1 for v in PB.values() if v["status"] == "divergent")}
-    data = {"generated_at": D.now8(), "fx": {"rate": FX[0], "as_of": FX[1], "sid": FX[2]}, "models": models, "groups": groups,
+    crowd_sites = {s_["domain"]: {"n": s_["crowd"]["n"], "srcs": s_["crowd"]["srcs"], "consistent": s_["crowd"]["consistent"], "divergent": s_["crowd"]["divergent"], "prefix": s_["crowd"]["prefix"], "failed": s_["crowd"]["failed"], "last": s_["crowd"]["last"]} for s_ in sites if s_.get("crowd")}
+    stats["crowd_reports"] = sum(d["n"] for d in CR.values()); stats["crowd_sites"] = len(crowd_sites)
+    _SURV = {"windows": SV.get("windows"), "churn": SV.get("churn"), "definition": SV.get("definition"), "age_coverage": SV.get("age_coverage"), "generated_at": SV.get("generated_at"), "events": (SV.get("events") or [])[:50]}
+    data = {"generated_at": D.now8(), "fx": {"rate": FX[0], "as_of": FX[1], "sid": FX[2]}, "models": models, "groups": groups, "crowd_sites": crowd_sites, "survival": _SURV,
             "vendor_name": VENDOR_NAME, "sites": sites, "stats": stats, "task_tokens": TT, "changes": changes[:40], "new_sites": new_sites,
             "snaps": {str(k): v for k, v in snaps.items() if v}, "label_help": LABEL_HELP, "probe_node": "美国西部探测节点", "rank": rank,
             "probe_help": "用本站在该中转站注册的 Key，向声明的模型发 12 条固定探针串（中英/emoji/代码/生僻字混排），各只要 1 个输出 token；记录返回的 prompt_tokens 计数与回显的模型名。同一模型不同分词器切出的 token 数不同：若 ≥3 个渠道对同一模型报出完全相同的 12 个计数，视为该模型的共识簇；某渠道的计数与共识簇不同，只记为“计数不一致”，不推测成因。这是一致性测量，不是真伪判定。"}
