@@ -718,7 +718,8 @@ def build_site(s):
     sv = s.get("survive") or {}
     svn = ""
     if sv:
-        svn = "%s · %s" % ({"premium": "主流后缀", "budget": "低价后缀", "other": "其他后缀"}.get(sv.get("tld"), "后缀未知"), "有备案" if sv.get("icp") else "无备案")
+        svn = {"premium": "主流后缀", "budget": "低价后缀", "other": "其他后缀"}.get(sv.get("tld"), "后缀未知")
+        if sv.get("icp") is not None: svn += " · " + ("有备案" if sv["icp"] else "无备案")
         if sv.get("uptime7") is not None: svn += " · 7 天可达 %.1f%%" % sv["uptime7"]
         if sv.get("trend3d") is not None: svn += " · 近 3 天可达变化 %+.1f" % sv["trend3d"]
         svn += " · 基率见站点存续页"
@@ -1243,7 +1244,7 @@ def build_survival():
     ch = SV.get("churn") or {}
     body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">站点存续 · 历史基率 · 每日更新</div><h1 style="font-size:26px;margin-top:6px">中转站会消失吗？消失前有什么可测的特征</h1><p class="lead">买家最怕的不是贵，是钱充进去站没了。这一页只做一件事：记录哪些站消失了（连续 7 天、80 轮以上有效探测一次都没连上），把它们消失前可以测量的特征摆出来，算出"有这种特征的站，N 天里消失了多大比例"。这是历史基率，不是对任何一家站的预测，也不是指控。样本不满 30 的桶不出数。</p>{{pledge}}</div>
 <div class="kpis rise" style="--i:1"><div class="card kpi"><div class="k">已确认中转站</div><div class="v"><span>{{sites}}</span></div><div class="n">观察起点 2026-09-02</div></div><div class="card kpi"><div class="k">本月消失</div><div class="v"><span>{{dead}}</span></div><div class="n">恢复 {{rev}} · 消失 = 连续 7 天未连通</div></div><div class="card kpi"><div class="k">已知域名年龄</div><div class="v"><span>{{age}}</span></div><div class="n">按注册局公开记录或首张证书日期，每天补 150 个</div></div></div>
-<section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">按特征看消失比例</h2><p class="lead" style="margin-top:4px">特征都是在站点页上能看到的：域名后缀、有没有备案、注册开不开、面板家族、域名年龄、7 天可达率。窗口越长越有意义，但也需要更长的观察期；现在只有短窗口有数。</p>{{parts}}</section>
+<section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">按特征看消失比例</h2><p class="lead" style="margin-top:4px">特征都是在站点页上能看到的：域名后缀、注册开不开、面板家族、域名年龄、7 天可达率（备案信息尚未采集，采集后自动加入）。窗口越长越有意义，但也需要更长的观察期；现在只有短窗口有数。</p>{{parts}}</section>
 <section class="card pad rise" style="--i:3;margin-top:18px"><h2 class="sec">消失与恢复记录</h2>{{ev}}</section>
 <section class="card pad rise" style="--i:4;margin-top:18px"><h2 class="sec">口径</h2><p class="lead" style="margin-top:4px">{{defn}} 域名年龄取注册局 RDAP 公开记录的注册日期；没有 RDAP 的后缀（如 .cn）退回证书透明度日志里该域名的首张证书日期，会比真实注册日期晚。每个站点页有一张"存续信号"卡，列出该站的这些特征。我们不把这些特征加权成分数，因为权重就是观点。</p></section>
 <script id="d" type="application/json">{{data}}</script>""", pledge=PLEDGE, sites=ch.get("sites", D["stats"]["confirmed"]), dead=ch.get("dead_this_month", 0), rev=ch.get("revived_this_month", 0), age=SV.get("age_coverage", 0), parts="".join(parts), ev=ev_html, defn=esc(SV.get("definition") or ""), data=jsdata(LIGHT_INDEX()))

@@ -50,9 +50,10 @@ def main():
         v = up.get(r["domain"], [])
         fam = "sub2api" if r["panel_kind"] == "sub2api" else "one-api" if (r["panel_kind"] or "").find("api") >= 0 else "other"
         sites[r["domain"]] = {"first_seen": r["first_seen_at"][:10], "observed_days": (today - dt.date.fromisoformat(r["first_seen_at"][:10])).days, "created": created, "age_src": "rdap" if r["domain_created"] else ("crt" if r["first_cert"] else None), "age_days": age, "age_bucket": age_bucket(age),
-                              "tld": tld_group(r["domain"]), "icp": bool(r["icp"]), "register": r["register_state"] or "unknown", "family": fam, "uptime7": uptime(v), "trend3d": trend(v), "price_changes7": pc.get(r["domain"], 0), "dead": r["domain"] in dead_now or r["status"] == "dead", "died_at": r["died_at"]}
+                              "tld": tld_group(r["domain"]), "icp": (bool(r["icp"]) if r["icp"] is not None else None), "register": r["register_state"] or "unknown", "family": fam, "uptime7": uptime(v), "trend3d": trend(v), "price_changes7": pc.get(r["domain"], 0), "dead": r["domain"] in dead_now or r["status"] == "dead", "died_at": r["died_at"]}
     # 基率：观察满 N 天的站里，消失的比例；按特征桶
-    dims = {"tld": lambda s_: s_["tld"], "icp": lambda s_: "有备案" if s_["icp"] else "无备案", "register": lambda s_: s_["register"], "family": lambda s_: s_["family"], "age": lambda s_: s_["age_bucket"], "uptime": lambda s_: ("≥99%" if s_["uptime7"] >= 99 else "<99%") if s_["uptime7"] is not None else "unknown"}
+    dims = {"tld": lambda s_: s_["tld"], "register": lambda s_: s_["register"], "family": lambda s_: s_["family"], "age": lambda s_: s_["age_bucket"], "uptime": lambda s_: ("≥99%" if s_["uptime7"] >= 99 else "<99%") if s_["uptime7"] is not None else "unknown"}
+    if any(s_["icp"] is not None for s_ in sites.values()): dims["icp"] = lambda s_: "有备案" if s_["icp"] else "无备案"
     windows = {}
     for N in (7, 14, 30, 90):
         cohort = [s_ for s_ in sites.values() if s_["observed_days"] >= N]
