@@ -8,6 +8,11 @@ export async function onRequestPost({ request, env }) {
   // 页面浏览（只有真实浏览器会执行脚本，爬虫不计）：pv 按路径；sess = 本次会话第一页；lang = zh/en
   const t = u.searchParams.get("t") || ""; const site = u.searchParams.get("s") === "robo" ? "robo:" : "";
   if (t === "pv" && path) { await bump(env, "pv", site + path.replace(/^\/en(?=\/|$)/, "").replace(/\/s\/[^/]+/, "/s/*").replace(/\/m\/[^/]+/, "/m/*").replace(/\/rank\/[^/]+/, "/rank/*").replace(/\/report\/[^/]+/, "/report/*").replace(/\/media\/[^/]+/, "/media/*").replace(/\/models\/[^/]+/, "/models/*").replace(/\/hardware\/[^/]+/, "/hardware/*").replace(/\/embodiments\/[^/]+/, "/embodiments/*") || "/"); await bump(env, "pv_all", site + (u.searchParams.get("l") === "en" ? "en" : "zh")); }
+  if (t === "pv" && path && /^\/(en\/)?(s|m|rank|report|media|models|hardware|embodiments)\/[^/]+/.test(path)) await bump(env, "pv_detail", site + path.replace(/^\/en(?=\/)/, ""));
   if (t === "sess") await bump(env, "sess", site + (u.searchParams.get("l") === "en" ? "en" : "zh"));
+  // 榜单关注度：某张榜在视口里停留 ≥1.5 秒记一次曝光；榜内点击记一次点击。k = 页面:榜名
+  const k = (u.searchParams.get("k") || "").slice(0, 80).replace(/[<>"]/g, "");
+  if (t === "board" && k) await bump(env, "board_view", k);
+  if (t === "boardclick" && k) await bump(env, "board_click", k);
   return withCors(request, new Response(null, { status: 204 }));
 }
