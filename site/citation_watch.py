@@ -33,6 +33,14 @@ def referrers(days=7):
     except Exception as e:
         print("D1 读取失败", e); return []
 
+def ref_pages(days=7):
+    since = (dt.datetime.now(BJ).date() - dt.timedelta(days=days)).isoformat()
+    try:
+        r = subprocess.run(["npx", "wrangler", "d1", "execute", "sinan-users", "--remote", "--json", "--command", "SELECT key k, SUM(n) n FROM events WHERE name='refpath' AND day>='%s' GROUP BY key ORDER BY n DESC LIMIT 40" % since], cwd=ROOT, capture_output=True, text=True, timeout=120)
+        return [{"host": x["k"].split("|")[0], "path": x["k"].split("|", 1)[1] if "|" in x["k"] else "", "n": x["n"]} for x in json.loads(r.stdout)[0]["results"]]
+    except Exception as e:
+        print("refpath 读取失败", e); return []
+
 def main():
     today = dt.datetime.now(BJ).date()
     if today.weekday() != 0 and "--force" not in sys.argv: print("引用监测：非周一，跳过"); return
@@ -52,7 +60,7 @@ def main():
     wk = "%d-w%02d" % today.isocalendar()[:2]
     summary = "%s：GitHub 提到我们的文件 %d 个（新 %d）· Hacker News %d 条（新 %d）· 本周外部来源访问 %d 次，来自 %d 个站点。" % (wk, len(gh), sum(x["new"] for x in gh), len(hs), sum(x["new"] for x in hs), sum(int(x["n"]) for x in rf), len(rf))
     print(summary)
-    mail_run("cite", {"week": wk, "summary": summary, "github": sorted(gh, key=lambda x: not x["new"]), "hn": sorted(hs, key=lambda x: not x["new"]), "referrers": rf, "poll": poll})
+    mail_run("cite", {"week": wk, "summary": summary, "github": sorted(gh, key=lambda x: not x["new"]), "hn": sorted(hs, key=lambda x: not x["new"]), "referrers": rf, "ref_pages": ref_pages(), "poll": poll})
     seen = {"github": sorted(set(seen["github"]) | set(x["url"] for x in gh)), "hn": sorted(set(seen["hn"]) | set(x["url"] for x in hs)), "last": today.isoformat()}
     json.dump(seen, io.open(SEEN, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 

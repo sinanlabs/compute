@@ -160,6 +160,7 @@ export async function onRequestPost({ request, env }) {
     const rf = (P.referrers || []).slice(0, 25).map((x) => [esc(x.host), String(x.n)]);
     const body = `<p style="font-size:14px;line-height:1.7">${esc(P.summary || "")}</p>`
       + `<h3 style="font-size:14px;margin:18px 0 6px">外部来源访问（本周，按来源站点）</h3>` + (rf.length ? table(["来源", "次数"], rf) : "<p style='font-size:13px;color:#9AA0B8'>本周没有记录到外部来源访问。</p>")
+      + ((P.ref_pages || []).length ? `<h3 style="font-size:14px;margin:18px 0 6px">外部来源落到了哪些页（含 AI 搜索引用）</h3>` + table(["来源", "页面", "次数"], P.ref_pages.slice(0, 25).map((x) => [esc(x.host), esc(x.path), String(x.n)])) : "")
       + `<h3 style="font-size:14px;margin:18px 0 6px">GitHub 上提到 sinanlab.com 的代码与文档</h3>` + (gh.length ? table(["仓库", "文件"], gh) : "<p style='font-size:13px;color:#9AA0B8'>无。</p>")
       + `<h3 style="font-size:14px;margin:18px 0 6px">Hacker News</h3>` + (hn.length ? table(["条目", "日期"], hn) : "<p style='font-size:13px;color:#9AA0B8'>无。</p>")
       + (P.poll ? `<h3 style="font-size:14px;margin:18px 0 6px">需求探针 · "需要司南代你统一调用（自带 Key）吗"（累计）</h3>` + table(["需要", "不需要", "说不准"], [[String(P.poll.need || 0), String(P.poll.no || 0), String(P.poll.unsure || 0)]]) : "");
