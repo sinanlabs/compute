@@ -49,13 +49,25 @@ def bsky_post(E, text):
     if facets: rec["facets"] = facets
     return http("https://bsky.social/xrpc/com.atproto.repo.createRecord", {"repo": s["did"], "collection": "app.bsky.feed.post", "record": rec}, {"Authorization": "Bearer " + s["accessJwt"]})
 
+def x_post_oauth2(E, text):
+    import subprocess
+    def call(tok): return http("https://api.x.com/2/tweets", {"text": text}, {"Authorization": "Bearer " + tok})
+    st, body = call(E["X_OAUTH2_ACCESS"])
+    if st == 401 and E.get("X_OAUTH2_REFRESH"):
+        subprocess.run([sys.executable, os.path.join(HERE, "x_oauth2.py"), "refresh"], cwd=ROOT, timeout=60)
+        E2 = env(); st, body = call(E2["X_OAUTH2_ACCESS"])
+    return st, body
+
 def main():
     E = env(); day = dt.datetime.now(BJ).date().isoformat()
     pj = os.path.join(ROOT, "data", "posts", "today.json")
     if not os.path.exists(pj): print("社媒：今天没有发帖稿"); return
     posts = json.load(io.open(pj, encoding="utf-8")); text = next((p.get("x_en") for p in posts if p.get("x_en")), None)
     if not text: print("社媒：没有英文短帖"); return
-    jobs = [("x", all(E.get(k) for k in ("X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_SECRET")), lambda: x_post(E, text[:280])),
+    if not E.get("X_OAUTH2_ACCESS") and E.get("X_CLIENT_ID"):
+        import subprocess; subprocess.run([sys.executable, os.path.join(HERE, "x_oauth2.py"), "kv-load"], cwd=ROOT, timeout=150); E = env()
+    x_ready = bool(E.get("X_OAUTH2_ACCESS")) or all(E.get(k) for k in ("X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_SECRET"))
+    jobs = [("x", x_ready, lambda: (x_post_oauth2(E, text[:280]) if E.get("X_OAUTH2_ACCESS") else x_post(E, text[:280]))),
             ("bluesky", bool(E.get("BSKY_HANDLE") and E.get("BSKY_APP_PASSWORD")), lambda: bsky_post(E, text[:300]))]
     for name, ready, fn in jobs:
         if not ready: print("社媒 %s：未配置凭据，跳过" % name); continue
