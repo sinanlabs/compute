@@ -83,8 +83,8 @@ a{color:inherit;text-decoration:none}button{font:inherit;color:inherit}::selecti
 .nav.on{background:linear-gradient(135deg,#7A63FF,#5642DF);color:#fff;box-shadow:0 10px 22px -12px rgba(75,54,214,.8)}
 .nav .badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;background:var(--ground);color:var(--ink-2);padding:2px 7px;border-radius:999px}.nav.on .badge{background:rgba(255,255,255,.2);color:#fff}
 .robo{margin-top:auto;border-radius:16px;padding:14px;background:linear-gradient(160deg,#FFF6E8,#FFE9C7);border:1px solid #FFE1B3;position:relative;overflow:hidden;display:block}
-.robo .gl{position:absolute;right:-18px;top:-18px;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFD27A,#F79009 60%,#C96A00);box-shadow:inset -8px -10px 18px rgba(120,60,0,.35)}
-.robo b{font-size:13px;display:block}.robo p{margin:4px 0 0;font-size:12px;color:#7A4B00;max-width:130px}
+.robo .gl{position:absolute;right:-14px;top:-14px;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFD27A,#F79009 60%,#C96A00);box-shadow:inset -8px -10px 18px rgba(120,60,0,.35)}
+.robo b{font-size:13px;display:block;position:relative;padding-right:40px}.robo p{margin:4px 0 0;font-size:12px;color:#7A4B00;max-width:130px}
 .main{min-width:0;padding:22px 30px 60px}
 .top{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
 .search{flex:1;max-width:520px;min-width:240px;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:0 14px;height:46px;box-shadow:var(--shadow-1);transition:box-shadow .3s var(--ease),border-color .3s}
