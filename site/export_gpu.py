@@ -17,10 +17,11 @@ def main():
     for (pf, gpu, kind), r in latest.items():
         g = gpus.setdefault(gpu, {"gpu": gpu, "vram_gb": r["vram_gb"], "quotes": []})
         g["quotes"].append({"platform": pf, "kind": kind, "usd": r["usd_per_hour"], "cny": r["cny_per_hour"], "n": r["n"], "ts": r["ts"][:16], "sid": r["snapshot_id"], "series": sorted(series[(pf, gpu, kind)].items())})
-    order = ["RTX 4090", "RTX 5090", "RTX A6000", "L40S", "A100 SXM4", "H100 SXM", "H100 NVL", "H200", "B200"]
+    order = ["RTX 4090", "RTX 4090 D", "RTX 5090", "RTX 5090 D", "RTX A6000", "RTX PRO 6000", "L40S", "V100 32GB", "A100 PCIe 40GB", "A100 SXM4", "A800 80GB", "H800 80GB", "H100 SXM", "H100 NVL", "H200", "B200"]
     out = {"generated_at": D.now8(), "fx": fx, "platforms": {"runpod": {"name": "RunPod", "url": "https://www.runpod.io/pricing", "kinds": {"secure": "安全云", "community": "社区云"}},
                                                           "vast": {"name": "Vast.ai", "url": "https://vast.ai/pricing", "kinds": {"min": "按需最低", "median": "按需中位"}},
-                                                          "suanli": {"name": "共绩算力", "url": "https://suanli.cn/", "kinds": {"starting": "官网起步价"}}},
+                                                          "suanli": {"name": "共绩算力", "url": "https://suanli.cn/", "kinds": {"starting": "官网起步价"}},
+                                                          "autodl": {"name": "AutoDL（国内）", "url": "https://www.autodl.com/market/list", "kinds": {"min": "按量最低", "median": "按量中位"}}},
            "gpus": [gpus[g] for g in order if g in gpus]}
     io.open(os.path.join(HERE, "gpu.json"), "w", encoding="utf-8").write(json.dumps(out, ensure_ascii=False))
     print("gpu.json：%d 款 GPU · %d 条报价" % (len(out["gpus"]), sum(len(g["quotes"]) for g in out["gpus"])))
