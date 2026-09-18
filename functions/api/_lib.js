@@ -48,9 +48,12 @@ export async function getSession(env, req) {
   const raw = parseCookies(req).sinan_sid; if (!raw) return null;
   const [sid, sig] = raw.split("."); if (!sid || !sig) return null;
   if ((await hmac(env.SESSION_SECRET, sid)) !== sig) return null;
-  const row = await env.DB.prepare(
-    `SELECT s.id AS sid, s.expires_at, s.revoked, u.id, u.handle, u.avatar_url, u.role, u.status, u.email
-     FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?`).bind(sid).first();
+  let row;
+  try {
+    row = await env.DB.prepare(
+      `SELECT s.id AS sid, s.expires_at, s.revoked, u.id, u.handle, u.avatar_url, u.role, u.status, u.email
+       FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?`).bind(sid).first();
+  } catch (e) { return null; } // 数据库暂不可用（如免费额度用尽）时按未登录处理，页面照常渲染
   if (!row || row.revoked || row.status !== "active" || new Date(row.expires_at + "Z") < new Date()) return null;
   return { sid, user: { id: row.id, handle: row.handle, avatar_url: row.avatar_url, role: row.role, has_email: !!row.email } };
 }

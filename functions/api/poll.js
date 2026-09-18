@@ -10,7 +10,13 @@ export async function onRequestPost({ request, env }) {
 }
 export async function onRequestGet({ request, env }) {
   const q = new URL(request.url).searchParams.get("q") || "byok"; if (!Q[q]) return withCors(request, json({ error: "bad_poll" }, 400));
-  const r = await env.DB.prepare("SELECT key a, SUM(n) n FROM events WHERE name=? GROUP BY key").bind("poll:" + q).all();
-  const out = {}; for (const x of r.results || []) out[x.a] = x.n;
-  return withCors(request, json({ q, counts: out }));
+  // 结果缓存 5 分钟：每次页面加载都查一遍会白白消耗 D1 读取额度
+  const cache = caches.default; const ck = new Request("https://compute.sinanlab.com/api/poll?q=" + q, { method: "GET" });
+  const hit = await cache.match(ck); if (hit) return withCors(request, new Response(hit.body, hit));
+  let out = {}, degraded = false;
+  try { const r = await env.DB.prepare("SELECT key a, SUM(n) n FROM events WHERE name=? GROUP BY key").bind("poll:" + q).all(); for (const x of r.results || []) out[x.a] = x.n; }
+  catch (e) { degraded = true; }
+  const res = json({ q, counts: out, ...(degraded ? { degraded: true } : {}) });
+  if (!degraded) { const c = new Response(res.body, res); c.headers.set("Cache-Control", "public, max-age=300"); await cache.put(ck, c.clone()); return withCors(request, c); }
+  return withCors(request, res);
 }

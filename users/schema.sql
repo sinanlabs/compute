@@ -117,3 +117,5 @@ CREATE TABLE IF NOT EXISTS events (            -- 无 PII 的轻量计数：登�
   n INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (day, name, key)
 );
+-- 按名称查最近 N 天（仪表盘 / 投票结果）只读命中的行，不再扫全表（D1 免费版每天 500 万行读取额度）
+CREATE INDEX IF NOT EXISTS idx_events_name_day ON events(name, day);
