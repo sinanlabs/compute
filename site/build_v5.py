@@ -1469,7 +1469,7 @@ GPU = json.load(io.open(os.path.join(HERE, "gpu.json"), encoding="utf-8")) if os
 
 def build_gpu():
     if not GPU or not GPU.get("gpus"): return None
-    PF = GPU["platforms"]; cols = [("runpod", "secure"), ("runpod", "community"), ("vast", "min"), ("vast", "median"), ("suanli", "starting")]
+    PF = GPU["platforms"]; cols = [("runpod", "secure"), ("runpod", "community"), ("vast", "min"), ("vast", "median"), ("autodl", "min"), ("autodl", "median"), ("suanli", "starting")]
     head = "".join('<th class="num">%s<div class="sub" style="font-weight:400">%s</div></th>' % (esc(PF[pf]["name"]), esc(PF[pf]["kinds"][k])) for pf, k in cols)
     rows = []
     for g in GPU["gpus"]:
