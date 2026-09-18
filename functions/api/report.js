@@ -10,7 +10,7 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   const s = await getSession(env, request); if (!s) return withCors(request, json({ error: "login_required" }, 401));
   const b = await request.json().catch(() => ({}));
-  const kind = ["quote", "site", "model", "media", "other"].includes(b.kind) ? b.kind : "other";
+  const kind = ["quote", "site", "model", "media", "plan", "other"].includes(b.kind) ? b.kind : "other";   // plan = 用户报的订阅套餐价
   const key = String(b.key || "").slice(0, 200), note = String(b.note || "").trim().slice(0, 1000), url = String(b.url || "").trim().slice(0, 500);
   if (note.length < 4) return withCors(request, json({ error: "note_too_short" }, 400));
   if (url && !/^https?:\/\//.test(url)) return withCors(request, json({ error: "bad_url" }, 400));
