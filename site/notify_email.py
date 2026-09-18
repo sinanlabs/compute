@@ -88,6 +88,11 @@ def main():
     if arg == "audit":
         p = audit_payload()
         return run("audit", p) if p else print("数据核查：今天没有新情况，不发")
+    if arg == "community":
+        import glob as _g
+        fs = sorted(_g.glob(os.path.join(ROOT, "data", "posts", "community_*.json")))
+        if not fs: return print("社区稿：没有可发的")
+        return run("community", json.load(io.open(fs[-1], encoding="utf-8")))
     if arg == "test": return run("test", {})
     if arg in ("auto", "daily"):
         p = daily_payload()

@@ -86,6 +86,17 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
+  if (b.kind === "community") {
+    // 每周社区稿：payload = { week, date, items:[{site, where, title, text}], sources } —— 只发管理员；Eric 复制到对应社区自己贴
+    const admins = (await env.DB.prepare("SELECT email, handle FROM users WHERE role='admin' AND email IS NOT NULL").all()).results || [];
+    const items = Array.isArray(P.items) ? P.items.slice(0, 6) : [];
+    const body = `<p style="font-size:13px;line-height:1.7;color:#5B5F73;margin:0 0 10px">四篇稿子对应四个社区，每篇的第一行是标题。数字取自本周数据，判断来自月报；发之前扫一眼板规。</p>` + items.map((it) => `<h3 style="font-size:14px;margin:18px 0 4px">${esc(it.site)}</h3><div style="font-size:12.5px;color:#5B5F73;margin:0 0 6px">${esc(it.where || "")}</div><pre style="white-space:pre-wrap;font:13px/1.65 ui-monospace,Menlo,monospace;background:#F4F5FA;border-radius:8px;padding:12px">${esc(it.text)}</pre>`).join("");
+    for (const a of admins) {
+      await send(a.email, { subject: `本周社区稿 ${P.week || ""} · linux.do / V2EX / Reddit / HN`, tags: ["community"], text: items.map((it) => `## ${it.site}\n${it.where || ""}\n\n${it.text}`).join("\n\n==========\n\n"),
+        html: layout({ title: `本周社区稿 ${P.week || ""}`, intro: "由本周数据与月报判断自动拼成；已过措辞自检。复制即贴，账号是你的。", body, footer: `观点来源：${esc((P.sources || {}).compute || "")} · ${esc((P.sources || {}).robo || "")}` }) });
+    }
+    return json({ kind: "community", sent: admins.length });
+  }
   if (b.kind === "post") {
     // linux.do 发帖稿：payload = { date, posts:[{kind, title, text}] }，只发管理员，正文原样放 <pre> 里方便复制
     const admins = (await env.DB.prepare("SELECT email, handle FROM users WHERE role='admin' AND email IS NOT NULL").all()).results || [];
