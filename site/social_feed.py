@@ -14,6 +14,16 @@ def main():
             if p.get("x_en") and not any(h["date"] == today and h["kind"] == p["kind"] for h in hist):
                 url = {"rank": "%s/rank" % BASE, "daily": BASE, "model": BASE, "probe": "%s/check" % BASE, "check": "%s/check" % BASE}.get(p["kind"], BASE)
                 hist.append({"date": today, "kind": p["kind"], "text": p["x_en"], "url": url, "ts": dt.datetime.now(BJ).isoformat()[:19]})
+    # Robo 周报：周一生成的 data/weekly/<周>.json，当天若还没推过就加一条
+    try:
+        import glob as _g
+        wk = sorted(_g.glob(os.path.join(ROOT, "..", "sinan-robo", "data", "weekly", "*.json")))
+        if wk:
+            w = json.load(io.open(wk[-1], encoding="utf-8")); wd = str(w.get("generated", ""))[:10]; today = dt.datetime.now(BJ).date().isoformat()
+            if wd == today and w.get("x_en") and not any(h["date"] == today and h["kind"] == "robo_weekly" for h in hist):
+                hist.append({"date": today, "kind": "robo_weekly", "text": w["x_en"], "url": w.get("url") or "https://robo.sinanlab.com/weekly", "ts": dt.datetime.now(BJ).isoformat()[:19]})
+    except Exception as e:
+        print("robo weekly skip:", e)
     hist = hist[-60:]
     os.makedirs(os.path.dirname(hist_p), exist_ok=True); json.dump(hist, io.open(hist_p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     def strip_url(t):   # 正文里不带网址：dlvr.it 会自己把 <link> 附在后面，重复就会被截断
