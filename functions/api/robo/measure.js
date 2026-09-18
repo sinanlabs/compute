@@ -6,13 +6,13 @@ import { getSession, json, withCors, preflight, bump, sha256 } from "../_lib.js"
 import { rateLimit } from "../auth/_otp.js";
 const GPU_MAP = [[/4090/i, "rtx-4090"], [/5090/i, "rtx-5090"], [/A800/i, "a800-80g"], [/H800/i, "h800-80g"], [/A100/i, "a100-80g"], [/H100/i, "h100-80g"], [/Thor/i, "jetson-thor"], [/Orin/i, "jetson-orin"]];
 export async function onRequestOptions({ request }) { return preflight(request); }
-export async function onRequestGet({ request, env }) {
+async function _get({ request, env }) {
   const model = String(new URL(request.url).searchParams.get("model") || "").slice(0, 80);
   if (!/^[a-z0-9.\-]+$/.test(model)) return withCors(request, json({ error: "bad_request" }, 400));
   const r = await env.DB.prepare("SELECT hardware_id, gpu_name, precision, COUNT(*) n, COUNT(DISTINCT COALESCE(src_hash,user_id)) srcs, MIN(json_extract(metrics_json,'$.latency_ms_p50')) p50_min, MAX(json_extract(metrics_json,'$.latency_ms_p50')) p50_max FROM robo_measurement WHERE model_id=? AND review_status='verified' AND created_at >= datetime('now','-90 days') GROUP BY hardware_id, gpu_name, precision").bind(model).all();
   return withCors(request, json({ model, items: r.results || [] }));
 }
-export async function onRequestPost({ request, env }) {
+async function _post({ request, env }) {
   const s = await getSession(env, request);
   const b = await request.json().catch(() => ({}));
   const model = String(b.model_id || "").slice(0, 80);
@@ -34,3 +34,8 @@ export async function onRequestPost({ request, env }) {
   await bump(env, "robo_meas", hw || "unmapped");
   return withCors(request, json({ ok: true, id: r.meta && r.meta.last_row_id, hardware_id: hw, status: "pending", anonymous: !s }));
 }
+
+// 数据库不可用（如免费额度用尽）时返回 503 JSON，而不是抛 1101；调用方（bench.py / 页面表单）据此提示"稍后再试"。
+const guard = (fn) => async (ctx) => { try { return await fn(ctx); } catch (e) { const msg = String(e && e.message || e); return withCors(ctx.request, json({ error: "db_unavailable", message: /row read limit|D1_ERROR/.test(msg) ? "数据库今日额度已满，请明天再试（数据不会丢，重跑一次即可）。" : "服务暂时不可用，请稍后再试。" }, 503)); } };
+export const onRequestGet = guard(_get);
+export const onRequestPost = guard(_post);

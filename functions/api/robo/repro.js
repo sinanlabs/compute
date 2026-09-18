@@ -4,13 +4,13 @@
 import { getSession, json, withCors, preflight, bump, sha256 } from "../_lib.js";
 import { rateLimit } from "../auth/_otp.js";
 export async function onRequestOptions({ request }) { return preflight(request); }
-export async function onRequestGet({ request, env }) {
+async function _get({ request, env }) {
   const model = String(new URL(request.url).searchParams.get("model") || "").slice(0, 80);
   if (!/^[a-z0-9.\-]+$/.test(model)) return withCors(request, json({ error: "bad_request" }, 400));
   const r = await env.DB.prepare("SELECT id, embodiment_id, outcome, setting, evidence_url, note, created_at FROM robo_repro WHERE model_id=? AND review_status='verified' ORDER BY created_at DESC LIMIT 100").bind(model).all();
   return withCors(request, json({ model, items: r.results || [] }));
 }
-export async function onRequestPost({ request, env }) {
+async function _post({ request, env }) {
   const s = await getSession(env, request);
   const b = await request.json().catch(() => ({}));
   const model = String(b.model_id || "").slice(0, 80), emb = String(b.embodiment_id || "").slice(0, 80);
@@ -29,3 +29,8 @@ export async function onRequestPost({ request, env }) {
   await bump(env, "robo_repro", outcome);
   return withCors(request, json({ ok: true, id: r.meta && r.meta.last_row_id, status: "pending", anonymous: !s }));
 }
+
+// 数据库不可用（如免费额度用尽）时返回 503 JSON，而不是抛 1101；调用方（bench.py / 页面表单）据此提示"稍后再试"。
+const guard = (fn) => async (ctx) => { try { return await fn(ctx); } catch (e) { const msg = String(e && e.message || e); return withCors(ctx.request, json({ error: "db_unavailable", message: /row read limit|D1_ERROR/.test(msg) ? "数据库今日额度已满，请明天再试（数据不会丢，重跑一次即可）。" : "服务暂时不可用，请稍后再试。" }, 503)); } };
+export const onRequestGet = guard(_get);
+export const onRequestPost = guard(_post);
