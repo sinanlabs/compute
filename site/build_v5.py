@@ -28,6 +28,16 @@ LABEL = {"unsustainable": "数学上不可持续", "below_bulk": "低于常见�
 BANDC = {"unsustainable": "#F04438", "below_bulk": "#F79009", "explainable": "#17B26A", "normal": "#17B26A", "premium": "#6E56F5", "far_above": "#9AA0B8"}
 DISCLAIMER = "此为算术比值，不构成对该渠道的任何指控，也不排除存在本站未收录的更低公开来源。"
 
+def _safe_snip(v):
+    """上游自述原文的兜底：含禁用词 / 像 base64 / 带标签的片段不上页。"""
+    try:
+        from core.wording import BANNED as _B
+        low = str(v).lower()
+        if any(w.lower() in low for w in _B): return None
+    except Exception: pass
+    if re.search(r"[A-Za-z0-9+/=]{24,}|[<>{}\[\]]|https?://", str(v)): return None
+    return str(v)
+
 def esc(s):
     if s is None: return ""
     if not isinstance(s, str): s = json.dumps(s, ensure_ascii=False)
@@ -779,7 +789,7 @@ def build_site(s):
         ("能力抽样", ("%d 个模型 · 低于中位 %d" % (len([r for r in s["models"] if (r.get("probe") or {}).get("cap")]), len([r for r in s["models"] if ((r.get("probe") or {}).get("cap") or {}).get("status") == "below"]))) if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "—",
          "30 道机器判分小题，本站答对数与同模型其他渠道中位数比" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "尚未用 Key 抽样", "" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "t"),
         ("上游自述", " · ".join((s.get("upstream") or {}).get("tags") or []) or "—",
-         ("站方面板公开文字里出现的说法，原文：" + " ｜ ".join("%s「%s」" % (k, v[:60]) for k, v in ((s.get("upstream") or {}).get("snippets") or {}).items() if k != "订阅制面板")[:300]) if (s.get("upstream") and any(k != "订阅制面板" for k in s["upstream"]["snippets"])) else ("按面板类型判定：Sub2API 面板按套餐转售订阅席位" if s.get("upstream") else "面板公开文字里没有关于上游来源的说法"), "" if s.get("upstream") else "t"),
+         ("站方面板公开文字里出现的说法，原文：" + " ｜ ".join("%s「%s」" % (k, _safe_snip(v)[:60]) for k, v in ((s.get("upstream") or {}).get("snippets") or {}).items() if k != "订阅制面板" and _safe_snip(v))[:300]) if (s.get("upstream") and any(k != "订阅制面板" for k in s["upstream"]["snippets"])) else ("按面板类型判定：Sub2API 面板按套餐转售订阅席位" if s.get("upstream") else "面板公开文字里没有关于上游来源的说法"), "" if s.get("upstream") else "t"),
         ("众测", ("%d 次 · %d 个来源" % (s["crowd"]["n"], s["crowd"]["srcs"])) if s.get("crowd") else "—",
          ("一致 %d · 含前缀 %d · 不一致 %d · 失败 %d · 最近 %s" % (s["crowd"]["consistent"], s["crowd"]["prefix"], s["crowd"]["divergent"], s["crowd"]["failed"], s["crowd"]["last"] or "")) if s.get("crowd") else "还没有人用自己的 Key 测过这个站；到测试页测一次，结果匿名回流到这里", "" if s.get("crowd") else "t"),
         ("存续信号", (("域名 %s 注册" % sv["created"]) if sv.get("created") else "域名年龄未知") if sv else "—", svn, "t"),
