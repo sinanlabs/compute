@@ -33,6 +33,7 @@ def clean_snip(t, m, tag):
     if len(sent) < 6 or _B64.search(sent) or len(_CJK.findall(sent)) < 4 and tag != "云厂商额度": return None
     low = sent.lower()
     if any(w.lower() in low for w in _BANNED): return None
+    if re.search(r"禁止|不得|严禁|不允许|违反|违规|试图|prohibit|forbidden|not allowed|must not", sent, re.I): return None   # 条款里的禁令句不是自述
     if re.search(r"[{}\[\]<>]|\\\\|https?://", sent): return None
     return sent
 
