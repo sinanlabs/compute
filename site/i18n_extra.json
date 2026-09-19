@@ -837,5 +837,6 @@
 "Sinan Lab, \"中国模型 API 中转市场月报 · {n} 年 {n} 月（创刊号）\", {n}-{n}-{n} https://compute.sinanlab.com/report/{n}-{n} (accessed ____)": "Sinan Lab, \"China Model API Relay Market Monthly · {n}-{n} (first issue)\", {n}-{n}-{n} https://compute.sinanlab.com/report/{n}-{n} (accessed ____)",
 "<a href=\"https://compute.sinanlab.com/price-index\"><img src=\"https://compute.sinanlab.com/badge/price-index.svg\" alt=\"司南 Token 价格指数\" width=\"{n}\" height=\"{n}\"></a>": "<a href=\"https://compute.sinanlab.com/en/price-index\"><img src=\"https://compute.sinanlab.com/badge/price-index.svg\" alt=\"Sinan Token Price Index\" width=\"{n}\" height=\"{n}\"></a>",
 "{n}% 显著高于。": "{n}% well above.",
-"{n}% 显著高于": "{n}% well above"
+"{n}% 显著高于": "{n}% well above",
+"区间定义见口径文档第 {n} 节：<{n}% 低于成本下限 · {n}–{n}% 低于常见批量折扣 · {n}–{n}% 说得通 · {n}–{n}% 接近公开价 · {n}–{n}% 高于 · >{n}% 显著高于。": "Band definitions are in section {n} of the definitions page: <{n}% below cost floor · {n}–{n}% below common bulk discount · {n}–{n}% within range · {n}–{n}% near public price · {n}–{n}% above · >{n}% well above."
 }
