@@ -73,6 +73,7 @@ class Tr(HTMLParser):
     ATTRS = {"title", "alt", "placeholder", "aria-label", "content", "data-label"}
     def __init__(self): super().__init__(convert_charrefs=False); self.out = []; self.skip = 0; self.left = 0
     def handle_starttag(self, tag, attrs):
+        self._flush()
         if tag in ("script", "style"): self.skip += 1
         parts = []
         for k, v in attrs:
@@ -85,19 +86,24 @@ class Tr(HTMLParser):
         self.out.append("<%s%s>" % (tag, (" " + " ".join(parts)) if parts else ""))
     def handle_startendtag(self, tag, attrs): self.handle_starttag(tag, attrs)
     def handle_endtag(self, tag):
+        self._flush()
         if tag in ("script", "style"): self.skip = max(0, self.skip - 1)
         self.out.append("</%s>" % tag)
-    def handle_data(self, d):
-        if self.skip: self.out.append(d); return
-        if CJK.search(d):
-            nd = tr_text(d)
-            if CJK.search(nd): self.left += 1
-            self.out.append(nd)
-        else: self.out.append(d)
-    def handle_entityref(self, n): self.out.append("&%s;" % n)
-    def handle_charref(self, n): self.out.append("&#%s;" % n)
-    def handle_comment(self, d): self.out.append("<!--%s-->" % d)
-    def handle_decl(self, d): self.out.append("<!%s>" % d)
+    # 文本与实体（&lt; &quot; 等）先攒成一个完整文本节点，遇到标签再整体翻译；否则含实体的句子会被拆碎翻不到
+    buf = ""
+    def _flush(self):
+        d = self.buf; self.buf = ""
+        if not d: return
+        if self.skip or not CJK.search(d): self.out.append(d); return
+        nd = tr_text(d)
+        if CJK.search(nd): self.left += 1
+        self.out.append(nd)
+    def handle_data(self, d): self.buf += d
+    def handle_entityref(self, n): self.buf += "&%s;" % n
+    def handle_charref(self, n): self.buf += "&#%s;" % n
+    def handle_comment(self, d): self._flush(); self.out.append("<!--%s-->" % d)
+    def handle_decl(self, d): self._flush(); self.out.append("<!%s>" % d)
+    def close(self): self._flush(); super().close()
 
 JS_RULES = sorted(DICT.get("js", {}).items(), key=lambda x: -len(x[0]))
 def js_tr(js):
@@ -183,7 +189,7 @@ def main(dist, base):
                 zh_html = switch_link(html, en_p, "EN")
                 zh_html = zh_html.replace("</head>", '<link rel="alternate" hreflang="en" href="%s%s"><link rel="alternate" hreflang="zh-CN" href="%s%s"></head>' % (base, en_p, base, path_zh), 1)
                 io.open(src, "w", encoding="utf-8").write(zh_html)
-            t = Tr(); t.feed(html); en_html = "".join(t.out)
+            t = Tr(); t.feed(html); t.close(); en_html = "".join(t.out)
             en_html = inline_js(en_html)
             en_html = head_fix(relink(en_html, base), base, path_zh)
             en_html = switch_link(en_html, path_zh, "中文")
