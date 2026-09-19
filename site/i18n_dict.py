@@ -716,6 +716,13 @@ DATA = {
 }
 
 if __name__ == "__main__":
+    # 补充词典：site/i18n_extra.json（由翻译批次生成的整句翻译；手写表优先，补充表只填空缺）
+    _xp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "i18n_extra.json")
+    if os.path.exists(_xp):
+        _x = json.load(io.open(_xp, encoding="utf-8")); _added = 0
+        for k, v in _x.items():
+            if k not in HTML and v and v != k: HTML[k] = v; _added += 1
+        print("补充词典：%d 条（新增 %d）" % (len(_x), _added))
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "i18n_en.json")
     io.open(out, "w", encoding="utf-8").write(json.dumps({"html": HTML, "js": JS, "data": DATA}, ensure_ascii=False, indent=0))
     print("i18n_en.json：html %d · js %d · data %d" % (len(HTML), len(JS), len(DATA)))

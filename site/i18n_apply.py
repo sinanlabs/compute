@@ -52,6 +52,14 @@ def tr_text(t):
     if "、" in core_n and len(core_n) < 60:
         parts = [tr_text(x) for x in core_n.split("、")]
         if not any(CJK.search(x) for x in parts): return lead + ", ".join(parts) + tail
+    for sep in (" · ", " ｜ ", " / "):   # 标签组合（如 "订阅号池 · 逆向 · 云厂商额度"）：各段都能翻就拼回去
+        if sep in core_n and len(core_n) < 120:
+            parts = [tr_text(x) for x in core_n.split(sep)]
+            if not any(CJK.search(x) for x in parts): return lead + sep.join(parts) + tail
+    m2 = re.match(r"^(站方面板公开文字里出现的说法，原文：)(.*)$", core_n, re.S)   # 上游自述：标签翻、引文保留原文
+    if m2:
+        q = re.sub(r"(官转|订阅号池|逆向|云厂商额度|公益免费|订阅制面板)「", lambda mm: tr_text(mm.group(1)) + " \u300c", m2.group(2))
+        return lead + "Wording found in the site's public panel text, verbatim: " + q + tail
     return t   # 没翻到：保留中文（残留计数）
 
 class Tr(HTMLParser):
