@@ -44,6 +44,12 @@ def tr_text(t):
     lead, core, tail = m.group(1), m.group(2), m.group(3)
     if not core or not CJK.search(core): return t
     core_n = re.sub(r"\s+", " ", core)
+    # 文本节点里保留着实体（&lt; &quot; 等）：先还原再匹配，翻到了再转义回去
+    import html as _h
+    core_u = _h.unescape(core_n)
+    if core_u != core_n:
+        r = tr_text(core_u)
+        if r != core_u: return lead + r.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;") + tail
     if core_n in EXACT: return lead + EXACT[core_n] + tail
     for zh, rx, en in RULES:
         mm = rx.match(core_n)
