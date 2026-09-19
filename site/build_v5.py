@@ -498,7 +498,9 @@ if os.environ.get("SINAN_THEME") == "coast":
     for _a, _b in COAST:
         if _a in CSS: CSS = CSS.replace(_a, _b); _n += 1
         else: print("主题：找不到片段", _a[:60])
-    print("主题 coast：替换 %d / %d 处" % (_n, len(COAST)))
+    # 追加：沙金作点缀（榜单序号、侧栏分组标题、选中的模型胶囊），让三色都出现
+    CSS += "\n.rkmini li .no{color:#b3945f;font-weight:600}.sect{color:#b3945f}.chip.on,.chip[aria-pressed=true]{background:linear-gradient(135deg,#5b95c1,#457ea9);border-color:transparent;color:#fff;box-shadow:0 8px 18px -10px rgba(69,126,169,.8)}.subbox{background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(243,235,221,.9));border-color:#e6d7bd}.mv.up{background:#dcefe4;color:#1b6b45}.pledge{border-color:#d4bc95;background:rgba(243,235,221,.35)}"
+    print("主题 coast：替换 %d / %d 处，追加沙金点缀" % (_n, len(COAST)))
 
 def _asset_v():
     return _hl.sha1((CSS + APP_JS + EARTH_JS).encode("utf-8")).hexdigest()[:10]
