@@ -17,7 +17,7 @@ except Exception:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-DIST = os.path.join(HERE, "dist")
+DIST = os.environ.get("SINAN_DIST") or os.path.join(HERE, "dist")
 BASE = "https://compute.sinanlab.com"
 D = json.load(io.open(os.path.join(HERE, "data_v2.json"), encoding="utf-8"))
 MEDIA = json.load(io.open(os.path.join(HERE, "media.json"), encoding="utf-8")) if os.path.exists(os.path.join(HERE, "media.json")) else None
@@ -468,6 +468,38 @@ ICONS = {
 }
 
 import hashlib as _hl
+# ---------- 主题：SINAN_THEME=coast（三色：深蓝 #457ea9 · 沙金 #d4bc95 · 浅蓝 #cce0f4）----------
+# 只替换颜色与阴影，不动版式；用环境变量切换，正式站默认不受影响。
+COAST = [
+    ("--ground:#F2F3F9;--ground-2:#E9EAF3;--card:#FFFFFF;--hair:#E6E7F0;--hair-2:#D5D7E6;--ink:#0F1222;--ink-2:#5A6079;--ink-3:#9AA0B8;",
+     "--ground:#eef4fa;--ground-2:#e1ecf6;--card:rgba(255,255,255,.9);--hair:#d6e4f0;--hair-2:#c0d4e6;--ink:#14283a;--ink-2:#48607a;--ink-3:#849db3;--sand:#d4bc95;--sand-soft:#f3ebdd;--sand-deep:#b3945f;"),
+    ("--p:#6E56F5;--p-deep:#4B36D6;--p-soft:#EEEBFF;--p-ink:#3A2AA8;", "--p:#457ea9;--p-deep:#35678c;--p-soft:#cce0f4;--p-ink:#2b5878;"),
+    ("--robo:#F79009;", "--robo:#b3945f;"),
+    ("--shadow-1:0 1px 2px rgba(20,22,50,.04),0 8px 24px -12px rgba(20,22,50,.12);--shadow-2:0 2px 6px rgba(20,22,50,.06),0 24px 48px -20px rgba(55,40,160,.22);",
+     "--shadow-1:0 1px 2px rgba(20,50,80,.04),0 10px 28px -14px rgba(69,126,169,.28);--shadow-2:0 2px 6px rgba(20,50,80,.06),0 26px 52px -20px rgba(69,126,169,.36);"),
+    ("--ease:cubic-bezier(.22,1,.36,1);--spring:cubic-bezier(.34,1.4,.64,1);--r:18px;", "--ease:cubic-bezier(.22,1,.36,1);--spring:cubic-bezier(.34,1.4,.64,1);--r:22px;"),
+    ("html,body{margin:0;background:var(--ground);", "html,body{margin:0;background:radial-gradient(1200px 640px at 0% 0%,#cce0f4 0%,rgba(204,224,244,.55) 35%,transparent 70%),radial-gradient(900px 520px at 100% 26%,rgba(212,188,149,.30),transparent 62%),radial-gradient(700px 420px at 60% 100%,rgba(204,224,244,.6),transparent 70%),var(--ground);"),
+    (".rail{position:sticky;top:0;height:100vh;background:var(--card);", ".rail{position:sticky;top:0;height:100vh;background:rgba(255,255,255,.66);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);"),
+    (".nav.on{background:linear-gradient(135deg,#7A63FF,#5642DF);color:#fff;box-shadow:0 10px 22px -12px rgba(75,54,214,.8)}", ".nav.on{background:linear-gradient(135deg,#5b95c1,#457ea9);color:#fff;box-shadow:0 10px 22px -12px rgba(69,126,169,.85)}"),
+    (".robo{margin-top:auto;border-radius:16px;padding:14px;background:linear-gradient(160deg,#FFF6E8,#FFE9C7);border:1px solid #FFE1B3;", ".robo{margin-top:auto;border-radius:16px;padding:14px;background:linear-gradient(160deg,#f7f0e4,#e8d7b8);border:1px solid #d4bc95;"),
+    ("background:radial-gradient(circle at 35% 30%,#FFD27A,#F79009 60%,#C96A00);box-shadow:inset -8px -10px 18px rgba(120,60,0,.35)", "background:radial-gradient(circle at 35% 30%,#f2e2c4,#d4bc95 60%,#a8864f);box-shadow:inset -8px -10px 18px rgba(90,60,20,.35)"),
+    (".robo p{margin:4px 0 0;font-size:12px;color:#7A4B00;", ".robo p{margin:4px 0 0;font-size:12px;color:#6a5030;"),
+    (".card{background:var(--card);border:1px solid var(--hair);border-radius:var(--r);box-shadow:var(--shadow-1)}", ".card{background:var(--card);border:1px solid var(--hair);border-radius:var(--r);box-shadow:var(--shadow-1);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}"),
+    ("background:radial-gradient(600px 300px at 12% 0%,rgba(110,86,245,.28),transparent 60%),#07070B;color:#fff;box-shadow:0 2px 6px rgba(20,22,50,.1),0 30px 60px -24px rgba(10,10,40,.7);",
+     "background:radial-gradient(700px 340px at 12% 0%,rgba(69,126,169,.6),transparent 60%),radial-gradient(500px 300px at 100% 100%,rgba(212,188,149,.28),transparent 60%),#0b1a28;color:#fff;box-shadow:0 2px 6px rgba(20,40,60,.12),0 30px 60px -24px rgba(11,26,40,.7);"),
+    (".hero .scrim{position:absolute;inset:0;background:linear-gradient(100deg,rgba(7,7,11,.72) 0%,rgba(7,7,11,.35) 42%,rgba(7,7,11,0) 68%);", ".hero .scrim{position:absolute;inset:0;background:linear-gradient(100deg,rgba(11,26,40,.78) 0%,rgba(11,26,40,.38) 42%,rgba(11,26,40,0) 68%);"),
+    (".btn.p{background:var(--p);color:#fff;box-shadow:0 10px 22px -12px rgba(75,54,214,.9)}", ".btn.p{background:linear-gradient(135deg,#5b95c1,#457ea9);color:#fff;box-shadow:0 10px 22px -12px rgba(69,126,169,.9)}"),
+    (".btn.w{background:#fff;color:var(--p-deep);", ".btn.w{background:linear-gradient(135deg,#f3e9d8,#d4bc95);color:#3d2f18;"),
+    (".brandband{background:#07070B;", ".brandband{background:#0b1a28;"),
+    (".search{flex:1;max-width:520px;min-width:240px;display:flex;align-items:center;gap:10px;background:var(--card);", ".search{flex:1;max-width:520px;min-width:240px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.8);"),
+]
+if os.environ.get("SINAN_THEME") == "coast":
+    _n = 0
+    for _a, _b in COAST:
+        if _a in CSS: CSS = CSS.replace(_a, _b); _n += 1
+        else: print("主题：找不到片段", _a[:60])
+    print("主题 coast：替换 %d / %d 处" % (_n, len(COAST)))
+
 def _asset_v():
     return _hl.sha1((CSS + APP_JS + EARTH_JS).encode("utf-8")).hexdigest()[:10]
 
