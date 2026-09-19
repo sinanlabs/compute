@@ -500,7 +500,15 @@ if os.environ.get("SINAN_THEME") == "coast":
         else: print("主题：找不到片段", _a[:60])
     # 追加：沙金作点缀（榜单序号、侧栏分组标题、选中的模型胶囊），让三色都出现
     CSS += "\n.rkmini li .no{color:#b3945f;font-weight:600}.sect{color:#b3945f}.chip.on,.chip[aria-pressed=true]{background:linear-gradient(135deg,#5b95c1,#457ea9);border-color:transparent;color:#fff;box-shadow:0 8px 18px -10px rgba(69,126,169,.8)}.subbox{background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(243,235,221,.9));border-color:#e6d7bd}.mv.up{background:#dcefe4;color:#1b6b45}.pledge{border-color:#d4bc95;background:rgba(243,235,221,.35)}"
-    print("主题 coast：替换 %d / %d 处，追加沙金点缀" % (_n, len(COAST)))
+    # 亮版首屏：浅蓝渐变 + 沙金光晕，深色文字；地球缩小放右侧（画布缩到右半区，着色器按画布尺寸画球）；星空隐藏
+    CSS += "\n.hero{background:radial-gradient(640px 360px at 6% 0%,rgba(69,126,169,.34),transparent 62%),radial-gradient(560px 340px at 100% 110%,rgba(212,188,149,.62),transparent 64%),linear-gradient(135deg,#cce0f4 0%,#e4eef8 46%,#f4efe4 100%);color:var(--ink);box-shadow:0 2px 6px rgba(20,40,60,.06),0 30px 60px -28px rgba(69,126,169,.45);border:1px solid rgba(255,255,255,.7)}"
+    CSS += ".hero .stars{display:none}.hero #gl{left:auto;right:-4%;top:6%;width:50%;height:92%;filter:drop-shadow(0 30px 40px rgba(43,88,120,.35))}.hero .scrim{background:linear-gradient(100deg,rgba(228,238,248,.55) 0%,rgba(228,238,248,.25) 40%,rgba(228,238,248,0) 58%)}"
+    CSS += ".hero .eyebrow{color:var(--p-deep);opacity:1}.hero h1{color:var(--ink)}.hero p{color:var(--ink-2)}.hero .stat{background:rgba(255,255,255,.66);border:1px solid rgba(69,126,169,.28);color:var(--ink);backdrop-filter:blur(10px)}.hero .stat b{color:var(--p-deep)}.hero .tag{color:var(--ink-3);opacity:.9}"
+    CSS += ".hero .btn.w{background:linear-gradient(135deg,#5b95c1,#457ea9);color:#fff;box-shadow:0 12px 24px -12px rgba(69,126,169,.9)}.hero .btn.g{background:linear-gradient(135deg,#f0e4cf,#d4bc95);color:#3d2f18;border:0;backdrop-filter:none}.hero .btn.g:hover{background:linear-gradient(135deg,#eadcc2,#cbb086)}"
+    # 榜单四张小卡 → 三色胶囊块：深蓝 / 沙金 / 浅蓝 / 藏青，各带同色柔光影
+    CSS += ".rkmini .card{border:0;border-radius:30px;padding:20px 22px 18px;color:#fff;backdrop-filter:none}.rkmini .card:nth-child(1){background:linear-gradient(135deg,#5b95c1,#457ea9);box-shadow:0 28px 44px -24px rgba(69,126,169,.95)}.rkmini .card:nth-child(2){background:linear-gradient(135deg,#e4d2ad,#d4bc95);color:#3d2f18;box-shadow:0 28px 44px -24px rgba(180,150,100,.9)}.rkmini .card:nth-child(3){background:linear-gradient(135deg,#e2edf8,#cce0f4);color:#1f3a52;box-shadow:0 28px 44px -24px rgba(120,160,200,.75)}.rkmini .card:nth-child(4){background:linear-gradient(135deg,#3f7398,#2b5878);box-shadow:0 28px 44px -24px rgba(43,88,120,.95)}"
+    CSS += ".rkmini h4{color:inherit}.rkmini .q{color:inherit;opacity:.78}.rkmini li{border-top-color:rgba(255,255,255,.3)}.rkmini .card:nth-child(2) li,.rkmini .card:nth-child(3) li{border-top-color:rgba(20,40,60,.14)}.rkmini li .no{color:inherit;opacity:.65;font-weight:600}.rkmini li a,.rkmini li .val{color:inherit}.rkmini .card a.more,.rkmini .card .more{color:inherit;opacity:.85}"
+    print("主题 coast：替换 %d / %d 处，追加沙金点缀 + 亮版首屏 + 胶囊榜卡" % (_n, len(COAST)))
 
 def _asset_v():
     return _hl.sha1((CSS + APP_JS + EARTH_JS).encode("utf-8")).hexdigest()[:10]
