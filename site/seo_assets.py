@@ -4,6 +4,15 @@ import os, io, json, sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from rank_seo import edition, rank_image_path
 
+# 配色：SINAN_THEME=coast 时把分享图里的紫色系换成三色（深蓝 #457ea9 / 沙金 #d4bc95 / 浅蓝 #cce0f4）
+_COAST = os.environ.get("SINAN_THEME") == "coast"
+def T(rgb):
+    if not _COAST: return rgb
+    m = {(46, 30, 130): (34, 78, 112), (30, 22, 80): (18, 40, 62), (22, 60, 140, 255): (69, 126, 169, 255), (8, 20, 60, 255): (11, 26, 40, 255),
+         (110, 86, 245): (69, 126, 169), (185, 173, 255): (204, 224, 244), (35, 30, 75): (27, 58, 82), (92, 79, 159): (91, 149, 193), (4, 6, 17): (7, 18, 30)}
+    return m.get(tuple(rgb), rgb)
+
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "img")
 FONT_CJK = "/System/Library/Fonts/Supplemental/Songti.ttc"
@@ -18,25 +27,25 @@ def font(size, cjk=True, bold=True):
 
 def canvas():
     W, H = 1200, 630
-    im = Image.new("RGB", (W, H), (4, 6, 17))
-    glow = Image.new("RGB", (W, H), (4, 6, 17)); g = ImageDraw.Draw(glow)
-    g.ellipse((700, 180, 1500, 900), fill=(46, 30, 130))
-    g.ellipse((-200, -300, 500, 200), fill=(30, 22, 80))
+    im = Image.new("RGB", (W, H), T((4, 6, 17)))
+    glow = Image.new("RGB", (W, H), T((4, 6, 17))); g = ImageDraw.Draw(glow)
+    g.ellipse((700, 180, 1500, 900), fill=T((46, 30, 130)))
+    g.ellipse((-200, -300, 500, 200), fill=T((30, 22, 80)))
     glow = glow.filter(ImageFilter.GaussianBlur(120))
     im = Image.blend(im, glow, 0.85)
     d = ImageDraw.Draw(im)
     # 地平线弧（呼应首页地球）
     arc = Image.new("RGBA", (W, H), (0, 0, 0, 0)); a = ImageDraw.Draw(arc)
-    a.ellipse((250, 470, 2200, 2400), fill=(22, 60, 140, 255))
-    a.ellipse((260, 486, 2190, 2390), fill=(8, 20, 60, 255))
+    a.ellipse((250, 470, 2200, 2400), fill=T((22, 60, 140, 255)))
+    a.ellipse((260, 486, 2190, 2390), fill=T((8, 20, 60, 255)))
     arc = arc.filter(ImageFilter.GaussianBlur(6))
     im.paste(arc, (0, 0), arc)
     return im, ImageDraw.Draw(im)
 
 def brand(d, y=64, locale="zh"):
-    d.rounded_rectangle((72, y, 72 + 54, y + 54), radius=16, fill=(110, 86, 245))
+    d.rounded_rectangle((72, y, 72 + 54, y + 54), radius=16, fill=T((110, 86, 245)))
     d.polygon([(99, y + 10), (110, y + 27), (99, y + 44)], fill=(255, 255, 255))
-    d.polygon([(99, y + 10), (88, y + 27), (99, y + 44)], fill=(185, 173, 255))
+    d.polygon([(99, y + 10), (88, y + 27), (99, y + 44)], fill=T((185, 173, 255)))
     d.text((144, y - 2), "Sinan Compute", font=font(34, cjk=False), fill=(255, 255, 255))
     d.text((144, y + 36), "SINAN LAB / RELAY MEASUREMENTS" if locale == "en" else "司南·算力 · SINAN LAB", font=font(18, cjk=locale != "en"), fill=(160, 168, 200))
 
@@ -49,7 +58,7 @@ def og_home(stats):
     for k, v in (("已确认中转站", str(stats["confirmed"])), ("实付报价", format(stats["quotes"], ",")), ("有报价的站", str(stats["with_quotes"]))):
         d.rounded_rectangle((x, 440, x + 300, 560), radius=18, fill=(22, 26, 58), outline=(90, 80, 160))
         d.text((x + 22, 456), k, font=font(20), fill=(160, 168, 200)); d.text((x + 22, 490), v, font=font(46, cjk=False), fill=(255, 255, 255)); x += 324
-    d.text((72, 588), "compute.sinanlab.com", font=font(22, cjk=False), fill=(185, 173, 255))
+    d.text((72, 588), "compute.sinanlab.com", font=font(22, cjk=False), fill=T((185, 173, 255)))
     im.save(os.path.join(OUT, "og.png"), optimize=True)
 
 def og_model(m):
@@ -66,7 +75,7 @@ def og_model(m):
         d.text((94, 436), "说得通的最低实付", font=font(20), fill=(160, 168, 200))
         d.text((94, 470), "$%.2f" % best["out"], font=font(56, cjk=False), fill=(255, 255, 255))
         d.text((300, 486), "/ 百万输出 · 参考价的 %.0f%%" % (best["ratio"] * 100), font=font(24), fill=(200, 206, 230))
-    d.text((72, 588), "compute.sinanlab.com/m/%s" % m["id"], font=font(22, cjk=False), fill=(185, 173, 255))
+    d.text((72, 588), "compute.sinanlab.com/m/%s" % m["id"], font=font(22, cjk=False), fill=T((185, 173, 255)))
     os.makedirs(os.path.join(OUT, "og"), exist_ok=True)
     im.save(os.path.join(OUT, "og", m["id"] + ".png"), optimize=True)
 
@@ -88,7 +97,7 @@ def og_rank(rank, locale="zh", output=None):
         d.text((x, y), text, font=f, fill=color)
 
     muted = (164, 174, 203); white = (247, 249, 255); accent = (193, 185, 255)
-    d.rounded_rectangle((864, 54, 1128, 112), radius=15, fill=(35, 30, 75), outline=(92, 79, 159))
+    d.rounded_rectangle((864, 54, 1128, 112), radius=15, fill=T((35, 30, 75)), outline=T((92, 79, 159)))
     text_line(900, 67, week, 28, accent, width=204, latin=True)
     text_line(72, 160, "API RELAYS / WEEKLY MEASUREMENTS" if en else "API 中转站 · 周度测量", 21, accent)
     text_line(72, 209, "Sinan Rankings" if en else "司南榜", 68, white)
