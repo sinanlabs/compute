@@ -783,7 +783,7 @@
 "{n} 个模型；国产模型中位 {n}%（{n} 个）": "{n} models; Chinese-model median {n}% ({n} models)",
 "面板家族按公开接口指纹判定；Sub{n}API 一族的套餐价在登录之后，本期无公开报价。": "Panel family is determined by public API fingerprint; Sub{n}API-family plan prices sit behind login, so there is no public quote this issue.",
 "名录：aiapirank-hvoyai": "Directory: aiapirank-hvoyai",
-"区间定义见口径文档第 {n} 节：": "Range definitions are in section {n} of the methodology document:",
+"区间定义见口径文档第 {n} 节：": "Band definitions are in section {n} of the definitions page:",
 "参考价取官方最低档（分辩率 / 时长），中转报价按同档折算；无官方公开价的族不出比率。": "The reference price uses the lowest official tier (resolution / duration); relay quotes are converted to the same tier; families without a public official price get no ratio.",
 "全部指标定义见": "All metric definitions are in",
 "司南实验室，《中国模型 API 中转市场月报 · {n} 年 {n} 月（创刊号）》，{n}-{n}-{n}，https://compute.sinanlab.com/report/{n}-{n}（访问日期 ____）": "Sinan Lab, \"China Model API Relay Market Monthly Report · {n}-{n} (Inaugural Issue)\", {n}-{n}-{n}, https://compute.sinanlab.com/report/{n}-{n} (accessed ____)",
@@ -835,5 +835,7 @@
 "中国模型 API 中转市场月报 · {n} 年 {n} 月（创刊号）": "China Model API Relay Market Monthly · {n}-{n} (first issue)",
 "司南实验室 · 月报 · {n}-{n}-{n} 至 {n}-{n}-{n}（滚动更新）": "Sinan Lab · Monthly · {n}-{n}-{n} to {n}-{n}-{n} (rolling update)",
 "Sinan Lab, \"中国模型 API 中转市场月报 · {n} 年 {n} 月（创刊号）\", {n}-{n}-{n} https://compute.sinanlab.com/report/{n}-{n} (accessed ____)": "Sinan Lab, \"China Model API Relay Market Monthly · {n}-{n} (first issue)\", {n}-{n}-{n} https://compute.sinanlab.com/report/{n}-{n} (accessed ____)",
-"<a href=\"https://compute.sinanlab.com/price-index\"><img src=\"https://compute.sinanlab.com/badge/price-index.svg\" alt=\"司南 Token 价格指数\" width=\"{n}\" height=\"{n}\"></a>": "<a href=\"https://compute.sinanlab.com/en/price-index\"><img src=\"https://compute.sinanlab.com/badge/price-index.svg\" alt=\"Sinan Token Price Index\" width=\"{n}\" height=\"{n}\"></a>"
+"<a href=\"https://compute.sinanlab.com/price-index\"><img src=\"https://compute.sinanlab.com/badge/price-index.svg\" alt=\"司南 Token 价格指数\" width=\"{n}\" height=\"{n}\"></a>": "<a href=\"https://compute.sinanlab.com/en/price-index\"><img src=\"https://compute.sinanlab.com/badge/price-index.svg\" alt=\"Sinan Token Price Index\" width=\"{n}\" height=\"{n}\"></a>",
+"{n}% 显著高于。": "{n}% well above.",
+"{n}% 显著高于": "{n}% well above"
 }
