@@ -375,10 +375,10 @@ var tg=document.getElementById("tg");tg.addEventListener("click",function(){only
 function pctm(r){return pct(r);}
 function famHtml(f,mod,i){var ref=f.ref;var rec=(f.rows||[]).filter(function(r){return r.recent&&!r.held;});var range=(f.eff_min!=null&&f.eff_max!=null&&ref)?[f.eff_min/ref.price,f.eff_max/ref.price]:null;
  var h='<div class="fam rise" style="--i:'+(i*0.6)+'"><div class="name"><span class="cube"></span><a href="/media/'+esc(f.family)+'">'+esc(f.name||f.family||f.vendor)+'</a>'+(f.recent_labels&&f.recent_labels.length?'<span class="sub" style="margin:0 0 0 auto">主推 '+esc(f.recent_labels.join(" · "))+'</span>':'')+'</div>';
- if(ref)h+='<div class="ref">$'+ref.price.toFixed(3)+'<small>/ '+(mod==="video"?"秒":"张")+' 官方 · '+esc(ref.model)+'</small></div><div class="meta">'+f.n_sites+' 站 · '+f.n_rows+' 条报价'+(mod==="video"&&f.default_clip?' · 按次折算假设 1 次 = '+f.default_clip+' 秒':'')+'</div>';
+ if(ref)h+='<div class="ref">$'+ref.price.toFixed(3)+'<small>/ '+(mod==="video"?"秒":"张")+' 官方 · '+esc(ref.model)+'</small></div><div class="meta">'+f.n_sites+' 站 · '+f.n_rows+' 条报价'+(mod==="video"&&f.default_clip?' · 按次报价按 1 次 = '+f.default_clip+' 秒折成每秒'+(f.n_assumed?'（'+f.n_assumed+' 条）':''):'')+'</div>';
  else h+='<div class="none">无官方参考价，只列报价，不出比率。'+esc(f.ref_missing||"")+'</div><div class="meta">'+f.n_sites+' 站 · '+f.n_rows+' 条报价</div>';
  if(range){var lo=Math.min(2,range[0])/2*100,hi=Math.min(2,range[1])/2*100;h+='<div class="rng"><i style="left:'+lo.toFixed(1)+'%;width:'+Math.max(2,hi-lo).toFixed(1)+'%"></i></div><div class="rl"><span>实付最低 '+pctm(range[0])+'</span><span>最高 '+pctm(range[1])+'</span></div>';}
- if(rec.length){h+='<table><thead><tr><th>站</th><th class="num">实付</th><th class="num">几成</th></tr></thead><tbody>'+rec.slice(0,6).map(function(r){return '<tr><td><a class="dom" href="/s/'+esc(r.site)+'">'+esc(r.site)+'</a></td><td class="num">'+(r.eff!=null?r.eff.toFixed(3):"—")+' <span class="sub" style="display:inline">'+(r.unit==="per_second"?"$/秒":"$/次")+'</span></td><td class="num">'+(r.ratio!=null?'<span class="r '+r.band+'">'+pctm(r.ratio)+'</span>':'—')+'</td></tr>';}).join("")+'</tbody></table>'+(rec.length>6?'<div class="sub">还有 '+(rec.length-6)+' 条 · 数据文件 media.json</div>':'');}
+ if(rec.length){h+='<table><thead><tr><th>站</th><th class="num">实付</th><th class="num">几成</th></tr></thead><tbody>'+rec.slice(0,6).map(function(r){return '<tr><td><a class="dom" href="/s/'+esc(r.site)+'">'+esc(r.site)+'</a></td><td class="num">'+(r.val!=null?(r.val<0.01?r.val.toFixed(4):r.val.toFixed(3)):(r.eff!=null?r.eff.toFixed(3):"—"))+' <span class="sub" style="display:inline">'+(r.val!=null?(f.canon_unit||(mod==="video"?"$/秒":"$/张")):(r.unit==="per_second"?"$/秒":"$/次"))+(r.val_basis==="assumed"?"<i title=\"按该族默认时长折算\" style=\"font-style:normal;opacity:.6\"> ≈</i>":"")+'</span></td><td class="num">'+(r.ratio!=null?'<span class="r '+r.band+'">'+pctm(r.ratio)+'</span>':'—')+'</td></tr>';}).join("")+'</tbody></table>'+(rec.length>6?'<div class="sub">还有 '+(rec.length-6)+' 条 · 数据文件 media.json</div>':'');}
  h+='</div>';return h;}
 function renderMedia(mod){var list=(M&&M[mod])||[];fams.innerHTML=list.map(function(f,i){return famHtml(f,mod,i);}).join("")||'<div class="callout">暂无数据</div>';}
 var seg=document.getElementById("seg");function moveInd(){var b=seg.querySelector("[aria-pressed=true]"),i=seg.querySelector(".ind");if(!b)return;i.style.left=b.offsetLeft+"px";i.style.width=b.offsetWidth+"px";}
@@ -923,22 +923,27 @@ def build_family(f, mod):
     def rows_html(rs):
         out = []
         for r in rs:
-            u = "$/秒" if r.get("unit") == "per_second" else "$/次"
+            u = f.get("canon_unit") or ("$/秒" if mod == "video" else "$/张")
+            val = r.get("val"); basis = r.get("val_basis")
+            note = {"stated": "站方标 %ss" % r.get("val_secs"), "assumed": "按默认 %ss 折算" % r.get("val_secs"), "native": ""}.get(basis, "")
+            if val is None: u = ("$/秒" if r.get("unit") == "per_second" else "$/次"); val = r.get("eff"); note = "该族没有公开的默认时长，未折成每秒"
             mid = ('<td class="num">—</td><td><span class="pill held">待核</span></td>' if r.get("held") else
                    ('<td class="num"><span class="r %s">%s</span></td><td><span class="pill %s">%s</span></td>' % (r["band"], pct(r["ratio"]), r["band"], LABEL[r["band"]])) if r.get("band") else '<td class="num">—</td><td><span class="pill none">无参考</span></td>')
             out.append('<tr><td><a class="dom" href="/s/%s">%s</a><div class="sub">%s%s</div></td><td>%s</td><td class="num"><span class="big">%s</span><span class="asf">%s%s</span></td>%s</tr>'
-                       % (esc(r["site"]), esc(r["site"]), esc(r.get("name") or ""), (" · " + esc(r["spec"])) if r.get("spec") else "", esc(r.get("version_label") or "—"), fmt(r["eff"]) if r.get("eff") is not None else "—", u, (" · 按 %s 秒折算" % f["default_clip"]) if (r.get("unit") == "per_call" and mod == "video" and f.get("default_clip")) else "", mid))
+                       % (esc(r["site"]), esc(r["site"]), esc(r.get("name") or ""), (" · " + esc(r["spec"])) if r.get("spec") else "", esc(r.get("version_label") or "—"), fmt(val) if val is not None else "—", u, ((" · " + note) if note else ""), mid))
         return "".join(out)
     def table(rs, cap):
         if not rs: return ""
         return '<section class="card rise" style="margin-top:16px"><div class="pad" style="padding-bottom:6px"><h2 class="sec">%s</h2></div><div class="tablewrap"><table><thead><tr><th>中转站</th><th>版本</th><th class="num">实付</th><th class="num">几成</th><th>怎么看</th></tr></thead><tbody>%s</tbody></table></div></section>' % (cap, rows_html(rs))
     facts = [("官方参考价", ("$%.3f / %s" % (ref["price"], unit_s)) if ref else "—", (esc(ref["model"]) + " · " + esc(ref.get("region") or "")) if ref else esc(f.get("ref_missing") or "暂无官方参考价，只列报价"), "" if ref else "t"),
              ("中转站", "%d 站 · %d 条" % (f.get("n_sites", 0), f.get("n_rows", 0)), "主推 %s，旧版本 %d 条折叠" % (" · ".join(f.get("recent_labels") or []) or "—", f.get("n_old", 0)), "t"),
-             ("实付区间", ("$%.3f – $%.3f" % (f["eff_min"], f["eff_max"])) if f.get("eff_min") is not None else "—", "每%s%s" % (unit_s, ("，中位 $%.3f" % f["eff_med"]) if f.get("eff_med") is not None else ""), ""),
+             ("实付区间", ("$%.4f – $%.4f" % (f["eff_min"], f["eff_max"])) if f.get("eff_min") is not None else "—",
+              "%s%s%s" % (f.get("canon_unit") or ("$/秒" if mod == "video" else "$/张"), ("，中位 $%.4f" % f["eff_med"]) if f.get("eff_med") is not None else "",
+              ("；其中 %d 条是按该族默认时长折算的" % f["n_assumed"]) if f.get("n_assumed") else ""), ""),
              ("价格说得通", "%d 家" % len(ok), "低于成本下限 %d · 待核 %d" % (sum(1 for r in rec if r.get("band") == "unsustainable"), len(held)), "")]
     facts_html = "".join('<div class="card fact"><div class="k">%s</div><div class="v%s">%s</div><div class="n">%s</div></div>' % (k, (" t" if t else ""), esc(v), n) for k, v, n, t in facts)
     faq = [("%s 的官方 API 价格是多少？" % name, ("本站取官方定价页的最低档作参考：%s，每%s $%.3f（%s）。人民币标价按当日汇率折算。" % (ref["model"], unit_s, ref["price"], ref.get("region") or "")) if ref else "官方尚未公开可抓取的定价页，或本站尚未接入；接入前只列中转站报价，不出比率。"),
-           (("中转站按次报价怎么和官方按秒价比？", "按次报价除以该族公开的默认时长（%s）折成每秒，假设写在每一行旁边；折算只是算术，不代表该站实际生成时长。" % (esc(f.get("clip_source") or "见方法论"))) if mod == "video" else ("图像怎么比？", "图像按张比较；输入图与输出图分开计价的官方模型取输出图价，分辨率档取最低档。")),
+           ("这张表的价格是什么口径？", "视频一律折成每秒（$/秒），图像一律按每张（$/张），全站统一。站方本来就按秒报价的直接用；模型名里写了时长的（如 veo3.1-8s）按它折算；两样都没有的按该族公开的默认时长折算，并在那一行标出来。没有公开默认时长的族不折算，只列原始报价。折算只是算术，不代表该站实际生成时长。"),
            ("为什么只主推最新两代版本？", "同一族的旧版本官方价通常更低，拿新版本参考价比旧版本报价会失真；旧版本条目折叠在下方，标注了版本。")]
     body = tpl(u"""<div class="mhead rise" style="--i:0"><div><div class="eyebrow" style="color:var(--p);opacity:1">{{mod}} · 模型族页</div><h1>{{name}} 的中转站实付价</h1><p class="lead">{{desc}}</p></div><div style="margin-left:auto"><a class="btn p" href="/media">在图像 · 视频账本里交互查看 →</a></div></div>
 <div class="facts rise" style="--i:1;grid-template-columns:repeat(4,1fr)">{{facts}}</div>{{t1}}{{t2}}{{t3}}
@@ -1250,7 +1255,7 @@ def load_open_reports():
 DATA_FILES = [
     ("data_v2.json", "/data_v2.json", "每日", "模型账本主文件：40 个模型 × 每个中转站的实付价（$/百万输出）、比率、区间、抓取快照编号；每站的可达率、注册状态、探针摘要、榜单名次；当天价格变动与新收录。", "generated_at, fx{rate,as_of}, models[{id,name,vendor,floor,rows[{vendor,out,ratio,band,sids,as_of,probe}]}], sites[{domain,name,panel,cluster,median,avail{uptime,ttfb_p50},register,probe,verified,rank_badge}], stats, changes[{t,vendor,model,old,new}], new_sites, rank{...}"),
     ("price-index.json", "/price-index.json", "每日", "司南 Token 价格指数：全市场与三档（旗舰 / 中档 / 快速）的折价率与链式点位逐日序列，每个模型的市场中位价序列与样本站数。", "version, base_date, tiers, series[{date,all,flagship,mid,flash}], latest, models{id:{name,tier,official,series[{date,median,n}]}}, method"),
-    ("media.json", "/media.json", "每日", "图像与视频账本：按模型族的官方参考价、各站按秒 / 按张实付价、分辨率档、待核标记。", "image[{family,name,ref,rows[...]}], video[...], held_sites, stats"),
+    ("media.json", "/media.json", "每日", "图像与视频账本：按模型族的官方参考价与各站实付价。统一口径：视频 $/秒、图像 $/张（val 字段），折算依据见 val_basis（native 站方按此口径报价 / stated 按模型名里的时长 / assumed 按该族默认时长）；原始报价与单位保留在 eff、unit。", "image[{family,name,ref,rows[...]}], video[...], held_sites, stats,val,val_basis,val_secs,canon_unit,n_assumed"),
     ("gpu.json", "/gpu.json", "每日", "算力租赁账本：主流 GPU 在 RunPod / Vast.ai / 算力互联的单卡每小时报价（美元与人民币）。", "platforms, gpus[{gpu,quotes[{platform,kind,usd,cny,n,ts}]}]"),
     ("rank/<期号>.json", "/rank/%s.json", "每周一", "司南榜某一期的完整数据（12 张榜、门槛、样本、待核）。期号形如 2026-w38，永久不变。", "week, date, n_sites, eligible_uptime, fast, price, dual, coverage, uptime, low, media, audit"),
     ("report/<月份>.json", "/report/%s.json", "每日重算，月底定稿", "月报原始数据：规模、结构、价格指数、涨跌最多的模型、可达分布、探针与核查、多模态、算力。", "month, period, final, scale, prices, reach, probes, audit, boards, media, gpu"),

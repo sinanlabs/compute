@@ -9,7 +9,7 @@ import os, sys, json, statistics as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import db as D
 from core.cost_floor import band
-from core.media import compare, official_refs, media_site_gate, DEFAULT_CLIP, CLIP_SOURCE, parse_version, recent_versions, version_key, version_label
+from core.media import canonical, CANON_UNIT, compare, official_refs, media_site_gate, DEFAULT_CLIP, CLIP_SOURCE, parse_version, recent_versions, version_key, version_label
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -46,6 +46,9 @@ def main():
         if res["modality"] not in ("image", "video") or not res.get("family") or res.get("placeholder"): continue
         row = {"site": r["vendor"], "name": name, "unit": r["unit"], "eff": round(eff, 4), "nominal": r["price"], "price_field": round(float(p), 4), "usd_direct": bool(c.get("usd_direct")), "spec": c.get("spec"), "variable_price": bool(c.get("variable_price")),
                "sids": [r["snapshot_id"]], "as_of": r["valid_from"][:16], "tier": res.get("tier"), "version_note": res.get("version_note")}
+        val, basis, secs = canonical(res["modality"], res["family"], name, r["unit"], eff, c.get("duration_s"))
+        row.update({"val": round(val, 6) if val is not None else None, "val_basis": basis, "val_secs": secs,
+                    "canon_unit": CANON_UNIT.get(res["modality"])})
         if res.get("ratio") is not None:
             code, label = band(res["ratio"])
             row.update({"ratio": round(res["ratio"], 4), "band": code, "assumption": res.get("assumption"), "ref_model": res["ref_model"],
@@ -83,11 +86,12 @@ def main():
         for x in lst:
             v = parse_version(fam, x["name"]); x["version"] = v; x["version_label"] = version_label(fam, v)
             x["recent"] = (v in recent) if v is not None else (len(recent) == 0)
-        lst.sort(key=lambda x: (1 if x["held"] else 0, 0 if x["recent"] else 1, -version_key(x["version"]), rank.get(x.get("band"), 9), x.get("ratio") or 0, x["eff"]))
-        effs = [x["eff"] for x in lst if not x["held"]]
+        lst.sort(key=lambda x: (1 if x["held"] else 0, 0 if x["recent"] else 1, -version_key(x["version"]), rank.get(x.get("band"), 9), x.get("ratio") or 0, x.get("val") if x.get("val") is not None else x["eff"]))
+        effs = [x["val"] for x in lst if not x["held"] and x.get("val") is not None]   # 统一口径：视频 $/秒、图像 $/张
         out[mod].append({"family": fam, "name": FAMILY_NAME.get(fam, fam), "ref": ref, "ref_missing": None if ref else REF_MISSING.get(fam, "官方定价未接入"),
                          "default_clip": DEFAULT_CLIP.get(fam) if mod == "video" else None, "clip_source": CLIP_SOURCE.get(fam) if mod == "video" else None,
-                         "n_sites": len({x["site"] for x in lst}), "n_rows": len(lst), "n_cmp": len(cmp_rows),
+                         "n_sites": len({x["site"] for x in lst}), "n_rows": len(lst), "n_cmp": len(cmp_rows), "canon_unit": CANON_UNIT.get(mod),
+                         "n_assumed": sum(1 for x in lst if x.get("val_basis") == "assumed" and not x["held"]),
                          "eff_min": min(effs) if effs else None, "eff_med": st.median(effs) if effs else None, "eff_max": max(effs) if effs else None,
                          "bands": {k: sum(1 for x in cmp_rows if x["band"] == k) for k in rank}, "rows": lst,
                          "recent_versions": recent, "recent_labels": [version_label(fam, v) for v in recent], "n_old": sum(1 for x in lst if not x["recent"])})

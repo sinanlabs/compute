@@ -690,6 +690,11 @@ JS = {
 }
 
 # 数据 JSON 里会渲染出来的中文（app.en.js 的 esc() 按这张表翻；键含 {n} 的走正则）
+JS.update({
+    "按次报价按 1 次 = ": "per-call quotes converted at 1 call = ", " 秒折成每秒": "s to give $/s",
+    "$/秒": "$/s", "$/张": "$/image", "$/次": "$/call",
+})
+
 DATA = {
 "与公开价接近": "Near public price", "低于批量折扣": "Below bulk discount", "计价方式待核": "Pricing basis unverified", "超低价": "Ultra-low", "高于公开价": "Above public price",
 "实付中位数约为公开价的 {n}%–{n}%，低于常见批量采购折扣区间": "Median effective price is about {n}%–{n}% of public price, below the common bulk-discount band",

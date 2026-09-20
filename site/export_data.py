@@ -458,7 +458,7 @@ def main():
                 inr = [r for r in rows if r.get("band") in ("explainable", "normal") and r.get("ratio") is not None]
                 for r in inr: site_ratios.setdefault(r["site"], []).append(r["ratio"])
                 if not inr: continue
-                keyf = (lambda r: r.get("per_s") or r.get("eff")) if mod == "video" else (lambda r: r.get("eff"))
+                keyf = lambda r: r.get("val") if r.get("val") is not None else (r.get("per_s") if mod == "video" else r.get("eff"))   # 统一口径：视频 $/秒、图像 $/张
                 seen_site, best = set(), []
                 for r in sorted([r for r in inr if keyf(r)], key=keyf):   # 同一站多个版本只取最低的一条；同名同价的别名域不重复占位
                     if r["site"] in seen_site: continue

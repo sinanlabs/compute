@@ -1576,7 +1576,18 @@
 "<a href=\"https://compute.sinanlab.com/price-index\"><img src=\"https://compute.sinanlab.com/badge/price-index.svg\" alt=\"司南 Token 价格指数\" width=\"{n}\" height=\"{n}\"></a>": "<a href=\"https://compute.sinanlab.com/en/price-index\"><img src=\"https://compute.sinanlab.com/badge/price-index.svg\" alt=\"Sinan Token Price Index\" width=\"{n}\" height=\"{n}\"></a>",
 "{n}% 显著高于。": "{n}% well above.",
 "{n}% 显著高于": "{n}% well above",
-"区间定义见口径文档第 {n} 节：<{n}% 低于成本下限 · {n}–{n}% 低于常见批量折扣 · {n}–{n}% 说得通 · {n}–{n}% 接近公开价 · {n}–{n}% 高于 · >{n}% 显著高于。": "Band definitions are in section {n} of the definitions page: <{n}% below cost floor · {n}–{n}% below common bulk discount · {n}–{n}% within range · {n}–{n}% near public price · {n}–{n}% above · >{n}% well above."
+"区间定义见口径文档第 {n} 节：<{n}% 低于成本下限 · {n}–{n}% 低于常见批量折扣 · {n}–{n}% 说得通 · {n}–{n}% 接近公开价 · {n}–{n}% 高于 · >{n}% 显著高于。": "Band definitions are in section {n} of the definitions page: <{n}% below cost floor · {n}–{n}% below common bulk discount · {n}–{n}% within range · {n}–{n}% near public price · {n}–{n}% above · >{n}% well above.",
+"$/张": "$/image",
+"$/秒 · 按默认 {n}s 折算": "$/s · converted at the family default {n}s",
+"$/秒 · 站方标 {n}s": "$/s · {n}s as stated by the site",
+"$/张 · 按默认 {n}s 折算": "$/image · converted at the family default {n}s",
+"$/次 · 该族没有公开的默认时长，未折成每秒": "$/call · no published default duration for this family, not converted to per second",
+"该族没有公开的默认时长，未折成每秒": "no published default duration for this family, not converted to per second",
+"$/秒，中位 ${n}；其中 {n} 条是按该族默认时长折算的": "$/s, median ${n}; {n} of them converted at the family default duration",
+"$/张，中位 ${n}": "$/image, median ${n}",
+"$/秒，中位 ${n}": "$/s, median ${n}",
+"这张表的价格是什么口径？": "What unit are the prices in this table?",
+"视频一律折成每秒（$/秒），图像一律按每张（$/张），全站统一。站方本来就按秒报价的直接用；模型名里写了时长的（如 veo{n}-{n}s）按它折算；两样都没有的按该族公开的默认时长折算，并在那一行标出来。没有公开默认时长的族不折算，只列原始报价。折算只是算术，不代表该站实际生成时长。": "Video is always expressed per second ($/s) and images per image ($/image), the same way across the site. Sites that already quote per second are used as is; where the model name states a duration (e.g. veo{n}-{n}s) we convert by it; where neither is available we convert by the family's published default duration and mark that row. Families with no published default duration are not converted and only the raw quote is shown. The conversion is arithmetic; it does not mean the site actually generates clips of that length."
 },
 "js": {
 "待核对（当晚处理）": "Pending (checked tonight)",
@@ -1761,7 +1772,12 @@
 " · 回显模型名不同": " · echo differs",
 " · 含固定前缀约 ": " · +",
 "\" token\":\"\"": "\"-token prefix\":\"\"",
-"\"探针 \"": "\"Probe \""
+"\"探针 \"": "\"Probe \"",
+"按次报价按 1 次 = ": "per-call quotes converted at 1 call = ",
+" 秒折成每秒": "s to give $/s",
+"$/秒": "$/s",
+"$/张": "$/image",
+"$/次": "$/call"
 },
 "data": {
 "与公开价接近": "Near public price",
