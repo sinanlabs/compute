@@ -97,6 +97,22 @@ export async function onRequestPost({ request, env }) {
     }
     return json({ kind: "community", sent: admins.length });
   }
+  if (b.kind === "reply") {
+    // 人工回信：payload = { to, subject, paragraphs:[...], sign }。用 notify@sinanlab.com 发，回复地址 hello@sinanlab.com。
+    // 只发给 payload 指定的一个地址（令牌由维护者在本机生成，一次性）；正文在本机已过措辞自检。
+    const to = String(P.to || "").trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return json({ error: "bad_recipient" }, 400);
+    const paras = (Array.isArray(P.paragraphs) ? P.paragraphs : []).slice(0, 40);
+    if (!paras.length) return json({ error: "empty_body" }, 400);
+    const htmlBody = paras.map((x) => (String(x).startsWith("- ") || /^\d+\. /.test(String(x))
+      ? `<div style="font-size:14px;line-height:1.85;margin:4px 0 4px 6px">${esc(String(x))}</div>`
+      : `<p style="font-size:14px;line-height:1.85;margin:0 0 12px">${esc(String(x))}</p>`)).join("");
+    const r = await sendMail(env, { to, subject: String(P.subject || "").slice(0, 200), tags: ["reply"],
+      text: paras.join("\n\n") + "\n\n" + (P.sign || "司南实验室 Sinan Lab · compute.sinanlab.com"),
+      html: layout({ title: String(P.subject || "").slice(0, 200), intro: "", body: htmlBody,
+        footer: `${esc(P.sign || "司南实验室 Sinan Lab")} · <a href="${site}" style="color:#9AA0B8">compute.sinanlab.com</a> · 直接回复本邮件即可联系我们` }) });
+    return json({ kind: "reply", to, sent: r.ok ? 1 : 0, error: r.error || null, id: r.id || null });
+  }
   if (b.kind === "post") {
     // linux.do 发帖稿：payload = { date, posts:[{kind, title, text}] }，只发管理员，正文原样放 <pre> 里方便复制
     const admins = (await env.DB.prepare("SELECT email, handle FROM users WHERE role='admin' AND email IS NOT NULL").all()).results || [];
