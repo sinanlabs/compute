@@ -1318,7 +1318,12 @@ def build_governance():
 
 def build_corrections():
     R = load_open_reports()
-    fixed = R.get("fixed") or []
+    fixed = list(R.get("fixed") or [])
+    _mp = os.path.join(HERE, "corrections_manual.json")   # 邮件 / 人工核对得来的修正，署名记录
+    if os.path.exists(_mp):
+        try: fixed = json.load(io.open(_mp, encoding="utf-8")) + fixed
+        except Exception: pass
+    fixed.sort(key=lambda x: x.get("date", ""), reverse=True)
     frows = "".join('<tr><td class="sub">%s</td><td>%s</td><td>%s → <b>%s</b></td><td class="sub">%s</td><td class="sub">%s</td></tr>' % (esc(x.get("date", "")[:10]), esc(x.get("target", "")), esc(x.get("original", "")), esc(x.get("corrected", "")), esc(x.get("reason", "")), esc(x.get("credit") or "站内核查")) for x in fixed) or '<tr><td colspan="5" class="sub">还没有已确认的修正记录。数据核查每晚自动跑，命中的行会先标"待核"而不是直接上榜。</td></tr>'
     orows = "".join('<tr><td class="sub">%s</td><td>%s</td><td>%s</td><td class="sub">%s</td></tr>' % (esc(x.get("created_at", "")[:10]), esc(x.get("kind", "") + " · " + x.get("key", "")), esc(x.get("note", "")), esc(x.get("handle") or "匿名")) for x in R.get("items") or []) or '<tr><td colspan="4" class="sub">目前没有待处理的报错。</td></tr>'
     body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><div class="eyebrow" style="color:var(--p)">修正日志 · 永久公开</div><h1 style="font-size:26px;margin-top:6px">我们改过什么，谁指出的</h1><p class="lead">每个数字旁边都有"报错"。用户提交的报错进核查队列，我们核对原始快照后，要么修正并在这里署名记录，要么说明为什么维持原判。这是数据网络的开始：你指出的错，会带着你的名字留在这里。</p>{{pledge}}</div>

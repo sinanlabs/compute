@@ -62,6 +62,8 @@ def classify(name):
             if re.search(rx, n): return "image", fam
     # 音频/工具类先剔（kling-audio、custom-voices、lip-sync 不是视频生成）
     if re.search(r"audio|voice|lip-?sync|lipsync|speech|tts|template|voices-list|extend", n): return "audio", "tts"
+    # 后处理接口（超分 / 增强 / 插帧 / 修复）不是生成模型，不进生成族比对（2026-09-20 relaydance 站长指出 seedance-upscale 被归入 seedance 生成族）
+    if re.search(r"upscal|super-?res|enhanc|interpolat|denois|restor|face-?fix", n): return "other", None
     for fam, rx in VIDEO:
         if re.search(rx, n): return "video", fam
     for fam, rx in IMAGE:

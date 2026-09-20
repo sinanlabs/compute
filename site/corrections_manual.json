@@ -1,0 +1,10 @@
+[
+ {
+  "date": "2026-09-20",
+  "target": "relaydance.com · seedance-upscale-720p / 1080p / 2k / 4k",
+  "original": "按次 $0.0043（标“待核”：低于同族中位 35%）",
+  "corrected": "按输出视频每秒计费 $0.0043/s（1080p 0.0086、2k 0.0172、4k 0.0344）；且为超分后处理接口，不归入 Seedance 生成族，不参与生成价比对",
+  "reason": "面板定价接口把该类 SKU 标成按次（quota_type=1）但未写单位；站长回复并给出说明页 https://relaydance.com/docs/super-resolution。已为该站加单位提示，并把全站“超分 / 增强 / 插帧”类接口从生成族剔除。",
+  "credit": "Aria Studio（relaydance.com 站长）来信指出"
+ }
+]
