@@ -779,10 +779,18 @@ def build_site(s):
         if sv.get("uptime7") is not None: svn += " · 7 天可达 %.1f%%" % sv["uptime7"]
         if sv.get("trend3d") is not None: svn += " · 近 3 天可达变化 %+.1f" % sv["trend3d"]
         svn += " · 基率见站点存续页"
+    pb = s.get("pricing_basis") or {}
+    pb_fact = [("计价口径", "分组 %s · 倍率 %s" % (pb.get("group") or "default", pb.get("group_ratio")),
+                "该站用动态计价表达式（billing_mode=tiered_expr）：每百万 token 价 = 表达式系数 × 分组倍率，单位为站内额度。我们统一取 %s 分组%s；其他分组与长上下文档位价格不同，以站方面板为准。" % (
+                 pb.get("group") or "default", ("的第一档（%s）" % pb["tier"]) if pb.get("tier") else ""), "t")] if pb else []
     facts = [
         ("价格画像", cl["name"] if cl else ("套餐制" if s.get("panel") == "sub2api" else "无比对"), ("中位 %s" % pct(s["median"])) if (cl and not held and s["median"] is not None) else (cl["help"] if cl else ("按套餐售卖订阅额度，价格需登录，本站不做套餐比价" if s.get("panel") == "sub2api" else "定价接口未公开，没有能对上参考价的模型")), "t" if not (cl and not held and s["median"] is not None) else ""),
-        ("24h 可达", ("7 天未连通" if s.get("dead") else (("%.0f%%" % av["uptime"]) if av.get("uptime") is not None else "—")), ("连续 7 天、≥100 次探测一次都没连上；页面保留，不进任何榜" if s.get("dead") else (("延迟 p50 %dms · %d 次探测 · %s" % (av["ttfb_p50"], av["n"], D["probe_node"])) if av.get("ttfb_p50") else "尚无探测")), "t" if s.get("dead") else ""),
+        ("24h 可达", ("7 天未连通" if s.get("dead") else ("未测" if not av.get("n") else ("%d/%d 成功" % (round(av["uptime"] * av["n"] / 100.0), av["n"]) if av["n"] < 10 else "%.0f%%" % av["uptime"]))),
+              ("连续 7 天、≥100 次探测一次都没连上；页面保留，不进任何榜" if s.get("dead") else
+               ("还没有探测样本" if not av.get("n") else
+                ("%s · %d 次探测 · 节点 %s%s" % (("延迟 p50 %dms" % av["ttfb_p50"]) if av.get("ttfb_p50") else "本站无成功样本，失败原因见下", av["n"], D["probe_node"], "；样本不足 10 次，只作参考" if av["n"] < 10 else "")))), "t" if s.get("dead") else ""),
         ("在卖模型", str(s["n_models"]) if s["n_models"] else "—", ("说得通 %d · 低于成本下限 %d" % (s["ok_count"], s["un_count"])) if (s["n_models"] and not held) else ("只列名义报价" if held else ("套餐制 · 模型清单需登录" if s.get("panel") == "sub2api" else "定价接口未公开，暂无报价")), ""),
+        *pb_fact,
         ("充值比例", price, "面板 price 字段：每 $1 名义额度收多少元", "t"),
         ("一致性探针", ("%d / %d 一致" % (s["probe"]["consistent"], s["probe"]["pairs"])) if s.get("probe") else "—",
          ("用本站 Key 测 %d 个模型的 token 计数，与同模型其他渠道比对 · %s" % (s["probe"]["pairs"], s["probe"]["ts"])) if s.get("probe") else "尚未用 Key 探测；只有拿到该站 Key 才能测", "" if s.get("probe") else "t"),

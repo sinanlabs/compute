@@ -65,11 +65,17 @@ def floors(db):
             out[k] = {"usd": usd, "vendor": r["vendor"], "sid": r["snapshot_id"], "cny": r["price"] if r["currency"] == "CNY" else None}
     return out
 
+PRICING_BASIS = {}
+
+
 def relay_rows(db):
     rows = {}
     for r in db.execute("SELECT vendor, model, unit, price, conditions, snapshot_id, valid_from FROM offer_norm WHERE vendor_kind='relay' "
                         "AND superseded_by IS NULL AND unit IN ('per_mtok_in','per_mtok_out','per_call','per_second')"):
         c = json.loads(r["conditions"] or "{}")
+        if c.get("billing_expr"):   # 动态计价：记下我们用的是哪个分组、哪个上下文档，页面要标出来
+            PRICING_BASIS[r["vendor"]] = {"mode": "tiered_expr", "group": c.get("group") or "default", "group_ratio": c.get("group_ratio"),
+                                          "tier": c.get("tier"), "multi_tier": bool(c.get("multi_tier")), "unit": "站内额度"}
         p = c.get("panel_price")
         if c.get("usd_direct"): eff = r["price"]; p = FX[0]        # 直接美元标价（kie.ai）：等价 price=汇率
         elif p is None: continue
@@ -335,7 +341,7 @@ def main():
         sites.append({"domain": v, "name": sf.get("system_name") or r["entity_name"], "site_url": r["site_url"], "first_seen": r["first_seen_at"][:10],
                       "channel": r["first_channel"], "panel": r["panel_kind"], "version": sf.get("version") or r["panel_version"],
                       "cluster": cl, "median": round(med, 3) if med is not None else None, "n_models": len(mrows), "n_ratio": len(rs),
-                      "avail": AV.get(v), "facts": sf, "models": mrows, "register": {"state": (REG.get(v) or ("unknown", None, None))[0], "msg": (REG.get(v) or (None, None, None))[1], "checked": ((REG.get(v) or (None, None, None))[2] or "")[:10]}, "ok_count": sum(1 for x in mrows if x["band"] in ("explainable", "normal")),
+                      "avail": AV.get(v), "facts": sf, "pricing_basis": PRICING_BASIS.get(v), "models": mrows, "register": {"state": (REG.get(v) or ("unknown", None, None))[0], "msg": (REG.get(v) or (None, None, None))[1], "checked": ((REG.get(v) or (None, None, None))[2] or "")[:10]}, "ok_count": sum(1 for x in mrows if x["band"] in ("explainable", "normal")),
                       "un_count": sum(1 for x in mrows if x["band"] == "unsustainable"),
                       "probe": {"pairs": sum(1 for x in mrows if x["probe"]), "consistent": sum(1 for x in mrows if x["probe"] and x["probe"]["status"] == "consistent"),
                                 "divergent": sum(1 for x in mrows if x["probe"] and x["probe"]["status"] == "divergent"), "ts": max([x["probe"]["ts"] for x in mrows if x["probe"]] or [""])} if any(x["probe"] for x in mrows) else None})
