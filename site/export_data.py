@@ -65,6 +65,8 @@ def floors(db):
             out[k] = {"usd": usd, "vendor": r["vendor"], "sid": r["snapshot_id"], "cny": r["price"] if r["currency"] == "CNY" else None}
     return out
 
+SECRET_RX = re.compile(r"(sk-[A-Za-z0-9_\-]{16,}|sk_[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{12,}|AIza[0-9A-Za-z_\-]{30,}|hf_[A-Za-z0-9]{20,}|eyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{10,})")
+
 PRICING_BASIS = {}
 
 
@@ -73,6 +75,7 @@ def relay_rows(db):
     for r in db.execute("SELECT vendor, model, unit, price, conditions, snapshot_id, valid_from FROM offer_norm WHERE vendor_kind='relay' "
                         "AND superseded_by IS NULL AND unit IN ('per_mtok_in','per_mtok_out','per_call','per_second')"):
         c = json.loads(r["conditions"] or "{}")
+        if SECRET_RX.search(str(r["model"])) or SECRET_RX.search(str(c.get("raw_name") or "")): continue   # 发布兜底：疑似凭据不出站
         if c.get("billing_expr"):   # 动态计价：记下我们用的是哪个分组、哪个上下文档，页面要标出来
             PRICING_BASIS[r["vendor"]] = {"mode": "tiered_expr", "group": c.get("group") or "default", "group_ratio": c.get("group_ratio"),
                                           "tier": c.get("tier"), "multi_tier": bool(c.get("multi_tier")), "unit": "站内额度"}

@@ -35,6 +35,8 @@ def clean_snip(t, m, tag):
     if any(w.lower() in low for w in _BANNED): return None
     if re.search(r"禁止|不得|严禁|不允许|违反|违规|试图|prohibit|forbidden|not allowed|must not", sent, re.I): return None   # 条款里的禁令句不是自述
     if re.search(r"[{}\[\]<>]|\\\\|https?://", sent): return None
+    if sent.count('"') >= 2 or '":' in sent or '","' in sent: return None            # JSON 残片，不是给人读的原文
+    if re.search(r"(QQ|qq|微信|weixin|wechat|telegram|电报)[^\u4e00-\u9fff]{0,6}\d{5,}", sent): return None   # 联系方式不引用
     return sent
 
 def main():

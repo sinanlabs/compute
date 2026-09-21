@@ -1,0 +1,26 @@
+# Sinan Compute（司南·算力）
+
+> 中立、可审计的模型 API 中转站实付比价工具。1813 个经面板指纹确认的中转站，53,787 条实付报价，对着官方与公开市场最低价逐条算成比率。每个数字可追溯到抓取快照（sha256）。不收任何被测渠道的钱，不给推荐，不判断真伪成因。
+
+## 口径
+- 实付 = 面板名义价（倍率 × $2/百万 token）× 该站充值比例（元/$1）÷ 当日 USD/CNY
+- 几成 = 实付 ÷ 最低公开渠道价；分档：<15% 数学上不可持续 · 15–40% 低于常见批量折扣 · 40–75% 价格说得通 · 75–125% 与公开价接近 · 125–300% 高于 · >300% 显著高于
+- 图像/视频：按秒 / 按张，与官方价比；按次报价按公开默认时长折算
+
+## 页面
+- 模型账本（交互）：https://compute.sinanlab.com/
+- 模型页（每模型一页）：https://compute.sinanlab.com/m/<model_id>，如 https://compute.sinanlab.com/m/deepseek-v4-pro
+- 中转站总表：https://compute.sinanlab.com/sites ；站点页：https://compute.sinanlab.com/s/<域名>
+- 图像 · 视频：https://compute.sinanlab.com/media
+- 方法论与数据下载：https://compute.sinanlab.com/method
+
+## 数据（JSON，公开）
+- https://compute.sinanlab.com/data_v2.json （模型账本、1813 个站点、快照索引、汇率）
+- https://compute.sinanlab.com/media.json
+- https://compute.sinanlab.com/history/<model_id>.json （价格走势，公开部分为最近 7 天；全部历史登录后经 /api/history/<model_id> 获取）
+- https://compute.sinanlab.com/citation-context.json （每日生成的模型引用上下文）
+- https://compute.sinanlab.com/citation-context.md （同一上下文的可读版）
+- https://compute.sinanlab.com/feed.xml （价格变动 RSS）
+
+## 引用规则
+引用本站数字时请带上日期（2026-09-19）与"此为算术比值，不构成对该渠道的任何指控"的说明。联系 hello@sinanlab.com

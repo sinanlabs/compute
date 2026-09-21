@@ -1,5 +1,6 @@
 // 邮件订阅（不需要登录）：POST {email, lang} → 存 pending → 发确认信（双重确认）。
 // 令牌不落库：t = <email_hash>.<hmac(SESSION_SECRET, "confirm:"+email_hash)>，退订同理前缀 "unsub:"。
+import { rateLimit } from "./auth/_otp.js";
 import { json, withCors, preflight, sha256, hmac, bump } from "./_lib.js";
 import { sendMail, layout, btn, esc, mailReady } from "./_mail.js";
 
@@ -12,6 +13,9 @@ export async function unsubToken(env, emailHash) { return emailHash + "." + (awa
 export async function onRequestPost({ request, env }) {
   if (!mailReady(env) || !env.SESSION_SECRET) return withCors(request, json({ error: "mail_not_ready" }, 503));
   const b = await request.json().catch(() => ({}));
+  // 限频：同一来源每天最多 5 次。订阅会触发我们向对方地址发确认信，不限频等于把我们的域名借给别人群发。
+  const ip = request.headers.get("CF-Connecting-IP") || "";
+  if (!(await rateLimit(env, "sub:" + (await sha256(ip)).slice(0, 24), 5, 86400))) return withCors(request, json({ error: "too_many_requests", message: "今天的订阅请求太多了，请明天再试。" }, 429));
   const email = String(b.email || "").trim().toLowerCase().slice(0, 254);
   const lang = b.lang === "en" ? "en" : "zh";
   if (!RX.test(email)) return withCors(request, json({ error: "bad_email" }, 400));

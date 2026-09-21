@@ -3,7 +3,8 @@
 我们当成按次再按 5 秒折算，便宜 5 倍还排了榜首，是 Eric 看面板发现的。这里把这类错误变成机制：
 
   A 字段漂移   每站最新 /api/pricing 里出现解析器不认识的字段（含 other_info 子键）→ 报告"需要看一眼"
-  B 单位提示   按次计价的图像/视频行，原始条目文字里却有"每秒 / /s / 按秒"→ 该行待核（不进比对、不进榜）
+  B 单位提示（面板文字写了按秒）
+  C 单位嫌疑（面板没写单位，但按次读异常低、按秒读正常）→ 该行待核 + 问站长   按次计价的图像/视频行，原始条目文字里却有"每秒 / /s / 按秒"→ 该行待核（不进比对、不进榜）
   C 价格孤点   同族里某站的每秒（图像：每张）实付 < 全族中位的 35%，且比第二便宜的站还低一半以上 → 待核，直到出现第二家相近价或人工放行
   D 榜首差距   （在 export_data 里执行）某族榜首比第二名低 40% 以上 → 榜首待核，不进榜
 
@@ -89,6 +90,30 @@ def check_unit_hints(db, raw):
             items.append({"site": r["vendor"], "name": name, "hint": hit.group(0)})
     return new, items
 
+
+def check_unit_suspect(db):
+    """C 单位嫌疑：面板没写单位、我们默认当按次的图像/视频行，若"按次读"远低于同型号参考价（<25%），
+    而"按秒读"正好落回正常区间（40%–150%），就有很大可能是按秒计费被我们读成了按次（2026-09-20 relaydance 站长指出的那类错误）。
+    这只是嫌疑，不改数字：该行标"待核"，不进比对与榜单，并由站长通知去问对方实际口径。"""
+    from core.media import DEFAULT_CLIP
+    refs = official_refs(db); new = 0; items = []
+    rows = db.execute("SELECT vendor, model, unit, price, conditions FROM offer_norm WHERE vendor_kind='relay' AND unit='per_call' AND superseded_by IS NULL").fetchall()
+    for r in rows:
+        c = json.loads(r["conditions"] or "{}")
+        if c.get("unit_source") or c.get("billing_mode"): continue   # 面板明确写了单位的不猜
+        name = c.get("raw_name") or r["model"]
+        mod, fam = classify(name)
+        if mod not in ("image", "video") or not fam: continue
+        a = compare({"name": name, "unit": "per_call", "eff_usd": r["price"]}, refs).get("ratio")
+        if a is None or a >= 0.25: continue
+        b = compare({"name": name, "unit": "per_second", "eff_usd": r["price"]}, refs).get("ratio")
+        if b is None or not (0.4 <= b <= 1.5): continue
+        clip = DEFAULT_CLIP.get(fam) or 5
+        detail = "面板未写单位，按次读 = 参考价的 %d%%（异常低）；按每秒读 = %d%%（正常）。若确为按秒计费，我们按 %s 秒折算就会低估 %s 倍。" % (round(a * 100), round(b * 100), clip, clip)
+        if hold(db, r["vendor"], r["model"], name, r["unit"], "unit_suspect", detail): new += 1
+        items.append({"site": r["vendor"], "name": name, "per_call_ratio": round(a, 4), "per_second_ratio": round(b, 4)})
+    return new, items
+
 def check_lone_outliers(db):
     """同族里价格孤点：< 全族中位 35% 且比第二便宜的站低一半以上。"""
     fxr = db.execute("SELECT rate FROM fx_rate ORDER BY id DESC LIMIT 1").fetchone(); refs = official_refs(db)
@@ -137,15 +162,16 @@ def main():
     raw = latest_raw(db)
     fields = check_fields(raw)
     n_hint, hints = check_unit_hints(db, raw)
+    n_sus, suspects = check_unit_suspect(db)
     n_out, outs = check_lone_outliers(db)
     db.commit()
     opened = open_holds(db)
-    rep = {"date": D.now8(), "sites_scanned": len(raw), "unit_switch_retired": n_ret, "unknown_fields": fields, "unit_hint_new": n_hint, "unit_hint": hints[:50],
+    rep = {"date": D.now8(), "sites_scanned": len(raw), "unit_switch_retired": n_ret, "unknown_fields": fields, "unit_hint_new": n_hint, "unit_hint": hints[:50], "unit_suspect_new": n_sus, "unit_suspect": suspects[:80],
            "lone_outlier_new": n_out, "lone_outliers": outs[:50], "open_holds": len(opened)}
     os.makedirs(os.path.join(ROOT, "data", "audit"), exist_ok=True)
     io.open(os.path.join(ROOT, "data", "audit", D.now8()[:10] + ".json"), "w", encoding="utf-8").write(json.dumps(rep, ensure_ascii=False, indent=1))
     io.open(os.path.join(ROOT, "data", "audit", "latest.json"), "w", encoding="utf-8").write(json.dumps(rep, ensure_ascii=False))
-    print("数据核查：扫 %d 站 · 单位改判作废旧行 %d · 未知字段 %d 个 · 单位提示新增待核 %d · 价格孤点新增待核 %d · 未放行待核共 %d" % (len(raw), n_ret, len(fields), n_hint, n_out, len(opened)))
+    print("数据核查：扫 %d 站 · 单位改判作废旧行 %d · 未知字段 %d 个 · 单位提示新增待核 %d · 单位嫌疑新增待核 %d · 价格孤点新增待核 %d · 未放行待核共 %d" % (len(raw), n_ret, len(fields), n_hint, n_sus, n_out, len(opened)))
     for f in fields[:8]: print("   未知字段 %-34s %3d 站  例：%s" % (f["field"], f["sites"], ", ".join(f["example"])))
     for x in outs[:8]: print("   孤点 %-14s %-22s %-36s $%.4f（第二 %.4f · 中位 %.4f）" % (x["family"], x["site"], x["name"][:36], x["value"], x["second"], x["median"]))
 
