@@ -667,7 +667,8 @@ PROBE_TXT = {"consistent": "探针 · 计数一致 %d/%d", "divergent": "探针 
 def probe_html(pb):
     """站×模型 的探针一行小字。pb=None → 空串。"""
     if not pb: return ""
-    txt = PROBE_TXT.get(pb["status"], "探针") % (pb["ok"], pb["n"])
+    _f = PROBE_TXT.get(pb["status"])   # cap_only 等没有 T1 计数的状态不出这行小字
+    txt = (_f % (pb["ok"], pb["n"])) if _f else ""
     if pb.get("offset"): txt += " · 含固定前缀约 %d token" % pb["offset"]
     if pb.get("echo") is False: txt += " · 回显模型名不同"
     if pb["status"] == "cap_only": txt = ""
@@ -783,6 +784,14 @@ def build_site(s):
     pb_fact = [("计价口径", "分组 %s · 倍率 %s" % (pb.get("group") or "default", pb.get("group_ratio")),
                 "该站用动态计价表达式（billing_mode=tiered_expr）：每百万 token 价 = 表达式系数 × 分组倍率，单位为站内额度。我们统一取 %s 分组%s；其他分组与长上下文档位价格不同，以站方面板为准。" % (
                  pb.get("group") or "default", ("的第一档（%s）" % pb["tier"]) if pb.get("tier") else ""), "t")] if pb else []
+    ab = s.get("about") or None
+    ab_fact = [("站方说明页",
+                ("公开可读" + ((" · 站方 %s 更新" % ab["self_updated"]) if ab.get("self_updated") else "")) if ab else "—",
+                ("站方自己写的说明，面板公开可读，我们只存快照、不核实内容%s。促销、活动与联系方式不收录。抓取 %s" % (
+                    ("；写到了 " + " · ".join(ab["topics"])) if ab.get("topics") else "",
+                    (ab.get("fetched") or "")[:16].replace("T", " "))) if ab else "面板没有公开可读的说明页（/api/about 为空或取不到）",
+                "" if ab else "t",
+                ('<div class="n"><a href="%s" rel="noopener nofollow">站方原文 ↗</a> · <a href="/snap/about/%s.txt">抓取快照</a></div>' % (esc(ab["public_url"]), esc(s["domain"]))) if ab else "")]
     facts = [
         ("价格画像", cl["name"] if cl else ("套餐制" if s.get("panel") == "sub2api" else "无比对"), ("中位 %s" % pct(s["median"])) if (cl and not held and s["median"] is not None) else (cl["help"] if cl else ("按套餐售卖订阅额度，价格需登录，本站不做套餐比价" if s.get("panel") == "sub2api" else "定价接口未公开，没有能对上参考价的模型")), "t" if not (cl and not held and s["median"] is not None) else ""),
         ("24h 可达", ("7 天未连通" if s.get("dead") else ("未测" if not av.get("n") else ("%d/%d 成功" % (round(av["uptime"] * av["n"] / 100.0), av["n"]) if av["n"] < 10 else "%.0f%%" % av["uptime"]))),
@@ -798,6 +807,7 @@ def build_site(s):
          "30 道机器判分小题，本站答对数与同模型其他渠道中位数比" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "尚未用 Key 抽样", "" if any((r.get("probe") or {}).get("cap") for r in s["models"]) else "t"),
         ("上游自述", " · ".join((s.get("upstream") or {}).get("tags") or []) or "—",
          ("站方面板公开文字里出现的说法，原文：" + " ｜ ".join("%s「%s」" % (k, _safe_snip(v)[:60]) for k, v in ((s.get("upstream") or {}).get("snippets") or {}).items() if k != "订阅制面板" and _safe_snip(v))[:300]) if (s.get("upstream") and any(k != "订阅制面板" for k in s["upstream"]["snippets"])) else ("按面板类型判定：Sub2API 面板按套餐转售订阅席位" if s.get("upstream") else "面板公开文字里没有关于上游来源的说法"), "" if s.get("upstream") else "t"),
+        *ab_fact,
         ("众测", ("%d 次 · %d 个来源" % (s["crowd"]["n"], s["crowd"]["srcs"])) if s.get("crowd") else "—",
          ("一致 %d · 含前缀 %d · 不一致 %d · 失败 %d · 最近 %s" % (s["crowd"]["consistent"], s["crowd"]["prefix"], s["crowd"]["divergent"], s["crowd"]["failed"], s["crowd"]["last"] or "")) if s.get("crowd") else "还没有人用自己的 Key 测过这个站；到测试页测一次，结果匿名回流到这里", "" if s.get("crowd") else "t"),
         ("存续信号", (("域名 %s 注册" % sv["created"]) if sv.get("created") else "域名年龄未知") if sv else "—", svn, "t"),
@@ -807,7 +817,7 @@ def build_site(s):
          "" if (s.get("register") or {}).get("state") == "open" else "t"),
         ("面板", "%s %s" % (s.get("panel") or "—", s.get("version") or ""), "首次收录 %s · 来源 %s" % (s["first_seen"], s.get("channel") or ""), "t"),
     ]
-    facts_html = "".join('<div class="card fact"><div class="k">%s</div><div class="v %s">%s</div><div class="n">%s</div></div>' % (k, t, esc(v), esc(n)) for k, v, n, t in facts)
+    facts_html = "".join('<div class="card fact"><div class="k">%s</div><div class="v %s">%s</div><div class="n">%s</div>%s</div>' % (f[0], f[3], esc(f[1]), esc(f[2]), (f[4] if len(f) > 4 else "")) for f in facts)
     rows = []
     for i, r in enumerate(s["models"]):
         v = r["out"] if r["out"] is not None else (r["call"] if r["call"] is not None else r["sec"])
@@ -1731,6 +1741,16 @@ def main():
         # from the same objects as the HTML, not another read of live files.
         from seo_assets import generate_rank_snapshot_images
         generate_rank_snapshot_images(rank_snapshots, output=os.path.join(DIST, "img"))
+    ab_n = 0
+    for s_ in D["sites"]:
+        ab_ = s_.get("about")
+        if not ab_: continue
+        src_ = os.path.join(ROOT, "data", "raw", "about.%s" % s_["domain"], ab_["sha256"])
+        if not os.path.exists(src_): continue
+        os.makedirs(os.path.join(DIST, "snap", "about"), exist_ok=True)
+        head = "# 站方说明页快照（站方自述，司南实验室未核实内容）\n# 来源 %s\n# 抓取 %s · 正文 sha256 %s\n\n" % (ab_["url"], ab_["fetched"], ab_["sha256"])
+        W("snap/about/%s.txt" % s_["domain"], head + io.open(src_, encoding="utf-8").read())
+        ab_n += 1
     for f in ("data_v2.json", "media.json", "go_links.json"):
         if os.path.exists(os.path.join(HERE, f)): shutil.copy(os.path.join(HERE, f), os.path.join(DIST, f))
     if os.path.exists(os.path.join(HERE, "static")):   # 站长平台验证文件等原样放根目录
@@ -1739,12 +1759,12 @@ def main():
             if os.path.isdir(src_): shutil.copytree(src_, dst_, dirs_exist_ok=True)
             else: shutil.copy(src_, dst_)
     W("assets/ledger.json", jsdata({"models": D["models"], "snaps": D["snaps"]}))
-    W("robots.txt", "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n" % BASE)
+    W("robots.txt", "User-agent: *\nAllow: /\nDisallow: /snap/\nSitemap: %s/sitemap.xml\n" % BASE)
     urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily"), ("/gpu", "daily"), ("/report", "weekly"), ("/press", "monthly"), ("/verify", "monthly"), ("/api-docs", "weekly"), ("/corrections", "weekly"), ("/survival", "daily"), ("/governance", "monthly")] + [("/report/%s" % r_["month"], "weekly") for r_ in load_reports()] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
     W("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join('  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq></url>\n' % (BASE, u, GEN_DATE, c) for u, c in urls) + "</urlset>\n")
     W("favicon.svg", FAVICON)
-    W("_headers", "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/assets/*\n  Cache-Control: public, max-age=604800\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n/img/*\n  Cache-Control: public, max-age=2592000\n/badge/*\n  Cache-Control: public, max-age=900, must-revalidate\n")
-    print("dist/ 生成完成：index · sites · media · method · 404 · 站点页 %d · 大小 index %d KB" % (n, os.path.getsize(os.path.join(DIST, "index.html")) // 1024))
+    W("_headers", "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/assets/*\n  Cache-Control: public, max-age=604800\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n/img/*\n  Cache-Control: public, max-age=2592000\n/badge/*\n  Cache-Control: public, max-age=900, must-revalidate\n/snap/*\n  X-Robots-Tag: noindex\n  Content-Type: text/plain; charset=utf-8\n")
+    print("dist/ 生成完成：index · sites · media · method · 404 · 站点页 %d · 站方说明页快照 %d · 大小 index %d KB" % (n, ab_n, os.path.getsize(os.path.join(DIST, "index.html")) // 1024))
 
 if __name__ == "__main__":
     main()

@@ -142,6 +142,10 @@ def upstream_index():
     p_ = os.path.join(HERE, "upstream_claims.json")
     return json.load(open(p_, encoding="utf-8")) if os.path.exists(p_) else {}
 
+def about_index():
+    p_ = os.path.join(HERE, "about_pages.json")
+    return json.load(open(p_, encoding="utf-8")) if os.path.exists(p_) else {}
+
 def survival_index():
     p_ = os.path.join(HERE, "survival.json")
     if not os.path.exists(p_): return {}
@@ -275,7 +279,7 @@ def price_changes(db, days=7):
 def main():
     global FX
     db = D.connect(); FX = fx(db)
-    F = floors(db); R = relay_rows(db); AV = availability(db); SF = status_facts(db); PB = probe_summary(db); t2_summary(db, PB); TT = task_tokens(db); CR = crowd_summary(db); SV = survival_index(); SVS = SV.get("sites") or {}; UP = upstream_index()
+    F = floors(db); R = relay_rows(db); AV = availability(db); SF = status_facts(db); PB = probe_summary(db); t2_summary(db, PB); TT = task_tokens(db); CR = crowd_summary(db); SV = survival_index(); SVS = SV.get("sites") or {}; UP = upstream_index(); AB = about_index()
     try: REG = {r["domain"]: (r["register_state"], r["register_msg"], r["register_checked"]) for r in db.execute("SELECT domain, register_state, register_msg, register_checked FROM relay_candidate WHERE level>=1")}
     except Exception: REG = {}
     CLOSED = {d_ for d_, v in REG.items() if v[0] == "closed"}
@@ -381,6 +385,8 @@ def main():
         cr = [d for (v_, m_), d in CR.items() if v_ == s_["domain"]]
         s_["crowd"] = {"n": sum(d["n"] for d in cr), "srcs": max([d["srcs"] for d in cr] or [0]), "models": len(cr), "consistent": sum(d["consistent"] for d in cr), "prefix": sum(d["prefix"] for d in cr), "divergent": sum(d["divergent"] for d in cr), "failed": sum(d["failed"] for d in cr), "last": max([d["last"] for d in cr if d["last"]] or [None])} if cr else None
         s_["upstream"] = UP.get(s_["domain"])
+        ab = AB.get(s_["domain"])
+        s_["about"] = {k: ab.get(k) for k in ("public_url", "url", "fetched", "sha256", "chars", "topics", "self_updated")} if ab else None
         sv = SVS.get(s_["domain"])
         s_["survive"] = {k: sv.get(k) for k in ("created", "age_src", "age_days", "age_bucket", "tld", "icp", "register", "family", "uptime7", "trend3d", "price_changes7", "observed_days")} if sv else None
     # 经司南核验：有 Key 的站，7 天里 ≥5 个模型一致性探针全部"一致"、无"不一致"、能力抽样无"低于中位"、7 天可达 ≥99%、注册开放

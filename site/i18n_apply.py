@@ -119,7 +119,7 @@ def inline_js(html):
 
 def relink(html, base):
     """站内绝对路径改 /en/ 前缀（资源与接口除外）。"""
-    keep = ("/assets/", "/fonts/", "/img/", "/api/", "/go/", "/badge/", "/history/", "/data_v2.json", "/media.json", "/go_links.json", "/feed.xml", "/llms.txt", "/sitemap", "/favicon", "/robots")
+    keep = ("/assets/", "/fonts/", "/img/", "/api/", "/go/", "/badge/", "/history/", "/snap/", "/data_v2.json", "/media.json", "/go_links.json", "/feed.xml", "/llms.txt", "/sitemap", "/favicon", "/robots")
     def fix(m):
         attr, q, url = m.group(1), m.group(2), m.group(3)
         if url.startswith(keep) or url.startswith("/en/") or url == "/en": return m.group(0)
