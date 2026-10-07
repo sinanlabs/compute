@@ -55,6 +55,7 @@ daily_refresh.sh
 run_forever.sh
 ops_ping.sh
 ops_status.py
+ops_backup.py
 core/media.py
 .engine.git/
 engine_git.sh
