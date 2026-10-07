@@ -12,6 +12,7 @@ ts() { date "+%Y-%m-%d %H:%M:%S"; }
   /usr/bin/python3 site/pull_reports.py | tail -1
   /usr/bin/python3 site/build_v5.py > data/logs/.build_out 2>&1; rc=$?; tail -30 data/logs/.build_out
   [ $rc -eq 0 ] || { echo "构建失败，放弃部署"; echo "===== $(ts) 结束 ====="; exit 1; }
+  /usr/bin/python3 site/social_feed.py | tail -1   # build_v5 会清空 dist，社媒 RSS 必须在构建之后重写（2026-10-07 漏了它，/social.xml 404 一天）
   /usr/bin/python3 site/i18n_apply.py site/dist https://compute.sinanlab.com | tail -1
   if /usr/bin/python3 site/wording_gate.py; then
     npx wrangler pages deploy site/dist --project-name sinan-compute --commit-dirty=true 2>&1 | grep -Ei "complete|error" | tail -1
