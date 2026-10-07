@@ -83,8 +83,27 @@ def structure_block(Dv, PI, M, G, changes):
     out["cost_floor"] = floors
     return out
 
+def finalize_prev(today):
+    """上月定稿（每天都检查一次，已定稿就跳过）。
+    - 次月 1 日：data_v2 / 核查 / 榜单这些快照仍是月末状态，整期重算即定稿（原设计）。
+    - 晚于 1 日（流水线那天没跑、或像 2026-09 那样漏了这一步）：不整期重算——可达、榜单、核查等快照字段会混进次月数据；
+      原样沿用最后一次滚动计算的结果（各字段彼此一致，不拼接不同时刻的数），并在 JSON 里写明定稿方式。"""
+    m1 = today.replace(day=1) - dt.timedelta(days=1); pm = m1.strftime("%Y-%m")
+    p = os.path.join(HERE, "reports", pm + ".json"); r = J(p)
+    if not r or r.get("final"): return
+    if today == m1 + dt.timedelta(days=1):
+        print("月报 %s：次月 1 日整期重算定稿" % pm); main(pm); return
+    r["final"] = True; r["finalized_at"] = D.now8()
+    r["final_basis"] = "last_rolling"   # 定稿方式：原样沿用最后一次滚动计算（见 generated_at）
+    r["final_note"] = "晚于次月 1 日定稿：数字原样沿用 %s（北京）的最后一次滚动计算，未用定稿当天的快照重算，以免混入次月数据。" % r.get("generated_at", "")[:16].replace("T", " ")
+    io.open(p, "w", encoding="utf-8").write(json.dumps(r, ensure_ascii=False))
+    print("月报 %s：补定稿（原样沿用 %s 的计算）" % (pm, r.get("generated_at", "")[:16]))
+
+
 def main(month=None):
-    today = dt.datetime.now(BJ).date(); month = month or today.strftime("%Y-%m")
+    today = dt.datetime.now(BJ).date()
+    if month is None: finalize_prev(today)   # 先把上月定稿，再算当月
+    month = month or today.strftime("%Y-%m")
     y, m = map(int, month.split("-")); m0 = dt.date(y, m, 1); m1 = (dt.date(y + (m // 12), m % 12 + 1, 1) - dt.timedelta(days=1))
     end = min(m1, today); start = max(m0, dt.date(2026, 9, 2))
     db = D.connect()

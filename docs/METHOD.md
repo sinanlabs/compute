@@ -89,6 +89,8 @@
 **参考价出处**：Google Veo / Nano Banana（ai.google.dev 定价页）、Kling 视频与图像（kling.ai/dev/pricing 嵌入 JSON）、MiniMax H3（platform.minimax.io 按量计费页）、BFL FLUX（bfl.ai/pricing）。
 **未接入**：Seedance / Seedream、Vidu、Wan / Qwen-Image（页面前端渲染）、Sora / GPT Image（OpenAI 403）、Midjourney（无按次 API 价）—— 只列报价，不出比率。
 
+Sora 参考价失效（2026-10-07 记）：OpenAI 于 2026-03-24 公告、2026-09-24 从 API 移除 Videos API 与全部 Sora 模型（sora-2、sora-2-pro 及各快照，见 OpenAI 弃用公告页）；官方定价页自 2026-09-27 的抓取起不再列出 Sora。按第 3 条"参考价来源变更"处理：Sora 官方参考价自 2026-09-24 失效，此后中转站仍在售的 Sora 报价只列不比、不进多模态榜；9 月 15 日至 24 日按当时官方价算出的比率保留在当期快照与月报里，不追溯修改。此前到 10 月 7 日之间，族页仍按 9 月 15 日的官方价出比率，已记入修正日志。
+
 **旧版本提示**：站方卖 Kling v1/v2、Veo 2、Hailuo 02 而参考为新版官方价时，句子注明（旧版官方价通常更低 → 比率偏高）。
 
 **媒体站级闸**：某站媒体行比率中位 <0.01 或 >30 → 整站「计价方式待核」不出比率；实付 <$0.0005 的行视为占位价跳过。

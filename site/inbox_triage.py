@@ -9,12 +9,32 @@
 
 用法：python3 site/inbox_triage.py           拉新信并分拣（写文件 + 发摘要）
      python3 site/inbox_triage.py --quiet   不发摘要邮件
+
+本站自己发出的邮件（发件域 sinanlab.com：notify@ / watchdog@ / hello@）不分拣，直接标 ignored。
+摘要发到所有者邮箱（data/secrets.env 的 OWNER_EMAIL），不再发回 hello@——否则摘要会被收信 Worker 存成"新来信"，
+第二天又被分拣一次（2026-09-27 ~ 10-07 出现过这个自循环）。
 """
 import os, io, re, sys, json, subprocess, datetime as dt
 
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 BJ = dt.timezone(dt.timedelta(hours=8)); BASE = "https://compute.sinanlab.com"
 load = lambda p, d=None: json.load(io.open(p, encoding="utf-8")) if os.path.exists(p) else d
+OWN_DOMAINS = ("sinanlab.com",)   # 本站发件域：自家通知、看门狗、分拣摘要都从这里发出
+
+
+def is_self(addr):
+    d = (addr or "").strip().lower().rsplit("@", 1)[-1]
+    return any(d == x or d.endswith("." + x) for x in OWN_DOMAINS)
+
+
+def owner_email():
+    """所有者收信地址：只放本机 data/secrets.env（git 忽略），不进公开仓库。"""
+    p = os.path.join(ROOT, "data", "secrets.env")
+    if os.path.exists(p):
+        for ln in io.open(p, encoding="utf-8"):
+            ln = ln.strip()
+            if ln.startswith("OWNER_EMAIL=") and "@" in ln: return ln.split("=", 1)[1].strip()
+    return None
 
 # 归类规则：按优先级匹配（越靠前越具体）。只看关键词，不做推断；拿不准归 other。
 RULES = [
@@ -73,6 +93,12 @@ def main():
         rows = d1("SELECT id, msg_id, from_addr, from_name, envelope_from, to_addr, subject, sent_at, in_reply_to, body_text, body_len, attachments, spf, received_at FROM inbox_mail WHERE status='new' ORDER BY id")
     except Exception as e:
         return print("来信分拣：拉取失败（%s）" % str(e)[:160])
+    own = [m for m in rows if is_self(m.get("from_addr"))]
+    if own:
+        d1("UPDATE inbox_mail SET status='ignored', handled_at=datetime('now'), handled_by='triage', action='self', note='本站自动发出的邮件，不分拣' WHERE id IN (%s)"
+           % ",".join(str(int(m["id"])) for m in own))
+        print("来信分拣：跳过本站自动邮件 %d 封（%s）" % (len(own), ", ".join("#%d" % m["id"] for m in own)))
+    rows = [m for m in rows if not is_self(m.get("from_addr"))]
     if not rows: return print("来信分拣：没有新邮件")
     D = load(os.path.join(HERE, "data_v2.json"), {"sites": []})
     domains = {x["domain"] for x in D.get("sites", [])}
@@ -120,7 +146,9 @@ def main():
                      x["subject"] or "(无主题)", x["from"], ("（站：%s）" % x["site"]) if x["site"] else "", (x["text"] or "")[:300]))
     tmp = os.path.join(ROOT, "data", "inbox", "_digest.txt")
     io.open(tmp, "w", encoding="utf-8").write("\n\n".join(paras))
-    subprocess.run(["/usr/bin/python3", os.path.join(HERE, "reply_mail.py"), "hello@sinanlab.com",
+    to = owner_email()
+    if not to: return print("来信分拣：data/secrets.env 没有 OWNER_EMAIL，摘要未发送（见 data/inbox/_digest.txt）")
+    subprocess.run(["/usr/bin/python3", os.path.join(HERE, "reply_mail.py"), to,
                     "来信分拣 %s · %d 封" % (today.strftime("%m-%d"), len(out)), tmp], cwd=ROOT, timeout=180)
 
 

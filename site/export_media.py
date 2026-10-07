@@ -24,7 +24,7 @@ FAMILY_NAME = {"veo": "Veo（Google）", "kling": "Kling 可灵（快手）", "h
 REF_SOURCE = {"veo": "ai.google.dev 定价页（按秒）", "kling": "kling.ai/dev/pricing（按秒）", "hailuo": "platform.minimax.io 按量计费页（按秒）",
               "nano-banana": "ai.google.dev 定价页（按张等价价）", "flux": "bfl.ai/pricing（按百万像素，1 张按 1MP）", "kling-image": "kling.ai/dev/pricing（按张）",
               "sora": "platform.openai.com/docs/pricing 视频表（按秒，720p 起）", "grok-vid": "docs.x.ai 定价（按秒，480p 起）", "grok-image": "docs.x.ai 定价（按张，1K 起）", "wan-image": "阿里百炼刊例价（按张）"}
-REF_MISSING = {"seedance": "火山方舟价格页为前端异步渲染，未能读取", "vidu": "Vidu 开放平台定价页为前端渲染，未能读取", "wan": "阿里百炼计费页为前端渲染，未能读取",
+REF_MISSING = {"sora": "OpenAI 已于 2026-09-24 下线 Videos API（含全部 Sora 模型），此后没有官方参考价", "seedance": "火山方舟价格页为前端异步渲染，未能读取", "vidu": "Vidu 开放平台定价页为前端渲染，未能读取", "wan": "阿里百炼计费页为前端渲染，未能读取",
                "gpt-image": "OpenAI 按图像 token 计价，无官方每张价，不折算", "midjourney": "Midjourney 官方无按次 API 定价（订阅制）",
                "seedream": "火山方舟价格页为前端异步渲染，未能读取", "qwen-image": "阿里百炼计费页为前端渲染，未能读取"}
 

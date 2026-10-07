@@ -8,6 +8,10 @@
 | Sinan Compute | `~/Desktop/claude code/compass` | `sinanlabs/compute` | `sinan-compute` | compute.sinanlab.com |
 | Sinan Robo（占位） | `~/Desktop/claude code/sinan-robo` | `sinanlabs/robo` | `sinan-robo` | robo.sinanlab.com |
 
+> 2026-09-27 起项目实际放在 `~/SinanLab/`（桌面上的同名文件夹是快捷方式，上表旧路径照常可用）。原因：桌面受 macOS 隐私保护，后台进程进不去。
+> 后台采集由 launchd 托管：`~/Library/LaunchAgents/com.sinanlab.pipeline.plist`（登录即启动、退出自动拉起、运行时不让 Mac 睡眠）；重启 `launchctl kickstart -k gui/$(id -u)/com.sinanlab.pipeline`，输出在 `data/logs/pipeline.out.log`。不要用 nohup 手动起 `run_forever.sh`。
+> 云端看门狗 `~/SinanLab/sinan-watchdog`（Cloudflare Worker，每小时）：后台 4 小时没报平安、或算力站数据 30 小时没更新，就发信给所有者，恢复再发一封。
+
 ## 第 1 步 · 登录 GitHub（一次，2 分钟）
 
 在你的终端里粘贴运行（会弹浏览器让你授权）：
