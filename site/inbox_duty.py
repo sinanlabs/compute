@@ -10,6 +10,7 @@ Eric 的要求：用户发来的邮件不再转发到他的邮箱，而是在 Cl
   python3 site/inbox_duty.py show                      分拣新信，然后完整打印所有待处理来信（原文 + 我们的事实）和等 Eric 拍板的信
   python3 site/inbox_duty.py reply <id> <正文.txt> [--dry]   回信给 #id 的发件人（主题自动 "Re: 原主题"），发完标记已回复、存档正文
   python3 site/inbox_duty.py mark <id> <状态> "<说明>"   状态：waiting_owner（等 Eric 拍板）/ ignored（垃圾、推销、自动通知）/ closed（无需回复）
+  python3 site/inbox_duty.py addkey <id> <域名> [base_url]  把来信里加密存档的 Key 解开写进 data/keys.env（不打印明文）
   python3 site/inbox_duty.py raw <id>                   看某封信的完整正文（含引用的旧往来）
   python3 site/inbox_duty.py log [N]                   最近 N 条值班记录（默认 20）
 
@@ -104,6 +105,7 @@ def show():
             print("收到：%s 北京 · 分类（关键词初判）：%s · 对应站：%s%s" % (bj(m.get("received_at")), m.get("category") or "-", site or "—",
                   " · ⚠ 存档出错" if m.get("status") == "error" else ""))
             if m.get("attachments"): print("附件（只记了文件名）：%s" % m["attachments"])
+            if m.get("secrets_enc"): print("🔑 来信里有 %d 个密钥（正文已打码，原文加密存档）：用 addkey %d <域名> 写进 keys.env" % (len(json.loads(m["secrets_enc"])), m["id"]))
             if senders: print("此人往来：" + "；".join("#%d %s %s→%s" % (x["id"], bj(x["received_at"]), (x["subject"] or "")[:30], x["status"]) for x in senders))
             print("\n【原文】（密钥已在收信时打码%s）\n%s\n" % ("；正文 %d 字，库里只存了前 24 KB" % m["body_len"] if (m.get("body_len") or 0) > 24000 else "", body[:12000]))
             if quoted: print("（下面还引用了之前的往来 %d 字，已折叠；要看全文：inbox_duty.py raw %d）\n" % (len(quoted), m["id"]))
@@ -135,6 +137,38 @@ def reply(mid, body_p, dry):
     log("#%s %s「%s」→ 已回信（存档 %s）" % (mid, m["from_addr"], (m.get("subject") or "")[:40], os.path.relpath(dst, ROOT)))
 
 
+def unseal(m):
+    """解开 Worker 存的密钥密文（RSA-OAEP/SHA-256），用本机私钥 data/inbox_key.pem；返回明文列表，绝不打印。"""
+    import base64, tempfile
+    pem = os.path.join(ROOT, "data", "inbox_key.pem")
+    out = []
+    for b in json.loads(m.get("secrets_enc") or "[]"):
+        with tempfile.NamedTemporaryFile(delete=False) as f: f.write(base64.b64decode(b)); ct = f.name
+        try:
+            r = subprocess.run(["/opt/homebrew/bin/openssl", "pkeyutl", "-decrypt", "-inkey", pem, "-in", ct, "-pkeyopt", "rsa_padding_mode:oaep",
+                                "-pkeyopt", "rsa_oaep_md:sha256", "-pkeyopt", "rsa_mgf1_md:sha256"], capture_output=True, timeout=30)
+        finally: os.unlink(ct)
+        if r.returncode == 0: out.append(r.stdout.decode("utf-8", "replace"))
+    return out
+
+
+def mask(k): return k[:6] + "…" + k[-4:] if len(k) > 14 else "***"
+
+
+def addkey(mid, domain, base=None):
+    """把来信 #id 里加密存档的 Key 写进 data/keys.env（域名=Key=base_url），只打印打码后的样子。"""
+    m = one(mid)
+    ks = [k for k in unseal(m) if re.match(r"(?i)^(sk-|sk_)", k)] or unseal(m)
+    if not ks: raise SystemExit("#%s 没有可解开的密钥（来信里没有、或是 2026-10-07 之前收的——那时只打码不加密）" % mid)
+    kp = os.path.join(ROOT, "data", "keys.env")
+    lines = io.open(kp, encoding="utf-8").read().splitlines() if os.path.exists(kp) else []
+    lines = [ln for ln in lines if ln.split("=")[0].strip().lower() != domain.lower()]
+    lines.append("%s=%s=%s" % (domain, ks[0], base or "https://" + domain))
+    io.open(kp, "w", encoding="utf-8").write("\n".join(lines) + "\n"); os.chmod(kp, 0o600)
+    log("#%s 来信 Key 已写入 keys.env：%s（%s）" % (mid, domain, mask(ks[0])))
+    print("已写入 data/keys.env：%s = %s%s" % (domain, mask(ks[0]), "（来信里共 %d 个密钥，用了第一个 sk- 开头的）" % len(ks) if len(ks) > 1 else ""))
+
+
 def mark(mid, status, note):
     if status not in STATUSES: raise SystemExit("状态只能是：" + " / ".join(sorted(STATUSES)))
     m = one(mid)
@@ -149,6 +183,7 @@ def main():
     if not a or a[0] == "show": return show()
     if a[0] == "reply" and len(a) >= 3: return reply(a[1], a[2], "--dry" in a)
     if a[0] == "mark" and len(a) >= 4: return mark(a[1], a[2], a[3])
+    if a[0] == "addkey" and len(a) >= 3: return addkey(a[1], a[2], a[3] if len(a) > 3 else None)
     if a[0] == "raw" and len(a) >= 2:
         return print(clean(one(a[1]).get("body_text") or ""))
     if a[0] == "log":
