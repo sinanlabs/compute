@@ -39,7 +39,7 @@ def main():
     r = httpx.post(BASE + "/api/notify/run", json={"token": tok, "kind": "reply", "payload": {"to": to, "subject": subject, "paragraphs": paras}}, timeout=120)
     print("HTTP %d %s" % (r.status_code, r.text[:300]))
     if r.status_code == 200 and inbox_id:
-        d1("UPDATE inbox_mail SET status='replied', handled_at=datetime('now'), handled_by='morning', action='replied' WHERE id=%d" % int(inbox_id))
+        d1("UPDATE inbox_mail SET status='replied', handled_at=datetime('now'), handled_by='duty', action='replied' WHERE id=%d" % int(inbox_id))
         print("inbox #%s 已标记为已回复" % inbox_id)
 
 

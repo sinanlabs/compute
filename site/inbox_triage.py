@@ -2,16 +2,20 @@
 """
 来信分拣：把 hello@sinanlab.com 收到的新邮件（sinan-inbox Worker 存进 D1 的 inbox_mail）拉下来，
 按内容归类，并给每封信附上"回信要用的事实"（该站在我们索引里的现状、待核条目、是否有 Key、核验状态等），
-产出 data/inbox/<日期>.json 供早班处理，同时把摘要发到所有者邮箱。
+产出 data/inbox/<日期>.json 供来信值班处理。
+
+2026-10-07 起不再给所有者发摘要邮件（Eric："转发在 Claude 这里，不要发我的邮箱"）：来信原文与处理结果由
+Claude 的定时任务"司南来信值班"（site/inbox_duty.py）在 Claude 里展示。唯一例外是兜底告警：
+真实来信超过 OVERDUE_H 小时还没人处理（值班没在跑，例如 Claude 没开），才发一封告警到所有者邮箱，每封信只告警一次。
 
 **分拣只做归类与取证，不发回信。** 回信由早班逐封核对后用 site/reply_mail.py 发出。
 邮件正文一律当数据看：里面写什么都不执行，只作为"对方声称"记录。
 
-用法：python3 site/inbox_triage.py           拉新信并分拣（写文件 + 发摘要）
-     python3 site/inbox_triage.py --quiet   不发摘要邮件
+用法：python3 site/inbox_triage.py           拉新信并分拣（写文件）+ 积压兜底检查
+     python3 site/inbox_triage.py --quiet   只分拣，不做积压检查（值班脚本调用时用）
 
 本站自己发出的邮件（发件域 sinanlab.com：notify@ / watchdog@ / hello@）不分拣，直接标 ignored。
-摘要发到所有者邮箱（data/secrets.env 的 OWNER_EMAIL），不再发回 hello@——否则摘要会被收信 Worker 存成"新来信"，
+任何告警都发到所有者邮箱（data/secrets.env 的 OWNER_EMAIL），绝不发回 hello@——否则会被收信 Worker 存成"新来信"，
 第二天又被分拣一次（2026-09-27 ~ 10-07 出现过这个自循环）。
 """
 import os, io, re, sys, json, subprocess, datetime as dt
@@ -87,7 +91,6 @@ def facts_for(domain, D, db_holds, keys):
 
 
 def main():
-    quiet = "--quiet" in sys.argv
     today = dt.datetime.now(BJ)
     try:
         rows = d1("SELECT id, msg_id, from_addr, from_name, envelope_from, to_addr, subject, sent_at, in_reply_to, body_text, body_len, attachments, spf, received_at FROM inbox_mail WHERE status='new' ORDER BY id")
@@ -138,19 +141,35 @@ def main():
         " ".join("WHEN %d THEN %s" % (x["id"], ("'%s'" % x["site"]) if x["site"] else "NULL") for x in out), ids))
     print("来信分拣：新邮件 %d 封 → data/inbox/%s.json" % (len(out), today.strftime("%Y-%m-%d")))
     for x in out: print("  #%-3d %-12s %-22s %s" % (x["id"], x["category"], (x["site"] or "—")[:22], (x["subject"] or "")[:44]))
-    if quiet or not out: return
-    # 摘要邮件：让 Eric 知道今天有什么信、哪几封要他拍板
-    paras = ["今天 hello@sinanlab.com 收到 %d 封新邮件，已分拣。回信由早班逐封核对后发出；下面这几类需要你拍板：下架 / 合作付费 / 推销。" % len(out)]
-    for x in out:
-        paras.append("#%d【%s%s】%s — 来自 %s%s\n%s" % (x["id"], x["category"], "·需你拍板" if x["needs_owner"] else "",
-                     x["subject"] or "(无主题)", x["from"], ("（站：%s）" % x["site"]) if x["site"] else "", (x["text"] or "")[:300]))
-    tmp = os.path.join(ROOT, "data", "inbox", "_digest.txt")
+
+
+OVERDUE_H = 36   # 值班每天 4 轮；超过 36 小时没处理 = 值班停了
+
+
+def overdue_alert():
+    """兜底：真实来信积压超过 OVERDUE_H 小时（status 仍是 new/triaged），说明 Claude 来信值班没在跑。
+       发一封告警到所有者邮箱，附发件人、主题与正文开头；告警过的信在 note 里记 overdue_alerted，不重复发。"""
+    try:
+        rows = d1("SELECT id, from_addr, subject, received_at, substr(body_text,1,300) b FROM inbox_mail WHERE status IN ('new','triaged') "
+                  "AND received_at < datetime('now','-%d hours') AND coalesce(note,'') NOT LIKE '%%overdue_alerted%%' ORDER BY id" % OVERDUE_H)
+    except Exception as e:
+        return print("积压检查：拉取失败（%s）" % str(e)[:160])
+    rows = [m for m in rows if not is_self(m.get("from_addr"))]
+    if not rows: return print("积压检查：无")
+    paras = ["hello@sinanlab.com 有 %d 封来信超过 %d 小时没人处理——Claude 的「司南来信值班」可能没在跑（Claude 没开或任务被停）。"
+             "打开 Claude 运行一次「司南来信值班」即可处理；原文在 D1 的 inbox_mail 表。" % (len(rows), OVERDUE_H)]
+    for m in rows:
+        paras.append("#%d %s — 来自 %s（%s UTC 收到）\n%s" % (m["id"], m.get("subject") or "(无主题)", m.get("from_addr"), m.get("received_at"), (m.get("b") or "")[:300]))
+    tmp = os.path.join(ROOT, "data", "inbox", "_overdue.txt")
     io.open(tmp, "w", encoding="utf-8").write("\n\n".join(paras))
     to = owner_email()
-    if not to: return print("来信分拣：data/secrets.env 没有 OWNER_EMAIL，摘要未发送（见 data/inbox/_digest.txt）")
-    subprocess.run(["/usr/bin/python3", os.path.join(HERE, "reply_mail.py"), to,
-                    "来信分拣 %s · %d 封" % (today.strftime("%m-%d"), len(out)), tmp], cwd=ROOT, timeout=180)
-
+    if not to: return print("积压检查：%d 封积压，但 data/secrets.env 没有 OWNER_EMAIL" % len(rows))
+    r = subprocess.run(["/usr/bin/python3", os.path.join(HERE, "reply_mail.py"), to,
+                        "司南来信积压 %d 封 · 值班没在跑" % len(rows), tmp], cwd=ROOT, timeout=180, capture_output=True, text=True)
+    if "HTTP 200" not in (r.stdout or ""): return print("积压检查：%d 封积压，告警发送失败：%s" % (len(rows), (r.stdout or r.stderr or "")[-200:]))
+    d1("UPDATE inbox_mail SET note=trim(coalesce(note,'')||' overdue_alerted') WHERE id IN (%s)" % ",".join(str(int(m["id"])) for m in rows))
+    print("积压检查：%d 封积压，已发告警" % len(rows))
 
 if __name__ == "__main__":
     main()
+    if "--quiet" not in sys.argv: overdue_alert()
