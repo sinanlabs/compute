@@ -14,13 +14,19 @@ MAX_AGE_H = 26
 
 
 def live_age():
-    try:
-        req = urllib.request.Request("https://compute.sinanlab.com/data_v2.json", headers={"User-Agent": "SinanLabHealth/1.0", "Cache-Control": "no-cache"})
-        g = json.loads(urllib.request.urlopen(req, timeout=30).read())["generated_at"]
-        t = dt.datetime.fromisoformat(g)
-        return g, (dt.datetime.now(BJ) - t).total_seconds() / 3600
-    except Exception as e:
-        return "取不到（%s）" % type(e).__name__, None
+    """读线上 generated_at。先读几 KB 的 stats.json（和 data_v2 同一轮导出），读不到再试几 MB 的 data_v2.json；
+       每个各试两次——本机网慢时一次超时不算站点停更（2026-10-08 值班误报过一次）。"""
+    err = None
+    for url in ("https://compute.sinanlab.com/stats.json", "https://compute.sinanlab.com/data_v2.json"):
+        for _ in range(2):
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "SinanLabHealth/1.0", "Cache-Control": "no-cache"})
+                g = json.loads(urllib.request.urlopen(req, timeout=45).read())["generated_at"]
+                t = dt.datetime.fromisoformat(g)
+                return g, (dt.datetime.now(BJ) - t).total_seconds() / 3600
+            except Exception as e:
+                err = e
+    return "取不到（%s）" % type(err).__name__, None
 
 
 def last_run():
