@@ -9,7 +9,10 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 echo "【后台】"
 st=$(launchctl print gui/$(id -u)/com.sinanlab.pipeline 2>/dev/null | grep -E "^\s*state =" | head -1 | tr -d ' \t')
 if [ "$st" = "state=running" ]; then
-  echo "采集服务在跑；最近一次可达探测：$(tail -1 data/logs/heartbeat.log 2>/dev/null | cut -c1-60)"
+  echo "采集服务在跑；最近 3 次可达探测："
+  tail -3 data/logs/heartbeat.log 2>/dev/null | cut -c1-80 | sed 's/^/  /'
+  if curl -s -o /dev/null -m 15 https://www.cloudflare.com/cdn-cgi/trace; then echo "  本机此刻上网正常（某一轮写着「外网不通」= 那一小时本机网络断过，该轮已自动不记账，不用处理）"
+  else echo "  ⚠ 本机此刻连不上外网——这是本机网络问题，不是站点问题；连续 3 轮以上才需要告诉 Eric 检查网络/代理"; fi
 else
   echo "采集服务不在跑（${st:-未注册}），正在拉起……"
   launchctl kickstart -k gui/$(id -u)/com.sinanlab.pipeline 2>&1 | tail -2
