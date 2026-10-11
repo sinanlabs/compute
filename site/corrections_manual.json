@@ -70,5 +70,13 @@
   "corrected": "2026-10-11 上午重新登录部署账号，补上传 Compute、Robo、母站三站，线上数据更新到 2026-10-11 10:48（北京）",
   "reason": "部署环节故障，不涉及任何价格或测量数值的改动",
   "credit": "本站自查"
+ },
+ {
+  "date": "2026-10-11",
+  "target": "图像 · Nano Banana 族官方参考价",
+  "original": "2026-09-02 起全族只用一个官方参考价：gemini-3.1-flash-image（Nano Banana 2）每张 $0.0336。该数实为同页 Nano Banana 2 Lite 的价格——抓取脚本按模型 id 切段，没认出 gemini-3.1-flash-lite-image，把它的价格并进了 Nano Banana 2 的段落，又按「取最低档」选中。Nano Banana 2 的真实官方价是 1K 每张 $0.067，因此 Nano Banana 2 相关报价的「实付占官方几成」被算高约一倍；Nano Banana Pro（$0.134）与初代（$0.039）的官方价从未抓到，Pro 报价一直没有比率；10 月 6 日新发布的 Nano Banana 2.1 被当成 Nano Banana 2",
+  "corrected": "抓取脚本按 Google 定价页三种写法逐模型解析（同一模型同一分辨率出现两个不同价格即拒绝入库），现有官方价：Nano Banana 2.1 $0.0336 / 2 $0.067 / 2 Lite $0.0336 / Pro $0.134（均为 1K 档，另有 2K、4K 档）；每条中转报价只和它所属那一代的官方价比，未标分辨率的按官方默认 1K 档；初代 Nano Banana 官方已于 2026-10-02 停止服务，只列不比。已发布的周报、月报与历史快照不追溯修改，以本条为准",
+  "reason": "官方参考价抓取错误（解析脚本未适配定价页结构），并非站方报价变化",
+  "credit": "本站自查（Eric 反馈图像账本缺少 Nano Banana 2.1、GPT Image 2.5 时一并查出）"
  }
 ]

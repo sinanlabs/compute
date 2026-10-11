@@ -13,6 +13,21 @@ import io, os, json
 DISC = "This is an arithmetic ratio. It is not an accusation against the vendor, and a lower public source not yet indexed here may exist."
 
 HTML = {
+"Nano Banana 分代比对（2026-10-11 起）": "Nano Banana per-generation comparison (from 2026-10-11)",
+"Google 对 Nano Banana 各代分别标价（ai.google.dev 定价页标准付费档，按图像 token 折成每张）：2.1（gemini-nano-banana-2.1）1K $0.0336；2（gemini-3.1-flash-image）1K $0.067；2 Lite（gemini-3.1-flash-lite-image）1K $0.0336；Pro（gemini-3-pro-image）1K/2K $0.134。中转报价按名字归到所属一代（名字里的 1k/2k/4k 是分辨率不是版本），只和该代官方价比；站方写了分辨率的取同分辨率档，没写的取官方默认 1K 档。初代（gemini-2.5-flash-image）官方已于 2026-10-02 停止服务，只列不比。此前（2026-09-02 至 10-11）全族误用了一个参考价，见修正日志。": "Google prices each Nano Banana generation separately (standard paid tier on the ai.google.dev pricing page, image tokens converted to a per-image price): 2.1 (gemini-nano-banana-2.1) 1K $0.0336; 2 (gemini-3.1-flash-image) 1K $0.067; 2 Lite (gemini-3.1-flash-lite-image) 1K $0.0336; Pro (gemini-3-pro-image) 1K/2K $0.134. Relay quotes are assigned to their generation by model name (1k/2k/4k in a name is a resolution, not a version) and compared only with that generation's official price; where the site states a resolution the matching tier is used, otherwise the official default 1K tier. The original Nano Banana (gemini-2.5-flash-image) was shut down by Google on 2026-10-02 and is listed without ratios. Before this (2026-09-02 to 10-11) the whole family wrongly used a single reference price; see the corrections log.",
+"GPT Image": "GPT Image",
+"OpenAI 对 GPT Image（含 2.5 的 Flare / Sunburst）按图像 token 计价，单张成本随尺寸与质量变化，官方没有公开的每张价，因此只列中转报价、不出比率。名字里的 4k 是分辨率，不当版本号。": "OpenAI bills GPT Image (including 2.5 Flare / Sunburst) by image tokens, so the cost of one image varies with size and quality and there is no official per-image price; relay quotes are therefore listed without ratios. 4k in a model name is a resolution and is not treated as a version number.",
+"${n} – ${n} / 张": "${n} – ${n} / image", "Nano Banana（初代）": "Nano Banana (original)",
+"官方对不同版本 / 档位分别标价：{s}。每条中转报价只和它对应的那一档比；站方写了分辨率的取同分辨率档。": "The vendor prices each version / tier separately: {s}. Each relay quote is compared only with its own tier; where the site states a resolution, the matching tier is used.",
+"视频账本 →": "Video ledger →", "图像账本 →": "Image ledger →",
+"图像：Nano Banana、GPT Image、Seedream、Qwen-Image、FLUX、Midjourney 等": "Images: Nano Banana, GPT Image, Seedream, Qwen-Image, FLUX, Midjourney and more",
+"视频（Seedance、Veo、Kling、Hailuo）按秒、图像（Nano Banana、GPT Image、Seedream）按张的实付价，与官方价放一起。": "Effective prices for video (Seedance, Veo, Kling, Hailuo) per second and images (Nano Banana, GPT Image, Seedream) per image, next to official prices.",
+"中转站的图像 / 视频报价，与官方按张 / 按秒价放在一起。按厂商族分组，只主推每族最新两代；按次报价折成按秒的假设写在明面上。官方没有公开按张 / 按秒价的族（如 GPT Image 按 token 计价）只列报价、不出比率。": "Relay image and video quotes next to official per-image and per-second prices. Grouped by vendor family, featuring only the latest two generations of each; the assumption used to convert per-call quotes to per-second is stated openly. Families with no official per-image or per-second price (e.g. GPT Image, billed per token) are listed without ratios.",
+"官方参考价（分版本 / 档位）": "Official reference (by version / tier)",
+"{s} 在 {n} 家中转站的按张实付价，每条对着它所属版本 / 档位的官方价算成比率。主推版本 {s}。数据 {n}-{n}-{n}，每个数字带抓取快照。": "Per-image effective prices for {s} at {n} relay sites, each compared against the official price of its own version / tier. Featured versions: {s}. Data {n}-{n}-{n}; every number carries a fetch snapshot.",
+"{s} 在 {n} 家中转站的按秒 / 按次实付价，每条对着它所属版本 / 档位的官方价算成比率。主推版本 {s}。数据 {n}-{n}-{n}，每个数字带抓取快照。": "Per-second / per-call effective prices for {s} at {n} relay sites, each compared against the official price of its own version / tier. Featured versions: {s}. Data {n}-{n}-{n}; every number carries a fetch snapshot.",
+"${n} – ${n} / 秒": "${n} – ${n} / s",
+"站方未标分辨率，参考取官方默认 1K 档": "The site does not state a resolution; reference uses the official default 1K tier",
 # ---------- 通用 / 导航 / 页脚 ----------
 "证据 ↗": "Evidence ↗", "证据": "Evidence", "证据链": "Evidence chain", "解释": "Explain", "关闭": "Close",
 "定价接口未公开": "Pricing endpoint not public", "无参考价": "No reference price", "无参考": "No reference", "无比对": "No comparison",
@@ -642,6 +657,8 @@ HTML = {
 
 # app.js 字面量子串（按长度降序替换；短词放最后兜底）
 JS = {
+"Nano Banana（初代）": "Nano Banana (original)",
+"各版本 / 档位分别比": "each version / tier compared separately", " 族": " families", "\" 族\"": "\" families\"",
     "待核对（当晚处理）": "Pending (checked tonight)", "已确认收录": "Confirmed and listed", "已在总表": "Already listed", "可达但不是可确认的中转面板": "Reachable but not a recognisable relay panel", "连不上": "Unreachable",
     "提交需要登录（用来防刷）。": "Sign-in required (anti-spam). ", "我提交过的：": "My submissions: ", "提交中…": "Submitting…", "这个站已经在队列里：": "Already queued: ", "已收到：": "Received: ", "域名格式不对": "Invalid domain", "今天提交太多了，明天再来": "Daily limit reached, try tomorrow", "请先登录": "Please sign in first",
     "登录": "Sign in", "注册": "Sign up", "登录 →": "Sign in →", "登录并关注 →": "Sign in and watch →", "会出现在你的关注列表，价格、可达率或探针结果变化时提醒你。不设密码：邮箱验证码，或用 Google / GitHub 账号。": " will appear in your watch list, and you get alerted when price, reachability or probe results change. No passwords: an email code, or a Google / GitHub account.",

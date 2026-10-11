@@ -213,6 +213,7 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabu
 /* media */
 .seg{margin-left:auto;display:inline-flex;background:var(--ground);border-radius:12px;padding:4px;position:relative}
 .seg button{border:0;background:transparent;padding:7px 14px;border-radius:9px;cursor:pointer;font-weight:600;font-size:12.5px;color:var(--ink-2);position:relative;z-index:1;transition:color .3s}.seg button[aria-pressed=true]{color:var(--ink)}
+.seg.big{margin-left:0}.seg.big button{padding:10px 22px;font-size:14.5px}.seg.big .cnt{font-weight:500;opacity:.6;font-size:12.5px;margin-left:4px}
 .seg .ind{position:absolute;top:4px;bottom:4px;background:var(--card);border-radius:9px;box-shadow:var(--shadow-1);transition:left .45s var(--spring),width .45s var(--spring)}
 .fams{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
 .fam{border:1px solid var(--hair);border-radius:16px;padding:16px;background:linear-gradient(180deg,#FBFBFE,#fff);transition:transform .45s var(--spring),box-shadow .45s}.fam:hover{transform:translateY(-3px);box-shadow:var(--shadow-2)}
@@ -373,18 +374,20 @@ var tg=document.getElementById("tg");tg.addEventListener("click",function(){only
 /* ========== 媒体 ========== */
 (function(){var fams=document.getElementById("fams");if(!fams)return;var M=null;
 function pctm(r){return pct(r);}
-function famHtml(f,mod,i){var ref=f.ref;var rec=(f.rows||[]).filter(function(r){return r.recent&&!r.held;});var range=(f.eff_min!=null&&f.eff_max!=null&&ref)?[f.eff_min/ref.price,f.eff_max/ref.price]:null;
+function famHtml(f,mod,i){var ref=f.ref;var rec=(f.rows||[]).filter(function(r){return r.recent&&!r.held;});var range=(f.ratio_min!=null&&f.ratio_max!=null)?[f.ratio_min,f.ratio_max]:((f.eff_min!=null&&f.eff_max!=null&&ref)?[f.eff_min/ref.price,f.eff_max/ref.price]:null);var mr=(f.refs&&f.refs.length>1)?f.refs:null;
  var h='<div class="fam rise" style="--i:'+(i*0.6)+'"><div class="name"><span class="cube"></span><a href="/media/'+esc(f.family)+'">'+esc(f.name||f.family||f.vendor)+'</a>'+(f.recent_labels&&f.recent_labels.length?'<span class="sub" style="margin:0 0 0 auto">主推 '+esc(f.recent_labels.join(" · "))+'</span>':'')+'</div>';
- if(ref)h+='<div class="ref">$'+ref.price.toFixed(3)+'<small>/ '+(mod==="video"?"秒":"张")+' 官方 · '+esc(ref.model)+'</small></div><div class="meta">'+f.n_sites+' 站 · '+f.n_rows+' 条报价'+(mod==="video"&&f.default_clip?' · 按次报价按 1 次 = '+f.default_clip+' 秒折成每秒'+(f.n_assumed?'（'+f.n_assumed+' 条）':''):'')+'</div>';
+ if(ref&&mr)h+='<div class="ref">$'+mr[0].price.toFixed(3)+'–'+mr[mr.length-1].price.toFixed(3)+'<small>/ '+(mod==="video"?"秒":"张")+' 官方 · 各版本 / 档位分别比</small></div><div class="meta">'+mr.map(function(r){return esc(r.label)+' $'+r.price.toFixed(3);}).join(' · ')+'</div><div class="meta">'+f.n_sites+' 站 · '+f.n_rows+' 条报价</div>';
+ else if(ref)h+='<div class="ref">$'+ref.price.toFixed(3)+'<small>/ '+(mod==="video"?"秒":"张")+' 官方 · '+esc(ref.model)+'</small></div><div class="meta">'+f.n_sites+' 站 · '+f.n_rows+' 条报价'+(mod==="video"&&f.default_clip?' · 按次报价按 1 次 = '+f.default_clip+' 秒折成每秒'+(f.n_assumed?'（'+f.n_assumed+' 条）':''):'')+'</div>';
  else h+='<div class="none">无官方参考价，只列报价，不出比率。'+esc(f.ref_missing||"")+'</div><div class="meta">'+f.n_sites+' 站 · '+f.n_rows+' 条报价</div>';
  if(range){var lo=Math.min(2,range[0])/2*100,hi=Math.min(2,range[1])/2*100;h+='<div class="rng"><i style="left:'+lo.toFixed(1)+'%;width:'+Math.max(2,hi-lo).toFixed(1)+'%"></i></div><div class="rl"><span>实付最低 '+pctm(range[0])+'</span><span>最高 '+pctm(range[1])+'</span></div>';}
  if(rec.length){h+='<table><thead><tr><th>站</th><th class="num">实付</th><th class="num">几成</th></tr></thead><tbody>'+rec.slice(0,6).map(function(r){return '<tr><td><a class="dom" href="/s/'+esc(r.site)+'">'+esc(r.site)+'</a></td><td class="num">'+(r.val!=null?(r.val<0.01?r.val.toFixed(4):r.val.toFixed(3)):(r.eff!=null?r.eff.toFixed(3):"—"))+' <span class="sub" style="display:inline">'+(r.val!=null?(f.canon_unit||(mod==="video"?"$/秒":"$/张")):(r.unit==="per_second"?"$/秒":"$/次"))+(r.val_basis==="assumed"?"<i title=\"按该族默认时长折算\" style=\"font-style:normal;opacity:.6\"> ≈</i>":"")+'</span></td><td class="num">'+(r.ratio!=null?'<span class="r '+r.band+'">'+pctm(r.ratio)+'</span>':'—')+'</td></tr>';}).join("")+'</tbody></table>'+(rec.length>6?'<div class="sub">还有 '+(rec.length-6)+' 条 · 数据文件 media.json</div>':'');}
  h+='</div>';return h;}
 function renderMedia(mod){var list=(M&&M[mod])||[];fams.innerHTML=list.map(function(f,i){return famHtml(f,mod,i);}).join("")||'<div class="callout">暂无数据</div>';}
 var seg=document.getElementById("seg");function moveInd(){var b=seg.querySelector("[aria-pressed=true]"),i=seg.querySelector(".ind");if(!b)return;i.style.left=b.offsetLeft+"px";i.style.width=b.offsetWidth+"px";}
-seg.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;seg.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});moveInd();renderMedia(b.dataset.m);});
-fetch("/media.json").then(function(r){return r.json();}).then(function(m){M=m;Object.keys(m.snaps||{}).forEach(function(k){D.snaps=D.snaps||{};if(!D.snaps[k])D.snaps[k]=m.snaps[k];});var a=document.getElementById("mediaasof");if(a)a.textContent="数据 "+m.generated_at.slice(0,16).replace("T"," ");renderMedia("video");requestAnimationFrame(moveInd);}).catch(function(){fams.innerHTML='<div class="callout">数据加载失败，请刷新。</div>';});
-addEventListener("resize",moveInd);})();
+function pick(m){seg.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.m===m?"true":"false");});moveInd();renderMedia(m);}
+seg.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;history.replaceState(null,"","#"+b.dataset.m);pick(b.dataset.m);});
+fetch("/media.json").then(function(r){return r.json();}).then(function(m){M=m;Object.keys(m.snaps||{}).forEach(function(k){D.snaps=D.snaps||{};if(!D.snaps[k])D.snaps[k]=m.snaps[k];});var a=document.getElementById("mediaasof");if(a)a.textContent="数据 "+m.generated_at.slice(0,16).replace("T"," ");seg.querySelectorAll("button").forEach(function(b){var c=b.querySelector(".cnt");if(c&&m[b.dataset.m])c.textContent=m[b.dataset.m].length+" 族";});pick(location.hash==="#image"?"image":"video");requestAnimationFrame(moveInd);}).catch(function(){fams.innerHTML='<div class="callout">数据加载失败，请刷新。</div>';});
+addEventListener("resize",moveInd);addEventListener("hashchange",function(){if(M&&(location.hash==="#image"||location.hash==="#video"))pick(location.hash.slice(1));});})();
 """
 
 # ------------------------------------------------------------------ 地球（首页 hero）
@@ -648,7 +651,7 @@ def build_index():
 <section class="rise" id="detect" style="--i:4.5;margin-top:22px"><div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><div><div class="eyebrow" style="color:var(--p)">检测 · 三层 · 全部可复现</div><h2 class="sec" style="margin-top:4px">不只比价，还测得到什么</h2><p class="lead" style="margin-top:4px">用我们自己的 Key 每天测；判定只有一致 / 不一致 / 样本不足，这是一致性测量，不是真伪判定。</p></div><a class="btn p" href="/check" style="margin-left:auto">用我的 Key 测一个站 →</a></div><div class="det">{{det}}</div></section>
 <div class="grid2" style="margin-top:22px"><div class="bento rise" id="bento" style="--i:5">{{tiles}}</div>
 <section class="card feed rise" style="--i:6"><h3>今日变动</h3>{{feed}}</section></div>
-<section class="card pad rise" style="margin-top:18px;--i:7;display:flex;flex-wrap:wrap;gap:14px;align-items:center"><div><h2 class="sec">图像 · 视频</h2><p class="lead">Seedance、Veo、Kling、Hailuo 等按秒 / 按张的实付价，与官方价放一起。</p></div><a class="btn p" href="/media" style="margin-left:auto">看图像与视频账本 →</a></section>
+<section class="card pad rise" style="margin-top:18px;--i:7;display:flex;flex-wrap:wrap;gap:14px;align-items:center"><div><h2 class="sec">图像 · 视频</h2><p class="lead">视频（Seedance、Veo、Kling、Hailuo）按秒、图像（Nano Banana、GPT Image、Seedream）按张的实付价，与官方价放一起。</p></div><a class="btn p" href="/media#video" style="margin-left:auto">视频账本 →</a><a class="btn p" href="/media#image">图像账本 →</a></section>
 <section class="rise" style="--i:8;margin-top:22px"><div class="eyebrow" style="color:var(--p)">SinanLab · 司南实验室</div><h2 class="sec" style="margin-top:4px">三个站，一把尺</h2><div class="prods"><a class="card" href="/"><b>Sinan Compute · 司南·算力</b><p>模型 API 中转站的实付价、可达率、一致性与能力检测，每周司南榜。</p></a><a class="card" href="https://robo.sinanlab.com"><b>Sinan Robo · 司南·机脑</b><p>开源具身模型（VLA）的许可证、权重、可上机器人本体，做成可审计的索引与榜单。</p></a><a class="card" href="https://sinanlab.com/"><b>母站 sinanlab.com</b><p>为什么可信、收入透明、隐私政策，以及两个站的订阅与账号。</p></a></div></section>
 <noscript><div class="notice" style="margin-top:18px">本页的模型切换、证据抽屏需要 JavaScript。上面的表格是默认模型 {{dmname}} 的静态版本；全部站点见 <a href="/sites">站点总表</a>。</div></noscript>
 <script id="d" type="application/json">{{data}}</script>""",
@@ -860,8 +863,8 @@ def build_media():
     ssr = ""
     for mod, lbl in (("video", "视频"), ("image", "图像")):
         ssr += '<h3 style="margin-top:14px">%s</h3><ul>' % lbl + "".join('<li>%s：%s · %d 站 · %d 条报价</li>' % (esc(f.get("family") or f.get("vendor")), ("官方 $%.3f/%s" % (f["ref"]["price"], "秒" if mod == "video" else "张")) if f.get("ref") else "无官方参考价", f.get("n_sites", 0), f.get("n_rows", 0)) for f in MEDIA.get(mod, [])) + "</ul>"
-    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end"><div><h1 style="font-size:24px">图像 · 视频账本</h1><p class="lead">中转站的图像 / 视频报价，与官方按张 / 按秒价放在一起。按厂商族分组，只主推每族最新两代；按次报价折成按秒的假设写在明面上。国内主力（Seedance、Vidu、Wan）官方价解析接入中，接入前只列报价不出比率。</p></div>
-<div class="seg" id="seg"><span class="ind"></span><button aria-pressed="true" data-m="video">视频生成</button><button aria-pressed="false" data-m="image">图像生成</button></div></div>
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end"><div><h1 style="font-size:24px">图像 · 视频账本</h1><p class="lead">中转站的图像 / 视频报价，与官方按张 / 按秒价放在一起。按厂商族分组，只主推每族最新两代；按次报价折成按秒的假设写在明面上。官方没有公开按张 / 按秒价的族（如 GPT Image 按 token 计价）只列报价、不出比率。</p></div></div>
+<div class="rise" style="--i:0.5;margin:0 0 12px"><div class="seg big" id="seg"><span class="ind"></span><button aria-pressed="true" data-m="video">视频生成 <span class="cnt"></span></button><button aria-pressed="false" data-m="image">图像生成 <span class="cnt"></span></button></div><span class="sub" style="margin-left:12px">图像：Nano Banana、GPT Image、Seedream、Qwen-Image、FLUX、Midjourney 等</span></div>
 <div class="sub" id="mediaasof" style="margin-bottom:8px">数据 {{asof}} · 视频 {{vs}} 站 {{vr}} 条 · 图像 {{is}} 站 {{ir}} 条</div>
 <div class="fams" id="fams"><noscript>{{ssr}}</noscript></div>
 <div class="tfoot" style="border:0;padding-left:0"><span>{{disc}}</span><span>原始数据：<a href="/media.json" style="color:var(--p-ink)">media.json</a></span></div>
@@ -932,12 +935,14 @@ def build_llms():
 def build_family(f, mod):
     unit_s = "秒" if mod == "video" else "张"
     ref = f.get("ref"); rows = f.get("rows") or []
+    mrefs = f.get("refs") if len(f.get("refs") or []) > 1 else None   # 同族多代各有官方价（如 Nano Banana 2.1 / 2 / Pro）
+    mref_txt = "；".join("%s $%.4g/%s（%s）" % (r["label"], r["price"], unit_s, r["model"]) for r in mrefs) if mrefs else ""
     rec = [r for r in rows if r.get("recent") and not r.get("held")]; old = [r for r in rows if not r.get("recent") and not r.get("held")]; held = [r for r in rows if r.get("held")]
     ok = [r for r in rec if r.get("band") in ("explainable", "normal")]
     name = f.get("name") or f["family"]
     title = "%s API 中转站价格：%d 站 %d 条报价 vs 官方 · Sinan Compute" % (name, f.get("n_sites", 0), f.get("n_rows", 0))
     desc = "%s 在 %d 家中转站的%s实付价，%s。主推版本 %s。数据 %s，每个数字带抓取快照。" % (name, f.get("n_sites", 0), "按秒 / 按次" if mod == "video" else "按张",
-           ("对着官方 $%.3f/%s 逐条算成比率" % (ref["price"], unit_s)) if ref else "暂无官方参考价，只列报价不出比率", " · ".join(f.get("recent_labels") or []) or "—", GEN_DATE)
+           ("每条对着它所属版本 / 档位的官方价算成比率" if mrefs else ("对着官方 $%.3f/%s 逐条算成比率" % (ref["price"], unit_s))) if ref else "暂无官方参考价，只列报价不出比率", " · ".join(f.get("recent_labels") or []) or "—", GEN_DATE)
     def rows_html(rs):
         out = []
         for r in rs:
@@ -953,14 +958,15 @@ def build_family(f, mod):
     def table(rs, cap):
         if not rs: return ""
         return '<section class="card rise" style="margin-top:16px"><div class="pad" style="padding-bottom:6px"><h2 class="sec">%s</h2></div><div class="tablewrap"><table><thead><tr><th>中转站</th><th>版本</th><th class="num">实付</th><th class="num">几成</th><th>怎么看</th></tr></thead><tbody>%s</tbody></table></div></section>' % (cap, rows_html(rs))
-    facts = [("官方参考价", ("$%.3f / %s" % (ref["price"], unit_s)) if ref else "—", (esc(ref["model"]) + " · " + esc(ref.get("region") or "")) if ref else esc(f.get("ref_missing") or "暂无官方参考价，只列报价"), "" if ref else "t"),
+    facts = [(("官方参考价（分版本 / 档位）", "$%.3f – $%.3f / %s" % (mrefs[0]["price"], mrefs[-1]["price"], unit_s), esc(" · ".join("%s $%.3f" % (r["label"], r["price"]) for r in mrefs)), "") if mrefs else
+              ("官方参考价", ("$%.3f / %s" % (ref["price"], unit_s)) if ref else "—", (esc(ref["model"]) + " · " + esc(ref.get("region") or "")) if ref else esc(f.get("ref_missing") or "暂无官方参考价，只列报价"), "" if ref else "t")),
              ("中转站", "%d 站 · %d 条" % (f.get("n_sites", 0), f.get("n_rows", 0)), "主推 %s，旧版本 %d 条折叠" % (" · ".join(f.get("recent_labels") or []) or "—", f.get("n_old", 0)), "t"),
              ("实付区间", ("$%.4f – $%.4f" % (f["eff_min"], f["eff_max"])) if f.get("eff_min") is not None else "—",
               "%s%s%s" % (f.get("canon_unit") or ("$/秒" if mod == "video" else "$/张"), ("，中位 $%.4f" % f["eff_med"]) if f.get("eff_med") is not None else "",
               ("；其中 %d 条是按该族默认时长折算的" % f["n_assumed"]) if f.get("n_assumed") else ""), ""),
              ("价格说得通", "%d 家" % len(ok), "低于成本下限 %d · 待核 %d" % (sum(1 for r in rec if r.get("band") == "unsustainable"), len(held)), "")]
     facts_html = "".join('<div class="card fact"><div class="k">%s</div><div class="v%s">%s</div><div class="n">%s</div></div>' % (k, (" t" if t else ""), esc(v), n) for k, v, n, t in facts)
-    faq = [("%s 的官方 API 价格是多少？" % name, ("本站取官方定价页的最低档作参考：%s，每%s $%.3f（%s）。人民币标价按当日汇率折算。" % (ref["model"], unit_s, ref["price"], ref.get("region") or "")) if ref else "官方尚未公开可抓取的定价页，或本站尚未接入；接入前只列中转站报价，不出比率。"),
+    faq = [("%s 的官方 API 价格是多少？" % name, ("官方对不同版本 / 档位分别标价：%s。每条中转报价只和它对应的那一档比；站方写了分辨率的取同分辨率档。" % mref_txt) if mrefs else ("本站取官方定价页的最低档作参考：%s，每%s $%.3f（%s）。人民币标价按当日汇率折算。" % (ref["model"], unit_s, ref["price"], ref.get("region") or "")) if ref else "官方尚未公开可抓取的定价页，或本站尚未接入；接入前只列中转站报价，不出比率。"),
            ("这张表的价格是什么口径？", "视频一律折成每秒（$/秒），图像一律按每张（$/张），全站统一。站方本来就按秒报价的直接用；模型名里写了时长的（如 veo3.1-8s）按它折算；两样都没有的按该族公开的默认时长折算，并在那一行标出来。没有公开默认时长的族不折算，只列原始报价。折算只是算术，不代表该站实际生成时长。"),
            ("为什么只主推最新两代版本？", "同一族的旧版本官方价通常更低，拿新版本参考价比旧版本报价会失真；旧版本条目折叠在下方，标注了版本。")]
     body = tpl(u"""<div class="mhead rise" style="--i:0"><div><div class="eyebrow" style="color:var(--p);opacity:1">{{mod}} · 模型族页</div><h1>{{name}} 的中转站实付价</h1><p class="lead">{{desc}}</p></div><div style="margin-left:auto"><a class="btn p" href="/media">在图像 · 视频账本里交互查看 →</a></div></div>

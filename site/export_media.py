@@ -9,7 +9,7 @@ import os, sys, json, statistics as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import db as D
 from core.cost_floor import band
-from core.media import canonical, CANON_UNIT, compare, official_refs, media_site_gate, DEFAULT_CLIP, CLIP_SOURCE, parse_version, recent_versions, version_key, version_label
+from core.media import canonical, CANON_UNIT, compare, official_refs, media_site_gate, DEFAULT_CLIP, CLIP_SOURCE, parse_version, recent_versions, version_key, version_label, REF_LABEL
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -82,19 +82,28 @@ def main():
                    "unit": "per_second" if mod == "video" else "per_call", "source": REF_SOURCE.get(fam)}
         rank = {"explainable": 0, "normal": 1, "premium": 2, "below_bulk": 3, "unsustainable": 4, "far_above": 5}
         # 版本：每族只主推最新两代，其余标 old 折叠
-        recent = recent_versions(fam, [x["name"] for x in lst], k=2)
+        # Nano Banana 现役是 2.1 + Pro + 2（2 于 2026-10-29 停用前大部分站还在卖），多主推一代
+        recent = recent_versions(fam, [x["name"] for x in lst], k=3 if fam == "nano-banana" else 2)
         for x in lst:
             v = parse_version(fam, x["name"]); x["version"] = v; x["version_label"] = version_label(fam, v)
             x["recent"] = (v in recent) if v is not None else (len(recent) == 0)
-        lst.sort(key=lambda x: (1 if x["held"] else 0, 0 if x["recent"] else 1, -version_key(x["version"]), rank.get(x.get("band"), 9), x.get("ratio") or 0, x.get("val") if x.get("val") is not None else x["eff"]))
+        lst.sort(key=lambda x: (1 if x["held"] else 0, 0 if x["recent"] else 1, -version_key(x["version"], fam), rank.get(x.get("band"), 9), x.get("ratio") or 0, x.get("val") if x.get("val") is not None else x["eff"]))
         effs = [x["val"] for x in lst if not x["held"] and x.get("val") is not None]   # 统一口径：视频 $/秒、图像 $/张
+        # 同族多个官方参考（如 Nano Banana 2.1 / 2 / Pro 各有官方价）：逐一列出，每行比的是自己那一代
+        refs_used = {}
+        for x in cmp_rows:
+            k_ = x["ref_model"]
+            if k_ not in refs_used or x["ref_price"] < refs_used[k_]["price"]:
+                refs_used[k_] = {"model": k_, "price": x["ref_price"], "region": x["ref_region"], "label": REF_LABEL.get(k_) or k_}
+        ratios = [x["ratio"] for x in cmp_rows]
         out[mod].append({"family": fam, "name": FAMILY_NAME.get(fam, fam), "ref": ref, "ref_missing": None if ref else REF_MISSING.get(fam, "官方定价未接入"),
                          "default_clip": DEFAULT_CLIP.get(fam) if mod == "video" else None, "clip_source": CLIP_SOURCE.get(fam) if mod == "video" else None,
                          "n_sites": len({x["site"] for x in lst}), "n_rows": len(lst), "n_cmp": len(cmp_rows), "canon_unit": CANON_UNIT.get(mod),
                          "n_assumed": sum(1 for x in lst if x.get("val_basis") == "assumed" and not x["held"]),
                          "eff_min": min(effs) if effs else None, "eff_med": st.median(effs) if effs else None, "eff_max": max(effs) if effs else None,
                          "bands": {k: sum(1 for x in cmp_rows if x["band"] == k) for k in rank}, "rows": lst,
-                         "recent_versions": recent, "recent_labels": [version_label(fam, v) for v in recent], "n_old": sum(1 for x in lst if not x["recent"])})
+                         "recent_versions": recent, "recent_labels": [version_label(fam, v) for v in recent], "n_old": sum(1 for x in lst if not x["recent"]),
+                         "refs": sorted(refs_used.values(), key=lambda r: r["price"]), "ratio_min": min(ratios) if ratios else None, "ratio_max": max(ratios) if ratios else None})
     for mod in out:
         out[mod].sort(key=lambda f: (0 if f["ref"] else 1, -f["n_sites"]))
     snaps = {}
