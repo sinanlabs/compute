@@ -133,7 +133,14 @@ def reply(mid, body_p, dry):
     if "HTTP 200" not in out: raise SystemExit("回信没发出去（见上面输出），#%s 状态未改" % mid)
     os.makedirs(SENT, exist_ok=True)
     dst = os.path.join(SENT, "reply_%s_%s.txt" % (int(mid), dt.datetime.now(BJ).strftime("%Y%m%d%H%M")))
-    io.open(dst, "w", encoding="utf-8").write("To: %s\nSubject: %s\n\n%s" % (m["from_addr"], subj, io.open(body_p, encoding="utf-8").read()))
+    body = io.open(body_p, encoding="utf-8").read()
+    io.open(dst, "w", encoding="utf-8").write("To: %s\nSubject: %s\n\n%s" % (m["from_addr"], subj, body))
+    # 回信正文也存进 D1，后台 admin.sinanlab.com 的「来信」栏目从这里读（所有者在那里看原文 + 我们回了什么）
+    sq = lambda s: "'" + str(s).replace("'", "''") + "'"
+    try:
+        T.d1("INSERT INTO inbox_reply(mail_id, to_addr, subject, body) VALUES (%d, %s, %s, %s)" % (int(mid), sq(m["from_addr"]), sq(subj), sq(body.strip())))
+    except Exception as e:
+        print("（回信已发出，但存进后台没成功：%s；本机存档在 %s）" % (str(e)[:200], os.path.relpath(dst, ROOT)))
     log("#%s %s「%s」→ 已回信（存档 %s）" % (mid, m["from_addr"], (m.get("subject") or "")[:40], os.path.relpath(dst, ROOT)))
 
 
@@ -178,24 +185,11 @@ def mark(mid, status, note):
     print("#%s 已标记为 %s" % (mid, status))
 
 
-def refresh_page():
-    """重写给 Eric 看的来信箱页面（/Users/eric/SinanLab/来信箱.html）；失败不影响值班。"""
-    try:
-        import inbox_page
-        inbox_page.write()
-    except Exception as e:
-        print("（来信箱页面没更新成功：%s）" % str(e)[:200])
-
-
 def main():
     a = sys.argv[1:]
-    if not a or a[0] == "show":
-        show(); return refresh_page()
-    if a[0] == "reply" and len(a) >= 3:
-        reply(a[1], a[2], "--dry" in a)
-        return None if "--dry" in a else refresh_page()
-    if a[0] == "mark" and len(a) >= 4:
-        mark(a[1], a[2], a[3]); return refresh_page()
+    if not a or a[0] == "show": return show()
+    if a[0] == "reply" and len(a) >= 3: return reply(a[1], a[2], "--dry" in a)
+    if a[0] == "mark" and len(a) >= 4: return mark(a[1], a[2], a[3])
     if a[0] == "addkey" and len(a) >= 3: return addkey(a[1], a[2], a[3] if len(a) > 3 else None)
     if a[0] == "raw" and len(a) >= 2:
         return print(clean(one(a[1]).get("body_text") or ""))
