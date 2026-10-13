@@ -178,11 +178,24 @@ def mark(mid, status, note):
     print("#%s 已标记为 %s" % (mid, status))
 
 
+def refresh_page():
+    """重写给 Eric 看的来信箱页面（/Users/eric/SinanLab/来信箱.html）；失败不影响值班。"""
+    try:
+        import inbox_page
+        inbox_page.write()
+    except Exception as e:
+        print("（来信箱页面没更新成功：%s）" % str(e)[:200])
+
+
 def main():
     a = sys.argv[1:]
-    if not a or a[0] == "show": return show()
-    if a[0] == "reply" and len(a) >= 3: return reply(a[1], a[2], "--dry" in a)
-    if a[0] == "mark" and len(a) >= 4: return mark(a[1], a[2], a[3])
+    if not a or a[0] == "show":
+        show(); return refresh_page()
+    if a[0] == "reply" and len(a) >= 3:
+        reply(a[1], a[2], "--dry" in a)
+        return None if "--dry" in a else refresh_page()
+    if a[0] == "mark" and len(a) >= 4:
+        mark(a[1], a[2], a[3]); return refresh_page()
     if a[0] == "addkey" and len(a) >= 3: return addkey(a[1], a[2], a[3] if len(a) > 3 else None)
     if a[0] == "raw" and len(a) >= 2:
         return print(clean(one(a[1]).get("body_text") or ""))
