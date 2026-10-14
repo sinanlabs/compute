@@ -146,6 +146,22 @@ def head_fix(html, base, path_zh):
         html = re.sub(r'<script type="application/ld\+json">(.*?)</script>', rank_ld, html, flags=re.S)
         html = re.sub(r'(<meta (?:property="og:image"|name="twitter:image") content=")' + re.escape(base) + r'/img/og/rank/(?!en/)',
                       lambda m: m.group(1) + base + '/img/og/rank/en/', html)
+    else:
+        # 其他页面的结构化数据（FAQPage 问答、面包屑、Dataset 描述）也要英文：以前英文页的 FAQ 结构化数据还是中文（2026-10-14 补）
+        KEEP = {"@context", "@type", "@id", "url", "item", "contentUrl", "urlTemplate", "license", "encodingFormat", "email", "logo", "sameAs", "query-input", "target", "inLanguage", "dateModified"}
+        cjk = re.compile(r"[\u4e00-\u9fff]")
+        def walk(o, k=None):
+            if isinstance(o, dict): return {kk: (vv if kk in KEEP else walk(vv, kk)) for kk, vv in o.items()}
+            if isinstance(o, list): return [walk(x, k) for x in o]
+            if isinstance(o, str) and cjk.search(o):
+                t_ = tr_text(o)
+                return t_ if isinstance(t_, str) else o
+            return o
+        def any_ld(m):
+            try: graph = json.loads(m.group(1))
+            except Exception: return m.group(0)
+            return '<script type="application/ld+json">%s</script>' % json.dumps(walk(graph), ensure_ascii=False).replace("</", "<\\/")
+        html = re.sub(r'<script type="application/ld\+json">(.*?)</script>', any_ld, html, flags=re.S)
     alt = '<link rel="alternate" hreflang="zh-CN" href="%s%s"><link rel="alternate" hreflang="en" href="%s%s"><link rel="alternate" hreflang="x-default" href="%s%s">' % (base, path_zh, base, en_path, base, path_zh)
     html = html.replace("</head>", alt + "</head>", 1)
     html = html.replace("/assets/app.js?", "/assets/app.en.js?").replace('src="/assets/app.js"', 'src="/assets/app.en.js"')

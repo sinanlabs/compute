@@ -309,8 +309,8 @@ function drawHist(cv){var m=cv.dataset.m,v=cv.dataset.v;var note=document.getEle
 var _openD=openD;openD=function(eye,title,html){_openD(eye,title,html);var cv=document.querySelector("#dbody canvas.hist");if(cv)drawHist(cv);};
 document.addEventListener("click",function(e){var h=e.target.closest?e.target.closest(".help"):null;if(h){openD("这个标签什么意思",LABEL[h.dataset.help]||"",helpHtml(h.dataset.help));return;}});
 /* 搜索 */
-(function(){var q=document.getElementById("q");if(!q||!D.site_index)return;var dl=document.getElementById("qlist");D.site_index.forEach(function(s){var o=document.createElement("option");o.value=s.d;dl.appendChild(o);});(D.model_index||[]).forEach(function(m){var o=document.createElement("option");o.value=m.name;dl.appendChild(o);});
-q.addEventListener("keydown",function(e){if(e.key!=="Enter")return;var v=q.value.trim().toLowerCase();if(!v)return;var s=D.site_index.filter(function(x){return x.d.indexOf(v)>=0||(x.n||"").toLowerCase().indexOf(v)>=0;})[0];if(s){location.href="/s/"+s.d;return;}var m=(D.model_index||[]).filter(function(x){return x.name.toLowerCase().indexOf(v)>=0||x.id.indexOf(v)>=0;})[0];if(m){location.href="/#m="+m.id;if(location.pathname==="/"||location.pathname==="/index.html")location.reload();return;}openD("没找到",q.value,"<p>既不是收录的站，也不是有报价的模型。试试域名（如 toapis.cn）或模型名（如 DeepSeek V4）。</p>");});})();
+(function(){var q=document.getElementById("q");if(!q)return;var dl=document.getElementById("qlist");var filled=false;var SITE_INDEX_URL="/assets/site_index.json?d="+new Date().toISOString().slice(0,10);function fill(){if(filled||!D.site_index)return;filled=true;D.site_index.forEach(function(s){var o=document.createElement("option");o.value=s.d;dl.appendChild(o);});(D.model_index||[]).forEach(function(m){var o=document.createElement("option");o.value=m.name;dl.appendChild(o);});}function load(cb){if(D.site_index){fill();if(cb)cb();return;}fetch(SITE_INDEX_URL).then(function(r){return r.json();}).then(function(j){D.site_index=j;fill();if(cb)cb();}).catch(function(){D.site_index=[];if(cb)cb();});}q.addEventListener("focus",function(){load();});
+q.addEventListener("keydown",function(e){if(e.key!=="Enter")return;load(function(){var v=q.value.trim().toLowerCase();if(!v)return;var s=D.site_index.filter(function(x){return x.d.indexOf(v)>=0||(x.n||"").toLowerCase().indexOf(v)>=0;})[0];if(s){location.href="/s/"+s.d;return;}var m=(D.model_index||[]).filter(function(x){return x.name.toLowerCase().indexOf(v)>=0||x.id.indexOf(v)>=0;})[0];if(m){location.href="/#m="+m.id;if(location.pathname==="/"||location.pathname==="/index.html")location.reload();return;}openD("没找到",q.value,"<p>既不是收录的站，也不是有报价的模型。试试域名（如 toapis.cn）或模型名（如 DeepSeek V4）。</p>");});});})();
 /* ========== 登录 · 关注 · 公告 ========== */
 (function(){var box=document.getElementById("auth");if(!box)return;var ME=null;
 function loginUrl(watch){return "/login?return_to="+encodeURIComponent(location.pathname+location.search)+(watch?"&watch="+encodeURIComponent(watch):"");}
@@ -550,7 +550,7 @@ def shell(title, desc, path, body, active="", page="", crumbs=None, extra_head="
     footer = SUBSCRIBE_BOX + u"""<div class="brandband"><img src="/brand/sinanlab-lockup.png" srcset="/brand/sinanlab-lockup@2x.png 2x" width="480" height="123" alt="SinanLab · 司南实验室" loading="lazy"><span>方向清晰，判断有据。</span></div><footer class="ft"><div class="in"><span>© 2026 Sinan Lab · 司南实验室</span><a href="https://sinanlab.com/constitution">为什么可信</a><a href="https://sinanlab.com/disclosure">收入透明</a><a href="https://github.com/sinanlabs/compute" rel="noopener">GitHub</a><a href="https://sinanlab.com/privacy">隐私政策</a><a href="https://sinanlab.com/disclaimer">免责声明</a><a href="/method">方法论</a><a href="/method#data">数据下载</a><a href="https://sinanlab.com/">母站 sinanlab.com</a><a href="mailto:hello@sinanlab.com">hello@sinanlab.com</a><span style="margin-left:auto">每个数字可追溯来源 · 不收任何被测渠道的钱</span></div></footer>"""
     drawer = u"""<div class="scrim" id="scrim"></div><aside class="drawer" id="drawer" role="dialog" aria-modal="true"><button class="x" id="dx" aria-label="关闭">×</button><div class="eyebrow" id="deye" style="color:var(--p)">证据链</div><h3 id="dtitle"></h3><div id="dbody"></div></aside>"""
     rail = tpl(u"""<aside class="rail"><a class="brand" href="/"><span class="mark"></span><div><b>Sinan Compute</b><small>司南·算力 · SINAN LAB</small></div></a><div class="sect">测量</div>{{nav}}<div class="sect">底层</div>{{nav2}}<a class="robo" href="https://robo.sinanlab.com"><span class="gl"></span><b>Sinan Robo</b><p>开源具身模型的可审计索引</p></a></aside>""", nav=nav, nav2=nav2)
-    return head + '<div class="app">' + rail + '<div class="main"><div class="top">' + (search if page != "index" else search) + asof + '<div class="auth" id="auth"></div></div>' + (crumb if crumbs else "") + body + footer + '</div></div>' + drawer + '<script src="/assets/app.js?v=%s" defer></script><script>try{if(location.pathname==="/"&&/[?&]code=/.test(location.search)&&/[?&]state=/.test(location.search)){fetch("/api/x/callback"+location.search).then(function(r){return r.json();}).then(function(j){document.body.insertAdjacentHTML("afterbegin","<div style=\\"position:fixed;top:0;left:0;right:0;z-index:99;background:#07070B;color:#F5F5F7;padding:12px 18px;font-size:14px\\">"+(j.ok?"X 授权完成，令牌已保存。可以关掉这个页面。":"X 授权失败："+(j.error||"")+(j.detail?" "+JSON.stringify(j.detail).slice(0,160):""))+"</div>");history.replaceState(null,"","/");});}}catch(e){};try{var _l=document.documentElement.lang==="en"?"en":"zh";fetch("/api/hit?t=pv&l="+_l+"&p="+encodeURIComponent(location.pathname),{method:"POST"});if(!sessionStorage.getItem("sess")){sessionStorage.setItem("sess","1");fetch("/api/hit?t=sess&l="+_l,{method:"POST"});}var _pg=location.pathname.replace(/^\/en(?=\/|$)/,"")||"/";var _bp=_pg==="/"?"home":(_pg.indexOf("/rank")===0?"rank":_pg.indexOf("/report")===0?"report":_pg.indexOf("/price-index")===0?"index":"");if(_bp&&"IntersectionObserver" in window){var _els=_bp==="home"?document.querySelectorAll(".rkmini .card"):document.querySelectorAll("section.card");var _seen={},_tm={}; function _title(el){var h=el.querySelector("h4,h2.sec,h2");return h?h.textContent.trim().slice(0,40):"";} var _io=new IntersectionObserver(function(es){es.forEach(function(e){var k=_title(e.target);if(!k)return;if(e.intersectionRatio>=0.5){if(!_seen[k]&&!_tm[k])_tm[k]=setTimeout(function(){_seen[k]=1;fetch("/api/hit?t=board&k="+encodeURIComponent(_bp+":"+k),{method:"POST"});},1500);}else if(_tm[k]){clearTimeout(_tm[k]);_tm[k]=null;}});},{threshold:[0.5]}); _els.forEach(function(el){if(_title(el))_io.observe(el);}); document.addEventListener("click",function(ev){var a=ev.target.closest?ev.target.closest("a"):null;if(!a)return;var sec=a.closest(_bp==="home"?".rkmini .card":"section.card");if(!sec)return;var k=_title(sec);if(k)fetch("/api/hit?t=boardclick&k="+encodeURIComponent(_bp+":"+k),{method:"POST",keepalive:true});});}}catch(e){};try{if(document.referrer){var _h=new URL(document.referrer).hostname;if(!/(^|\\.)sinanlab\\.com$/.test(_h)&&!sessionStorage.getItem("ref"))fetch("/api/hit?r="+encodeURIComponent(_h)+"&p="+encodeURIComponent(location.pathname),{method:"POST"}).then(function(){sessionStorage.setItem("ref","1");});}}catch(e){}</script>%s</body></html>' % (GEN_DATE.replace("-", ""), scripts)
+    return head + '<div class="app">' + rail + '<div class="main"><div class="top">' + (search if page != "index" else search) + asof + '<div class="auth" id="auth"></div></div>' + (crumb if crumbs else "") + body + footer + '</div></div>' + drawer + '<script src="/assets/app.js?v=%s" defer></script><script>try{if(location.pathname==="/"&&/[?&]code=/.test(location.search)&&/[?&]state=/.test(location.search)){fetch("/api/x/callback"+location.search).then(function(r){return r.json();}).then(function(j){document.body.insertAdjacentHTML("afterbegin","<div style=\\"position:fixed;top:0;left:0;right:0;z-index:99;background:#07070B;color:#F5F5F7;padding:12px 18px;font-size:14px\\">"+(j.ok?"X 授权完成，令牌已保存。可以关掉这个页面。":"X 授权失败："+(j.error||"")+(j.detail?" "+JSON.stringify(j.detail).slice(0,160):""))+"</div>");history.replaceState(null,"","/");});}}catch(e){};try{var _l=document.documentElement.lang==="en"?"en":"zh";fetch("/api/hit?t=pv&l="+_l+"&p="+encodeURIComponent(location.pathname),{method:"POST"});if(!sessionStorage.getItem("sess")){sessionStorage.setItem("sess","1");fetch("/api/hit?t=sess&l="+_l,{method:"POST"});}var _pg=location.pathname.replace(/^\/en(?=\/|$)/,"")||"/";var _bp=_pg==="/"?"home":(_pg.indexOf("/rank")===0?"rank":_pg.indexOf("/report")===0?"report":_pg.indexOf("/price-index")===0?"index":"");if(_bp&&"IntersectionObserver" in window){var _els=_bp==="home"?document.querySelectorAll(".rkmini .card"):document.querySelectorAll("section.card");var _seen={},_tm={}; function _title(el){var h=el.querySelector("h4,h2.sec,h2");return h?h.textContent.trim().slice(0,40):"";} var _io=new IntersectionObserver(function(es){es.forEach(function(e){var k=_title(e.target);if(!k)return;if(e.intersectionRatio>=0.5){if(!_seen[k]&&!_tm[k])_tm[k]=setTimeout(function(){_seen[k]=1;fetch("/api/hit?t=board&k="+encodeURIComponent(_bp+":"+k),{method:"POST"});},1500);}else if(_tm[k]){clearTimeout(_tm[k]);_tm[k]=null;}});},{threshold:[0.5]}); _els.forEach(function(el){if(_title(el))_io.observe(el);}); document.addEventListener("click",function(ev){var a=ev.target.closest?ev.target.closest("a"):null;if(!a)return;var sec=a.closest(_bp==="home"?".rkmini .card":"section.card");if(!sec)return;var k=_title(sec);if(k)fetch("/api/hit?t=boardclick&k="+encodeURIComponent(_bp+":"+k),{method:"POST",keepalive:true});});}}catch(e){};try{var _h=document.referrer?new URL(document.referrer).hostname:"";var _own=/(^|\\.)sinanlab\\.com$/;if(!_h||_own.test(_h)){var _u=new URLSearchParams(location.search).get("utm_source")||"";_h=_u.toLowerCase().replace(/[^a-z0-9.\\-]/g,"").slice(0,60);}if(_h&&!_own.test(_h)&&!sessionStorage.getItem("ref"))fetch("/api/hit?r="+encodeURIComponent(_h)+"&p="+encodeURIComponent(location.pathname),{method:"POST"}).then(function(){sessionStorage.setItem("ref","1");});}catch(e){}</script>%s</body></html>' % (GEN_DATE.replace("-", ""), scripts)
 
 # ------------------------------------------------------------------ 首页
 def gauge_html(ratio, band):
@@ -630,7 +630,7 @@ def build_index():
         for r in m["rows"]: sids.update(r["sids"])
     light = {"models": dml, "fx": D["fx"], "snaps": {k: v for k, v in D["snaps"].items() if int(k) in sids}, "label_help": D["label_help"], "default_model": default,
              "probe_help": D.get("probe_help", ""), "ledger": "/assets/ledger.json?v=%s" % GEN_DATE.replace("-", ""),
-             "site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}
+             "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}
     body = tpl(u"""
 <section class="hero rise" style="--i:1"><canvas class="stars" id="stars"></canvas><canvas id="gl"></canvas><div class="scrim"></div>
 <div class="txt"><div class="eyebrow">实付比率 · 司南榜每周出刊 · 一致性检测 · 用你的 Key 自测</div><h1>看清算力，<br>才好买算力。</h1>
@@ -661,7 +661,9 @@ def build_index():
         n=st["confirmed"], quotes=format(st["quotes"], ","), quotes_raw=st["quotes"], kpis=kpi_html, week=esc(RK.get("week", "")), rkmini=rkmini, det=det, pistrip=pistrip, pledge=PLEDGE, mlinks="".join('<a href="/m/%s">%s</a>' % (esc(m["id"]), esc(m["name"])) for m in D["models"]), chips="".join(chips), rows=ssr_ledger_rows(dm), disc=DISCLAIMER, tiles=tiles_html, feed=feed_html, dmname=esc(dm["name"]), data=jsdata(light))
     desc = "司南实验室出品。%d 个中转站的模型 API 实付价对着官方与公开市场价逐条算成比率，%s 条报价，每个数字可追溯抓取快照。不收任何被测渠道的钱。" % (st["confirmed"], format(st["quotes"], ","))
     ld = [{"@context": "https://schema.org", "@type": "WebSite", "name": "Sinan Compute", "alternateName": "司南·算力", "url": BASE + "/", "inLanguage": "zh-CN",
-           "publisher": {"@type": "Organization", "name": "Sinan Lab", "alternateName": "司南实验室", "url": "https://sinanlab.com", "logo": BASE + "/brand/sinanlab-mark.png", "email": "hello@sinanlab.com"},
+           "publisher": {"@type": "Organization", "name": "Sinan Lab", "alternateName": "司南实验室", "url": "https://sinanlab.com", "logo": BASE + "/brand/sinanlab-mark.png", "email": "hello@sinanlab.com",
+                         # 同一机构在各平台的身份互相指认（AI 交叉核对品牌信息时用）
+                         "sameAs": ["https://github.com/sinanlabs", "https://bsky.app/profile/sinanlab.bsky.social", "https://x.com/LIUEric591082", "https://robo.sinanlab.com"]},
            "potentialAction": {"@type": "SearchAction", "target": {"@type": "EntryPoint", "urlTemplate": BASE + "/sites#q={search_term_string}"}, "query-input": "required name=search_term_string"}},
           {"@context": "https://schema.org", "@type": "Dataset", "name": "Sinan Compute 中转站实付价数据集", "description": desc, "url": BASE + "/method#data", "license": "https://creativecommons.org/licenses/by/4.0/",
            "creator": {"@type": "Organization", "name": "Sinan Lab"}, "distribution": [{"@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": BASE + "/data_v2.json"}, {"@type": "DataDownload", "encodingFormat": "application/json", "contentUrl": BASE + "/media.json"}], "dateModified": GEN_DATE}]
@@ -714,7 +716,11 @@ def build_model(m):
              ("实付中位数", pct(med) if med is not None else "—", "%d 家可比中转站相对参考价" % len(live), ""),
              ("价格说得通 / 低于成本下限", "%d / %d" % (len(ok), len(un)), "低于成本下限不等于有问题，本站不推测成因", "")]
     facts_html = "".join('<div class="card fact"><div class="k">%s</div><div class="v%s">%s</div><div class="n">%s</div></div>' % (k, (" t" if t else ""), esc(v), esc(n)) for k, v, n, t in facts)
-    faq = [("%s 的官方或公开参考价是多少？" % m["name"], "本站取官方定价页与公开市场（如 OpenRouter）中的最低价作参考：%s，每百万输出 token $%s，输入 $%s。人民币标价按当日汇率折算，快照可点开。" % (f["vendor"], fmt(f["out"]), fmt(f["in"]))),
+    # 一句话结论（先给答案，带日期与数字；搜索摘要和 AI 回答最常截取的就是这一句）
+    concl = "截至 %s，%s 在 %d 家中转站有报价，实付中位是参考价的 %s。" % (GEN_DATE, m["name"], m["n_relay"], pct(med) if med is not None else "—")
+    if best: concl += "价格说得通的 %d 家里，实付最低 $%s / 百万输出（%s，参考价的 %s）。" % (len(ok), fmt(best["out"]), best["vendor"], pct(best["ratio"]))
+    faq = [("%s 在中转站实际多少钱？" % m["name"], concl + "参考价取 %s 的 $%s / 百万输出。" % (f["vendor"], fmt(f["out"]))),
+           ("%s 的官方或公开参考价是多少？" % m["name"], "本站取官方定价页与公开市场（如 OpenRouter）中的最低价作参考：%s，每百万输出 token $%s，输入 $%s。人民币标价按当日汇率折算，快照可点开。" % (f["vendor"], fmt(f["out"]), fmt(f["in"]))),
            ("中转站的 %s 比官方便宜很多，可信吗？" % m["name"], "本站只做算术：实付 ÷ 参考价。低于 15%% 的报价在无补贴假设下低于该模型的成本下限，我们标为“数学上不可持续”，但不推测成因、不下结论；是否下单由你判断。目前 %d 家报价说得通，%d 家低于成本下限。" % (len(ok), len(un))),
            ("中转站的实付价是怎么算出来的？", "面板名义价（倍率 × $2/百万）× 该站充值比例（每 $1 名义额度收多少元）÷ 当日 USD/CNY 汇率。三个数都在证据抽屏里，能对到抓取快照。"),
            ("怎么核实某个站给的是不是真的 %s？" % m["name"], "价格说得通只说明价格不反常。真伪要用你在该站的 Key 跑协议一致性检测（本站探针脚本或开源的 Veridrop），本站不替你判断。"),
@@ -725,17 +731,17 @@ def build_model(m):
     def table(rows_, caption):
         if not rows_: return ""
         return '<section class="card rise" style="margin-top:16px"><div class="pad" style="padding-bottom:6px"><h2 class="sec">%s</h2></div><div class="tablewrap"><table><thead><tr><th>中转站</th><th class="num">输出 $/百万</th><th class="num">输入 $/百万</th><th style="padding-left:18px">实付是参考价的几成</th><th>怎么看</th><th>24h 可达</th></tr></thead><tbody>%s</tbody></table></div></section>' % (caption, ssr_rows_all(m, rows_))
-    body = tpl(u"""<div class="mhead rise" style="--i:0"><div><div class="eyebrow" style="color:var(--p);opacity:1">{{vendor}} · 模型页</div><h1>{{name}} 的中转站实付价</h1><p class="lead">{{n}} 家中转站在卖，参考价取 {{fv}} 的 ${{fo}} / 百万输出。中转价已按人民币充值通道折成实付；每个数字点进首页账本可看抓取快照。</p></div>
+    body = tpl(u"""<div class="mhead rise" style="--i:0"><div><div class="eyebrow" style="color:var(--p);opacity:1">{{vendor}} · 模型页</div><h1>{{name}} 的中转站实付价</h1><p class="lead"><b>{{concl}}</b></p><p class="lead">{{n}} 家中转站在卖，参考价取 {{fv}} 的 ${{fo}} / 百万输出。中转价已按人民币充值通道折成实付；每个数字点进首页账本可看抓取快照。</p></div>
 <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap"><button class="btn o watch" data-kind="model" data-key="{{id}}">关注这个模型</button><a class="btn p" href="/#m={{id}}">在账本里交互查看 →</a></div></div>
 <div class="facts rise" style="--i:1;grid-template-columns:repeat(4,1fr)">{{facts}}</div>
 {{t_main}}{{t_un}}{{t_far}}{{t_held}}
 <section class="card pad rise" style="margin-top:16px;--i:3"><h2 class="sec">常见问题</h2>{{faq}}<div class="disc">{{disc}}</div></section>
 <div class="mlinks card" style="margin-top:16px;border-top:1px solid var(--hair)"><span class="vn">同厂商其他模型</span>{{rel}}<a href="/" style="margin-left:auto">全部 {{nm}} 个模型 →</a></div>
 <script id="d" type="application/json">{{data}}</script>""",
-        vendor=esc(vendor_name), name=esc(m["name"]), n=m["n_relay"], fv=esc(f["vendor"]), fo=fmt(f["out"]), id=esc(m["id"]), facts=facts_html,
+        concl=esc(concl), vendor=esc(vendor_name), name=esc(m["name"]), n=m["n_relay"], fv=esc(f["vendor"]), fo=fmt(f["out"]), id=esc(m["id"]), facts=facts_html,
         t_main=table(main, "价格说得通的 %d 家（含高于公开价）" % len(main)), t_un=table(un, "低于成本下限的 %d 家 · 本站不推测成因" % len(un)), t_far=table(far, "显著高于公开价的 %d 家" % len(far)), t_held=table(held, "计价方式待核的 %d 家 · 只列名义换算" % len(held)),
         faq=faq_html, disc=DISCLAIMER, rel=rel_html, nm=len(D["models"]),
-        data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": x["id"], "name": x["name"]} for x in D["models"]]}))
+        data=jsdata({"model_index": [{"id": x["id"], "name": x["name"]} for x in D["models"]]}))
     ld = [{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faq]},
           {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "模型账本", "item": BASE + "/"}, {"@type": "ListItem", "position": 2, "name": m["name"], "item": BASE + "/m/" + m["id"]}]}]
     og = "/img/og/%s.png" % m["id"] if os.path.exists(os.path.join(HERE, "img", "og", m["id"] + ".png")) else "/img/og.png"
@@ -757,13 +763,13 @@ def build_sites():
                        ('<span style="color:var(--good)">%d</span> / <span style="color:var(--crit)">%d</span>' % (s["ok_count"], s["un_count"])) if s["n_models"] and code != "held" else "—", up, ("%dms" % av["ttfb_p50"]) if av.get("ttfb_p50") else "—", esc(s["first_seen"])))
     filters = "".join('<button class="fchip" data-f="%s" aria-pressed="%s">%s</button>' % (k, "true" if k == "all" else "false", lbl) for k, lbl in
                       [("all", "全部"), ("near", "与公开价接近 %d" % C["near"]), ("cheap", "低于批量折扣 %d" % C["cheap"]), ("ultra", "超低价 %d" % C["ultra"]), ("high", "高于公开价 %d" % C["high"]), ("held", "计价方式待核 %d" % C["held"])])
-    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">中转站总表</h1><p class="lead">{{n}} 个经面板指纹确认的中转站。画像 = 该站所有可比模型的实付相对公开价的中位数；{{nq}} 个站定价接口未公开，暂无报价。</p></div>
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">中转站总表</h1><p class="lead">{{n}} 个经面板指纹确认的中转站。画像 = 该站主流模型的实付相对公开价的中位数（主流不足 3 个时用全部可比模型）；{{nq}} 个站定价接口未公开，暂无报价。</p></div>
 <section class="card rise" style="--i:1"><div class="filters">{{filters}}<button class="fchip" id="tg" style="margin-left:auto" aria-pressed="false">也显示无报价的站</button></div>
 <div class="tablewrap"><table id="sitetbl"><thead><tr><th>站</th><th>价格画像</th><th class="num">在卖模型</th><th class="num">说得通 / 低于下限</th><th>24h 可达</th><th class="num">延迟 p50</th><th>首次收录</th></tr></thead><tbody>{{rows}}</tbody></table></div>
 <div class="tfoot"><span id="sitefoot"></span><span>画像口径与模型表一致：&lt;15% 超低价 · 15–40% 低于批量折扣 · 40–125% 与公开价接近 · ≥125% 高于公开价</span></div></section>
 <script id="d" type="application/json">{{data}}</script>""",
         n=st["confirmed"], nq=st["confirmed"] - st["with_quotes"], filters=filters, rows="".join(rows),
-        data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+        data=jsdata({"model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
     submit_card = u"""<section class="card pad rise" id="submit" style="--i:3;margin-top:18px"><h2 class="sec">提交一个中转站</h2><p class="lead">你知道的站还没在总表里？填域名，我们当晚做一次面板确认，命中就收录。只收域名，不收任何推广参数；收录与否只看能不能确认它是模型 API 中转站，与谁提交无关。</p>
 <div id="sub-gate" class="callout" style="margin-top:12px">正在读取登录状态…</div>
 <div id="sub-form" style="display:none;margin-top:12px"><div style="display:flex;gap:10px;flex-wrap:wrap"><input id="sub-dom" placeholder="例如 toapis.cn" style="flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--hair-2);border-radius:10px;font:inherit;font-size:14px;background:var(--card)"><button class="btn p" id="sub-go">提交</button></div><p class="sub" id="sub-msg" style="margin-top:8px"></p><div id="sub-mine" class="sub" style="margin-top:6px"></div></div>
@@ -864,22 +870,51 @@ def build_site(s):
     tbl = ('<section class="card rise" style="margin-top:16px;--i:3"><div class="pad" style="padding-bottom:6px"><h2 class="sec">它卖的模型与实付价</h2><p class="lead">%s</p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">实付</th><th class="num">参考价</th><th>实付是参考价的几成</th><th>怎么看</th><th class="num">证据</th></tr></thead><tbody>%s</tbody></table></div><div class="tfoot"><span>%s</span></div></section>'
            % ("计价方式待核：只列名义报价换算的实付，不出比率、不分档。" if held else "实付 = 站方标价 × 充值比例 ÷ 汇率（%s），即真金白银每百万 token 花多少美元；站方标价是面板上显示的站内额度价，可在站方页面逐条核对（站方页面默认可能展示会员分组价，本站取 %s 分组）。参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。" % (
                 ("%s 元 / $1 · 汇率 %.2f" % (fmt((s.get("facts") or {}).get("price")), D["fx"]["rate"])) if (s.get("facts") or {}).get("price") else "按面板充值比例", _safe_snip((s.get("pricing_basis") or {}).get("group") or "default") or "站方默认"), "".join(rows), DISCLAIMER)) if s["n_models"] else ""   # 分组名是站方原文，含禁用词时不转载
-    body = tpl(u"""<div class="sitehead rise" style="--i:0"><div><h1>{{domain}}<span class="nm">{{name}}</span></h1></div><div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">{{pic}}<button class="btn o watch" data-kind="site" data-key="{{domain}}">关注这个站</button><a class="btn p" href="/go/{{domain}}" target="_blank" rel="noopener nofollow">前往站点 ↗</a></div></div>
+    # ---- 一句话结论 + 常见问题（2026-10-14 起：先给结论、只摆测量；同一组问答写进 FAQPage 结构化数据，给搜索引擎和 AI 引用）----
+    dom = s["domain"]; reg = (s.get("register") or {}).get("state")
+    reg_s = {"open": "新用户注册开放。", "closed": "新用户注册已关闭。"}.get(reg, "新用户注册状态未能判定。")
+    up_s = ("近 24 小时可达 %.0f%%。" % av["uptime"]) if av.get("uptime") is not None else "近 24 小时没有可达数据。"
+    priced = [x for x in s["models"] if x.get("out") is not None]
+    core_order = [x["id"] for x in D["models"]]
+    ex = next((x for mid_ in core_order for x in priced if x["model"] == mid_ and x.get("ratio") is not None), None)
+    sum_parts = ["截至 %s，%s 有 %d 个模型有报价。" % (GEN_DATE, dom, s["n_models"]) if s["n_models"] else "截至 %s，本站没有 %s 的报价（定价接口未公开、需要登录或一周以上读不到）。" % (GEN_DATE, dom)]
+    if s.get("median") is not None and not held:
+        sum_parts.append(("主流 %d 个模型的实付中位是参考价的 %s。" % (s.get("n_core") or 0, pct(s["median"]))) if s.get("median_basis") == "core" else ("%d 个可比模型的实付中位是参考价的 %s。" % (s.get("n_ratio") or 0, pct(s["median"]))))
+    sum_parts += [up_s, reg_s]
+    summary_html = '<p class="lead rise" style="--i:0.5;margin:4px 0 14px">%s</p>' % "".join("<span>%s</span>" % esc(x) for x in sum_parts)
+    qa = []
+    if ex:
+        qa.append(("%s 卖哪些模型、实际多少钱？" % dom, "截至 %s，%s 有 %d 个模型有报价。以 %s 为例：站方标价每百万输出 $%s（站内额度），按 %s 的充值比例和 %.2f 的汇率折算，实付 $%s，是参考价的 %s。" % (
+            GEN_DATE, dom, s["n_models"], ex["name"], fmt(ex.get("nom_out")) if ex.get("nom_out") is not None else "—", price, D["fx"]["rate"], fmt(ex["out"]), pct(ex["ratio"]))))
+    elif priced:
+        qa.append(("%s 卖哪些模型、实际多少钱？" % dom, "截至 %s，%s 有 %d 个模型有报价，本页表格逐个列出站方标价与折算后的实付。" % (GEN_DATE, dom, s["n_models"])))
+    else:
+        qa.append(("%s 卖哪些模型、实际多少钱？" % dom, "本站暂时没有 %s 的报价：它的定价接口未公开、需要登录，或一周以上读不到。可达性与注册状态仍在更新。" % dom))
+    if f.get("price") is not None:
+        qa.append(("%s 的实付价是怎么算的？" % dom, "实付 = 站方标价 × 充值比例 ÷ 汇率。%s 的面板显示每 $1 额度收 %s 元，本站取 %s 分组；站方页面默认展示的可能是会员分组价。" % (dom, fmt(f["price"]), pb_group)))
+    if av.get("uptime") is not None:
+        qa.append(("%s 现在能连上吗？" % dom, "过去 24 小时本站探测 %d 次，可达 %.0f%%%s。可达率只说明能不能连上，不代表模型质量。" % (av.get("n") or 0, av["uptime"], ("，首字节中位 %d 毫秒" % av["ttfb_p50"]) if av.get("ttfb_p50") else "")))
+    qa.append(("%s 还能注册新账号吗？" % dom, {"open": "能。面板的注册接口显示开放（可能需要邮箱验证或人机验证）。", "closed": "不能。站方已关闭新用户注册，本站榜单不收录关闭注册的站。"}.get(reg, "未能判定：该站不是标准面板，或没有公开注册接口，请到站上确认。")))
+    qa.append(("这些数据多久更新、怎么核对？", "面板价每天抓取一次，可达性每小时探测一次；本页每个价格都能在证据抽屉里对到抓取快照。本站不收被测渠道的钱，不给推荐。"))
+    faq_sec = '<section class="card pad rise" style="margin-top:16px;--i:3.7"><h2 class="sec">常见问题</h2><dl class="faq">%s</dl></section>' % "".join('<dt>%s</dt><dd>%s</dd>' % (esc(q), esc(a)) for q, a in qa)
+    site_ld = [{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in qa]},
+               {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "中转站总表", "item": BASE + "/sites"}, {"@type": "ListItem", "position": 2, "name": dom, "item": BASE + "/s/" + dom}]}]
+    body = tpl(u"""<div class="sitehead rise" style="--i:0"><div><h1>{{domain}}<span class="nm">{{name}}</span></h1>{{summary}}</div><div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">{{pic}}<button class="btn o watch" data-kind="site" data-key="{{domain}}">关注这个站</button><a class="btn p" href="/go/{{domain}}" target="_blank" rel="noopener nofollow">前往站点 ↗</a></div></div>
 {{notice}}<div class="facts rise" style="--i:2">{{facts}}</div><div class="repfoot rise" style="--i:2.2;margin-top:10px;padding-top:0;border:0"><button class="rep" data-kind="site" data-key="{{domain}}" data-ctx="站点 {{domain}}">这个站的信息有误？报错</button>{{planbtn}}<span class="sub">报错需登录；核实后记入修正日志并署名</span></div>{{noq}}{{tbl}}
 {{mlinks}}<div class="card pad rise" style="margin-top:16px;--i:3.8"><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><img src="/badge/{{domain}}.svg" alt="实测徽章" width="340" height="64" style="border-radius:14px"><div style="flex:1;min-width:260px"><h2 class="sec" style="font-size:15px">站长可嵌入的实测徽章</h2><p class="lead" style="margin-top:4px">只显示测量值：24h 可达率、价格画像、日期，每天自动更新，点击回到本页。不含任何评价。</p><code style="display:block;margin-top:8px;font-size:11.5px;word-break:break-all;background:var(--ground);padding:8px 10px;border-radius:8px">&lt;a href="{{base}}/s/{{domain}}"&gt;&lt;img src="{{base}}/badge/{{domain}}.svg" alt="Sinan Compute 实测" width="340" height="64"&gt;&lt;/a&gt;</code></div></div></div>
-{{rankbadge}}<div class="callout rise" style="margin-top:16px;--i:4"><b>想核实它给的是不是真模型？</b> 用你在该站的 Key 跑开源的协议一致性检测（本站探针脚本或 Veridrop）。本站只给价格与可达性的测量，不替你判断。出站链接不带任何推广参数，只记点击数。</div>
+{{faqsec}}{{rankbadge}}<div class="callout rise" style="margin-top:16px;--i:4"><b>想核实它给的是不是真模型？</b> 用你在该站的 Key 跑开源的协议一致性检测（本站探针脚本或 Veridrop）。本站只给价格与可达性的测量，不替你判断。出站链接不带任何推广参数，只记点击数。</div>
 <script id="d" type="application/json">{{data}}</script>""",
         mlinks=('<div class="mlinks card rise" style="margin-top:16px;--i:3.5"><span class="vn">它在卖的主推模型</span>%s</div>' % "".join('<a href="/m/%s">%s</a>' % (esc(mm["id"]), esc(mm["name"])) for mm in D["models"] if any(r["vendor"] == s["domain"] for r in mm["rows"]))) if any(any(r["vendor"] == s["domain"] for r in mm["rows"]) for mm in D["models"]) else "",
         rankbadge=('<div class="card pad rise" style="margin-top:16px;--i:3.9"><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><img src="/badge/rank/%s/%s.svg" alt="司南榜期号徽章" width="340" height="64" style="border-radius:14px"><div style="flex:1;min-width:260px"><h2 class="sec" style="font-size:15px">本期上榜：%s · %s #%02d</h2><p class="lead" style="margin-top:4px">按测量值排序的名次，带期号，永久有效；站长可嵌入，点击回到当期榜单。不构成推荐。</p><code style="display:block;margin-top:8px;font-size:11.5px;word-break:break-all;background:var(--ground);padding:8px 10px;border-radius:8px">&lt;a href="%s/rank/%s"&gt;&lt;img src="%s/badge/rank/%s/%s.svg" alt="司南榜 %s %s #%02d" width="340" height="64"&gt;&lt;/a&gt;</code></div></div></div>' % (
             esc(s["rank_badge"]["week"]), esc(s["domain"]), esc(s["rank_badge"]["week"]), esc(s["rank_badge"]["board_name"]), s["rank_badge"]["pos"], BASE, esc(s["rank_badge"]["week"]), BASE, esc(s["rank_badge"]["week"]), esc(s["domain"]), esc(s["rank_badge"]["week"]), esc(s["rank_badge"]["board_name"]), s["rank_badge"]["pos"])) if s.get("rank_badge") else "",
-        base=BASE, domain=esc(s["domain"]), planbtn=(('<button class="rep" data-kind="plan" data-key="%s" data-ctx="套餐价 %s" data-tpl="套餐名：  · 价格：  元 / 月  · 每日/每周额度：  · 购买日期：  ">我买过这个站的套餐，报个价</button>' % (esc(s["domain"]), esc(s["domain"]))) if s.get("panel") == "sub2api" else ""), name=esc(s.get("name") or ""), pic=('<span class="pill %s">%s</span>' % (cl["code"], esc(cl["name"]))) if cl else '<span class="pill none">暂无报价</span>', notice=notice, facts=facts_html, noq=noq, tbl=tbl,
+        summary=summary_html, faqsec=faq_sec, base=BASE, domain=esc(s["domain"]), planbtn=(('<button class="rep" data-kind="plan" data-key="%s" data-ctx="套餐价 %s" data-tpl="套餐名：  · 价格：  元 / 月  · 每日/每周额度：  · 购买日期：  ">我买过这个站的套餐，报个价</button>' % (esc(s["domain"]), esc(s["domain"]))) if s.get("panel") == "sub2api" else ""), name=esc(s.get("name") or ""), pic=('<span class="pill %s">%s</span>' % (cl["code"], esc(cl["name"]))) if cl else '<span class="pill none">暂无报价</span>', notice=notice, facts=facts_html, noq=noq, tbl=tbl,
         data=jsdata({"site": {"domain": s["domain"], "held": held, "models": [{"name": r["name"], "raw": r["raw"], "out": r["out"], "call": r["call"], "sec": r["sec"], "ratio": r["ratio"], "band": r["band"], "floor_out": r.get("floor_out"), "floor_vendor": r.get("floor_vendor"), "sids": r["sids"], "probe": r.get("probe")} for r in s["models"]]},
                      "snaps": {k: v for k, v in D["snaps"].items() if any(int(k) in r["sids"] for r in s["models"])}, "label_help": D["label_help"], "fx": D["fx"],
-                     "site_index": [{"d": x["domain"], "n": x["name"]} for x in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+                     "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
     title = "%s%s · Sinan Compute" % (s["domain"], (" · " + s["name"]) if s.get("name") else "")
     desc = "%s%s：%s，在卖 %d 个模型%s，24h 可达 %s。中转站实付比价，每个数字带抓取快照。" % (s["domain"], ("（%s）" % s["name"]) if s.get("name") else "", cl["name"] if cl else "定价接口未公开", s["n_models"],
            ("（说得通 %d，低于成本下限 %d）" % (s["ok_count"], s["un_count"])) if (s["n_models"] and not held) else "", ("%.0f%%" % av["uptime"]) if av.get("uptime") is not None else "未探测")
-    return shell(title, desc, "/s/" + s["domain"], body, active="sites", page="site", crumbs=[("中转站总表", "/sites"), (s["domain"],)])
+    return shell(title, desc, "/s/" + s["domain"], body, active="sites", page="site", crumbs=[("中转站总表", "/sites"), (s["domain"],)], jsonld=site_ld)
 
 # ------------------------------------------------------------------ 媒体页
 def build_media():
@@ -895,7 +930,7 @@ def build_media():
 <div class="tfoot" style="border:0;padding-left:0"><span>{{disc}}</span><span>原始数据：<a href="/media.json" style="color:var(--p-ink)">media.json</a></span></div>
 <script id="d" type="application/json">{{data}}</script>""",
         asof=MEDIA["generated_at"][:16].replace("T", " "), vs=st.get("video_sites", 0), vr=st.get("video_rows", 0), **{"is": st.get("image_sites", 0)}, ir=st.get("image_rows", 0), ssr=ssr, disc=DISCLAIMER,
-        data=jsdata({"fx": MEDIA["fx"], "snaps": {}, "label_help": D["label_help"], "site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+        data=jsdata({"fx": MEDIA["fx"], "snaps": {}, "label_help": D["label_help"], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
     return shell("图像 · 视频账本 · Sinan Compute", "Seedance、Veo、Kling、Hailuo 等图像与视频模型在中转站的按秒 / 按张实付价，与官方价放一起比。", "/media", body, active="media", page="media", crumbs=[("图像 · 视频",)])
 
 # ------------------------------------------------------------------ 方法论
@@ -909,11 +944,11 @@ def build_method():
 <li><a href="/media.json">media.json</a> —— 图像 / 视频报价与官方参考</li>
 <li><a href="/go_links.json">go_links.json</a> —— 出站链接表（含推广参数字段，当前全部为空）</li></ul>
 <p>快照正文按 sha256 存对象存储，不公开下载；需要核对某条快照请写邮件到 hello@sinanlab.com 并附快照编号。</p>""" % (D["generated_at"][:16].replace("T", " "), st["confirmed"])
-    body = '<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">口径与定义</h1><p class="lead">每个数字是什么意思、怎么换算、我们不下哪些结论，以及可以拿走的公开数据。</p></div><section class="card pad prose rise" style="--i:1">%s%s</section><script id="d" type="application/json">%s</script>' % (html_, data, jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+    body = '<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">口径与定义</h1><p class="lead">每个数字是什么意思、怎么换算、我们不下哪些结论，以及可以拿走的公开数据。</p></div><section class="card pad prose rise" style="--i:1">%s%s</section><script id="d" type="application/json">%s</script>' % (html_, data, jsdata({"model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
     return shell("口径与定义 · Sinan Compute", "Sinan Compute 的数据来源、实付换算、成本下限分档、措辞规则与原始数据下载。", "/method", body, active="method", page="method", crumbs=[("口径与定义",)])
 
 def build_me():
-    body = '<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">我的</h1><p class="lead">关注的站和模型、提醒设置。数据本身对所有人公开，这里只放你自己的东西。</p></div><div class="grid2" style="margin-top:0"><section class="card pad melist rise" id="melist" style="--i:1"><div class="callout">正在读取…</div></section><section class="card pad rise" style="--i:2"><h2 class="sec">提醒</h2><p class="lead">关注的站或模型价格变了、可达率掉了、探针结果变了，发邮件告诉你；每周一封周报。只发有变化的，随时关掉。</p><div id="alerts" class="callout" style="margin-top:12px">正在读取…</div><div class="callout" style="margin-top:12px">我们不存密码；邮箱只用于提醒，查找用哈希；不放追踪脚本。<a href="https://sinanlab.com/privacy" style="color:var(--p-ink)">隐私政策</a></div></section></div><script id="d" type="application/json">%s</script>' % jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]})
+    body = '<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">我的</h1><p class="lead">关注的站和模型、提醒设置。数据本身对所有人公开，这里只放你自己的东西。</p></div><div class="grid2" style="margin-top:0"><section class="card pad melist rise" id="melist" style="--i:1"><div class="callout">正在读取…</div></section><section class="card pad rise" style="--i:2"><h2 class="sec">提醒</h2><p class="lead">关注的站或模型价格变了、可达率掉了、探针结果变了，发邮件告诉你；每周一封周报。只发有变化的，随时关掉。</p><div id="alerts" class="callout" style="margin-top:12px">正在读取…</div><div class="callout" style="margin-top:12px">我们不存密码；邮箱只用于提醒，查找用哈希；不放追踪脚本。<a href="https://sinanlab.com/privacy" style="color:var(--p-ink)">隐私政策</a></div></section></div><script id="d" type="application/json">%s</script>' % jsdata({"model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]})
     return shell("我的 · Sinan Compute", "我的关注与提醒设置。", "/me", body, page="me", crumbs=[("我的",)], extra_head='<meta name="robots" content="noindex">')
 
 def build_feed():
@@ -927,7 +962,33 @@ def build_feed():
         items.insert(0, '<item><title>%s 新收录 %d 个中转站</title><link>%s/sites</link><guid isPermaLink="false">new-%s</guid><description>%s</description></item>' % (GEN_DATE, len(D["new_sites"]), BASE, GEN_DATE, _h.escape("、".join(D["new_sites"][:20]))))
     return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sinan Compute · 中转站价格变动</title><link>%s/</link><description>模型 API 中转站实付价的变动记录，每日更新；只陈述测量，不含推荐。</description><language>zh-CN</language>%s</channel></rss>' % (BASE, "".join(items))
 
+def _llms_today():
+    """llms.txt 里的「今日关键数字」与「常见问题去哪看」：给 AI 一个带日期、可直接引用的摘要（2026-10-14 起）。"""
+    out = ["", "## 今日关键数字（%s，北京时间每日更新）" % GEN_DATE]
+    L = (PI or {}).get("latest") or {}
+    if L.get("all"):
+        out.append("- 司南 Token 价格指数：%s 点（%s = 100），全市场实付中位约为官方价的 %s，中位每百万输出 token $%s（约 ¥%s）。来源 %s/price-index" % (
+            L["all"].get("level"), (PI or {}).get("base_date"), pct(L["all"]["ratio"]), L["all"]["price_usd"], L["all"]["price_cny"], BASE))
+    st = D["stats"]
+    out.append("- 收录 %d 个中转站，其中 %d 个有公开报价，共 %s 条实付报价；24 小时可达 %d 个。" % (st["confirmed"], st["with_quotes"], format(st["quotes"], ","), st.get("reachable") or 0))
+    for m in [x for x in D["models"] if x.get("is_latest")][:8]:
+        live = [r for r in m["rows"] if not r["held"]]
+        if not live: continue
+        med = sorted(r["ratio"] for r in live)[len(live) // 2]
+        out.append("- %s：%d 个中转站有报价，实付中位为参考价（%s $%s / 百万输出）的 %s。%s/m/%s" % (m["name"], m["n_relay"], m["floor"]["vendor"], fmt(m["floor"]["out"]), pct(med), BASE, m["id"]))
+    out += ["", "## 常见问题去哪看",
+            "- 「某个模型的 API 在中转站多少钱」：%s/m/<model_id>（每页第一句是带日期的结论）" % BASE,
+            "- 「某个中转站怎么样、实际多少钱、能不能注册」：%s/s/<域名>（第一句是结论，页尾有问答）" % BASE,
+            "- 「中转站整体价格水平与走势」：%s/price-index 与月报 %s/report" % (BASE, BASE),
+            "- 「图像 / 视频模型（Seedance、Veo、Nano Banana 等）多少钱」：%s/media" % BASE,
+            "- 「这些数字怎么算的、错了怎么办」：%s/method 与修正日志 %s/corrections" % (BASE, BASE)]
+    return "\n".join(out) + "\n"
+
 def build_llms():
+    h = _llms_head(); i = h.find("\n## 口径")
+    return h[:i] + _llms_today() + h[i:]
+
+def _llms_head():
     st = D["stats"]
     return u"""# Sinan Compute（司南·算力）
 
@@ -1002,7 +1063,7 @@ def build_family(f, mod):
         mod="视频" if mod == "video" else "图像", name=esc(name), desc=esc(desc), facts=facts_html, t1=table(rec, "主推版本 · %d 条" % len(rec)), t2=table(old, "旧版本 · %d 条" % len(old)), t3=table(held, "计价方式待核 · %d 条" % len(held)),
         faq="".join('<dt>%s</dt><dd>%s</dd>' % (esc(q), esc(a)) for q, a in faq), disc=DISCLAIMER,
         rel="".join('<a href="/media/%s">%s</a>' % (esc(x["family"]), esc(x.get("name") or x["family"])) for x in MEDIA[mod] if x["family"] != f["family"]),
-        data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": x["id"], "name": x["name"]} for x in D["models"]]}))
+        data=jsdata({"model_index": [{"id": x["id"], "name": x["name"]} for x in D["models"]]}))
     ld = [{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faq]},
           {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "图像 · 视频", "item": BASE + "/media"}, {"@type": "ListItem", "position": 2, "name": name, "item": BASE + "/media/" + f["family"]}]}]
     return shell(title, desc, "/media/" + f["family"], body, active="media", page="family", crumbs=[("图像 · 视频", "/media"), (name,)], jsonld=ld)
@@ -1044,7 +1105,7 @@ def build_weekly(W, all_weeks):
         ts="".join('<tr><td><a class="dom" href="/s/%s">%s</a></td><td class="num">%d</td></tr>' % (esc(v), esc(v), n) for v, n in top_sites) or '<tr><td class="dim">无</td></tr>',
         n=len(ch), rows="".join('<tr><td class="mono" style="font-size:12px">%s</td><td>%s</td><td><a href="/m/%s">%s</a></td><td class="num">%s</td><td class="num">%s</td><td>%s</td></tr>' % (esc(c["t"][5:16].replace("T", " ")), ('<a class="dom" href="/s/%s">%s</a>' % (esc(c["vendor"]), esc(c["vendor"]))) if c["kind"] == "relay" else esc(c["vendor"]) + '<span class="sub">公开参考价</span>', esc(c["model"]), esc(c["model"]), fmt(c["old"]), fmt(c["new"]), "↑" if c["new"] > c["old"] else "↓") for c in ch[:300]) or '<tr><td class="dim" colspan="6">本周暂无变动</td></tr>',
         disc=DISCLAIMER, rel="".join('<a href="/weekly/%s">%s</a>' % (esc(x["week"]), esc(x["week"])) for x in all_weeks if x["week"] != W["week"]) or '<span class="dim">—</span>',
-        data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": x["id"], "name": x["name"]} for x in D["models"]]}))
+        data=jsdata({"model_index": [{"id": x["id"], "name": x["name"]} for x in D["models"]]}))
     return shell(title, desc, "/weekly/" + W["week"], body, active="home", page="weekly", crumbs=[("价格周报", "/weekly"), (W["week"],)])
 
 
@@ -1197,7 +1258,7 @@ document.getElementById("em-ok").addEventListener("click",function(){var c=docum
  fetch("/api/auth/email/verify",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:token,code:c,return_to:rt,watch:watch})}).then(function(r){return r.json();}).then(function(j){if(j.ok){M.textContent="成功，正在跳转…";location.replace(j.return_to||rt);}else{M.textContent=(ERR[j.error]||"出错了")+(j.left?"，还可以试 "+j.left+" 次":"");}}).catch(function(){M.textContent="网络错误，请重试。";});});
 document.getElementById("em-code").addEventListener("keydown",function(e){if(e.key==="Enter")document.getElementById("em-ok").click();});
 document.getElementById("em").addEventListener("keydown",function(e){if(e.key==="Enter")document.getElementById("em-send").click();});})();</script>
-<script id="d" type="application/json">{{data}}</script>""", data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+<script id="d" type="application/json">{{data}}</script>""", data=jsdata({"model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
     return shell("登录 · Sinan Compute", "用邮箱验证码、Google 或 GitHub 账号登录司南实验室，不设密码。", "/login", body, page="login", crumbs=[("登录",)], extra_head='<meta name="robots" content="noindex">')
 
 # ------------------------------------------------------------------ 司南 Token 价格指数
@@ -1273,7 +1334,7 @@ def build_price_index():
 {{cite}}
 {{poll}}<script id="d" type="application/json">{{data}}</script>""",
         date=PI["generated_at"][:10], n_sites=D["stats"]["confirmed"], base=PI["base_date"], cards="".join(cards), chart=chart, min_sites=PI["min_sites"], rows="".join(rows), task=task_html, method=esc(PI["method"]), embed=embed, cite=cite_block("司南 Token 价格指数", "/price-index", PI["generated_at"][:10]),
-        poll=POLL_BOX, data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+        poll=POLL_BOX, data=jsdata({"model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
     # 口径断点（数据修正当天点位持平）：放在页首说明，读者看到折价率快照跳变时知道原因
     if PI.get("breaks"): body = "".join('<div class="callout rise" style="margin-bottom:12px"><b>口径断点 %s</b>：%s</div>' % (esc(b["date"]), esc(b["reason"])) for b in PI["breaks"]) + body
     return shell("司南 Token 价格指数 · 每百万 Token 多少钱 · Sinan Compute", "中国模型 API 中转市场每日 Token 价格指数：各主流模型跨站中位实付价、相对官方价的折价率、链式点位，可引用可下载。", "/price-index", body, active="pindex", page="pindex", crumbs=[("Token 价格指数",)])
@@ -1527,7 +1588,7 @@ def build_report(Rp, first_issue=False, lang="zh"):
     return shell(title + " · Sinan Compute", "%s：%d 个中转站的实付价、Token 价格指数、可达与一致性检测、多模态与算力成本，附司南实验室的分析与判断。" % (MONTH_ZH(m), sc["confirmed_now"]), "/report/%s" % m, body, active="report", page="report", crumbs=[("月报", "/report"), (MONTH_ZH(m),)])
 
 def LIGHT_INDEX():
-    return {"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m_["id"], "name": m_["name"]} for m_ in D["models"]]}
+    return {"model_index": [{"id": m_["id"], "name": m_["name"]} for m_ in D["models"]]}
 
 def build_report_index(reports):
     items = "".join('<a class="card pad" href="/report/%s" style="display:block"><div class="eyebrow" style="color:var(--p)">%s%s</div><h2 class="sec" style="margin-top:4px">%s</h2><p class="sub">%d 个中转站 · 新收录 %d · 主流变价 %d 次 · 全市场折价率 %s</p></a>' % (
@@ -1610,7 +1671,7 @@ def build_gpu():
 <section class="card pad rise" style="--i:2;margin-top:18px"><h2 class="sec">这张账本用来做什么</h2><p class="lead" style="margin-top:4px">和 <a href="/price-index" style="color:var(--p-ink)">Token 价格指数</a> 放在一起看：一边是 Token 卖多少钱，一边是造 Token 的机器租多少钱。我们对中转报价的"低于成本下限"判定，参考的成本地板就来自公开渠道价与这类租赁价，今后会把换算假设逐条写在口径与定义里。这里只记录，不做推测。</p></section>
 <script id="d" type="application/json">{{data}}</script>""",
         date=GPU["generated_at"][:10], head=head, rows="".join(rows), fx="%.2f" % GPU["fx"],
-        data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+        data=jsdata({"model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
     return shell("算力租赁账本 · 一张显卡租一小时多少钱 · Sinan Compute", "主流 GPU（4090 / 5090 / A100 / H100 / H200 / B200）在 RunPod、Vast.ai、共绩算力等公开租赁平台的单卡时价，每日记录，带快照。", "/gpu", body, active="gpu", page="gpu", crumbs=[("算力租赁",)])
 
 def build_check():
@@ -1660,12 +1721,12 @@ fetch("/api/me",{credentials:"include"}).then(function(r){return r.json();}).cat
  function report(auto){var s=document.getElementById("ck-rep-status");if(!window.__CK||!window.__CK.length){s.textContent="先测一次。";return;}s.textContent="回流中…";Promise.all(window.__CK.map(function(x){x.source="web";return fetch("/api/check/report",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(x)});})).then(function(){s.textContent=(auto?"已自动回流 ":"已回流 ")+window.__CK.length+" 条（匿名，不含 Key），谢谢。明早起在该站点页的"众测"里可见。";}).catch(function(){s.textContent="回流失败，稍后再试。";});}
  document.getElementById("ck-report").addEventListener("click",function(){report(false);});
  document.getElementById("ck-base").addEventListener("change",function(){var b=this.value.trim().replace(/^https?:\/\//,"").replace(/\/.*$/,"");var c=(D0.crowd||{})[b];document.getElementById("ck-crowd").innerHTML=c?("这个站已有众测 "+c.n+" 次（来自 "+c.srcs+" 个来源）：一致 "+c.consistent+" · 含前缀 "+c.prefix+" · 不一致 "+c.divergent+" · 失败 "+c.failed+"。<a href=\"/s/"+b+"\">站点页 →</a>"):(b?"这个站还没有众测结果，你会是第一个。":"");});
-});})();</script>""", poll=POLL_BOX, data=jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "models": [{"id": m["id"], "name": m["name"]} for m in D["models"] if m["is_latest"]], "crowd": D.get("crowd_sites") or {}}))
+});})();</script>""", poll=POLL_BOX, data=jsdata({"models": [{"id": m["id"], "name": m["name"]} for m in D["models"] if m["is_latest"]], "crowd": D.get("crowd_sites") or {}}))
     return shell("测试模型真伪 · 众测 · Sinan Compute", "用你自己的 Key 在浏览器里测一个中转站：8 条固定探针，比对 token 计数、回显模型名与延迟。Key 不上传；结果匿名回流到众测池。", "/check", body, active="check", page="check", crumbs=[("测试模型真伪",)])
 
 def build_weekly_index(all_weeks):
     rows = "".join('<tr><td><a class="name" href="/weekly/%s">%s</a></td><td>%s – %s</td><td class="num">%d</td><td class="num">%d</td></tr>' % (esc(w["week"]), esc(w["week"]), min(w["days"]), max(w["days"]), len(w["changes"]), sum(len(v) for v in w["new_sites"].values())) for w in all_weeks)
-    body = '<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">中转站价格周报</h1><p class="lead">每周自动生成：价格变动、新收录、每个模型本周说得通的最低实付。订阅 <a href="/feed.xml" style="color:var(--p-ink)">RSS</a> 每天收变动。</p></div><section class="card rise"><div class="tablewrap"><table><thead><tr><th>周</th><th>日期</th><th class="num">变价</th><th class="num">新收录</th></tr></thead><tbody>%s</tbody></table></div></section><script id="d" type="application/json">%s</script>' % (rows or '<tr><td class="dim">尚无</td></tr>', jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": x["id"], "name": x["name"]} for x in D["models"]]}))
+    body = '<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">中转站价格周报</h1><p class="lead">每周自动生成：价格变动、新收录、每个模型本周说得通的最低实付。订阅 <a href="/feed.xml" style="color:var(--p-ink)">RSS</a> 每天收变动。</p></div><section class="card rise"><div class="tablewrap"><table><thead><tr><th>周</th><th>日期</th><th class="num">变价</th><th class="num">新收录</th></tr></thead><tbody>%s</tbody></table></div></section><script id="d" type="application/json">%s</script>' % (rows or '<tr><td class="dim">尚无</td></tr>', jsdata({"model_index": [{"id": x["id"], "name": x["name"]} for x in D["models"]]}))
     return shell("中转站价格周报 · Sinan Compute", "每周自动生成的模型 API 中转站价格变动周报。", "/weekly", body, active="home", page="weekly", crumbs=[("价格周报",)])
 
 def badge_svg(s):
@@ -1699,7 +1760,7 @@ def rank_badge_svg(s):
             % (esc(b["week"]), esc(label), esc(s["domain"]), MARK_SVG, font, esc(b["week"]), font, esc(label), esc(s["domain"]), esc(b["value"])))
 
 def build_404():
-    body = '<div class="card pad rise" style="--i:0;max-width:640px"><div class="eyebrow" style="color:var(--p)">404</div><h1 style="font-size:28px;margin-top:8px">没有这个页面。</h1><p class="lead">地址可能拼错了，或者这个站还没被收录。试试上面的搜索框，或者：</p><div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"><a class="btn p" href="/">回首页</a><a class="btn o" href="/sites">中转站总表</a><a class="btn o" href="/media">图像 · 视频</a></div></div><script id="d" type="application/json">%s</script>' % jsdata({"site_index": [{"d": s["domain"], "n": s["name"]} for s in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]})
+    body = '<div class="card pad rise" style="--i:0;max-width:640px"><div class="eyebrow" style="color:var(--p)">404</div><h1 style="font-size:28px;margin-top:8px">没有这个页面。</h1><p class="lead">地址可能拼错了，或者这个站还没被收录。试试上面的搜索框，或者：</p><div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"><a class="btn p" href="/">回首页</a><a class="btn o" href="/sites">中转站总表</a><a class="btn o" href="/media">图像 · 视频</a></div></div><script id="d" type="application/json">%s</script>' % jsdata({"model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]})
     return shell("没有这个页面 · Sinan Compute", "页面不存在。", "/404", body, page="404")
 
 # ------------------------------------------------------------------ main
@@ -1794,6 +1855,8 @@ def main():
             if os.path.isdir(src_): shutil.copytree(src_, dst_, dirs_exist_ok=True)
             else: shutil.copy(src_, dst_)
     W("assets/ledger.json", jsdata({"models": D["models"], "snaps": D["snaps"]}))
+    # 搜索框的站名索引（2034 站约 78 KB）：以前内联在每一页，现在单独一个文件，第一次点搜索框时才取（2026-10-14）
+    W("assets/site_index.json", jsdata([{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]]))
     W("robots.txt", "User-agent: *\nAllow: /\nDisallow: /snap/\nSitemap: %s/sitemap.xml\n" % BASE)
     urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily"), ("/gpu", "daily"), ("/report", "weekly"), ("/press", "monthly"), ("/verify", "monthly"), ("/api-docs", "weekly"), ("/corrections", "weekly"), ("/survival", "daily"), ("/governance", "monthly")] + [("/report/%s" % r_["month"], "weekly") for r_ in load_reports()] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
     W("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join('  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq></url>\n' % (BASE, u, GEN_DATE, c) for u, c in urls) + "</urlset>\n")

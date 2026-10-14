@@ -6,7 +6,10 @@ export async function onRequestPost({ request, env }) {
   // 限频：同一来源每天最多 600 次计数。计数只用于站内统计，被刷会污染数据并烧掉数据库额度。
   const src = (await sha256((request.headers.get("CF-Connecting-IP") || "") + "|" + (request.headers.get("User-Agent") || ""))).slice(0, 24);
   if (!(await rateLimit(env, "hit:" + src, 600, 86400))) return withCors(request, json({ ok: false, error: "too_many" }, 429));
-  const u = new URL(request.url); const r = (u.searchParams.get("r") || "").toLowerCase().slice(0, 120);
+  const u = new URL(request.url); let r = (u.searchParams.get("r") || "").toLowerCase().slice(0, 120);
+  // 没有 referrer 时前端会退而上报 utm_source（AI 产品常只带 utm_source=chatgpt.com / perplexity）。不带域名后缀的常见来源名映射成域名（2026-10-14）
+  const UTM = { chatgpt: "chatgpt.com", openai: "chatgpt.com", perplexity: "perplexity.ai", copilot: "copilot.microsoft.com", bing: "www.bing.com", claude: "claude.ai", gemini: "gemini.google.com", kimi: "kimi.com", deepseek: "chat.deepseek.com", doubao: "doubao.com", yuanbao: "yuanbao.tencent.com", metaso: "metaso.cn", phind: "phind.com", you: "you.com", poe: "poe.com", grok: "grok.com" };
+  if (UTM[r]) r = UTM[r];
   const path = (u.searchParams.get("p") || "").slice(0, 120).replace(/[^\w\-./]/g, "");
   if (/^[a-z0-9.-]+\.[a-z]{2,}$/.test(r) && !/(^|\.)sinanlab\.com$/.test(r)) { await bump(env, "ref", r); if (path) await bump(env, "refpath", r + "|" + path); }
   // 页面浏览（只有真实浏览器会执行脚本，爬虫不计）：pv 按路径；sess = 本次会话第一页；lang = zh/en
