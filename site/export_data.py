@@ -70,10 +70,19 @@ SECRET_RX = re.compile(r"(sk-[A-Za-z0-9_\-]{16,}|sk_[A-Za-z0-9]{16,}|ghp_[A-Za-z
 PRICING_BASIS = {}
 
 
+PRICING_LAST_OK = {}   # 站 → 最近一次成功读到定价接口的时间
+STALE_DAYS = 7          # 超过这么多天读不到定价接口：旧报价撤下不展示（2026-10-14 起；此前会一直显示几周前的价）
+
 def relay_rows(db):
-    rows = {}
+    rows = {}; variants = {}
+    for r in db.execute("SELECT source, max(fetched_at) t FROM source_snapshot WHERE source LIKE 'relay.pricing.%' AND http_status=200 GROUP BY source"):
+        PRICING_LAST_OK[r["source"][len("relay.pricing."):]] = r["t"]
+    import datetime as _dt
+    cutoff = (_dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))) - _dt.timedelta(days=STALE_DAYS)).isoformat()
+    stale = {v for v, t in PRICING_LAST_OK.items() if t and t.replace(" ", "T") < cutoff}
     for r in db.execute("SELECT vendor, model, unit, price, conditions, snapshot_id, valid_from FROM offer_norm WHERE vendor_kind='relay' "
                         "AND superseded_by IS NULL AND unit IN ('per_mtok_in','per_mtok_out','per_call','per_second')"):
+        if r["vendor"] in stale: continue   # 定价接口一周以上读不到：旧价不再当成"在卖"展示
         c = json.loads(r["conditions"] or "{}")
         if SECRET_RX.search(str(r["model"])) or SECRET_RX.search(str(c.get("raw_name") or "")): continue   # 发布兜底：疑似凭据不出站
         if c.get("billing_expr"):   # 动态计价：记下我们用的是哪个分组、哪个上下文档，页面要标出来
@@ -83,14 +92,35 @@ def relay_rows(db):
         if c.get("usd_direct"): eff = r["price"]; p = FX[0]        # 直接美元标价（kie.ai）：等价 price=汇率
         elif p is None: continue
         else: eff = r["price"] * float(p) / FX[0]
-        key = (r["vendor"], canonical(r["model"]))
-        m = rows.setdefault(key, {"vendor": r["vendor"], "model": canonical(r["model"]), "raw": c.get("raw_name") or r["model"],
-                                  "in": None, "out": None, "call": None, "sec": None, "nominal_out": None, "price_field": float(p),
-                                  "stripe": c.get("panel_stripe_unit_price"), "sids": set(), "as_of": r["valid_from"], "mtype": c.get("model_type")})
+        # 先按"站 × 站方原名"聚：输入价、输出价必须出自同一个名字（以前按标准名直接覆盖，输入输出可能来自两个名字）
+        raw = c.get("raw_name") or r["model"]
+        key = (r["vendor"], canonical(r["model"]), raw)
+        m = variants.setdefault(key, {"vendor": r["vendor"], "model": canonical(r["model"]), "raw": raw,
+                                      "in": None, "out": None, "call": None, "sec": None, "nominal_out": None, "nominal_in": None, "price_field": float(p),
+                                      "stripe": c.get("panel_stripe_unit_price"), "sids": set(), "as_of": r["valid_from"], "mtype": c.get("model_type"),
+                                      "group": c.get("group"), "group_ratio": c.get("group_ratio"), "time_mult": c.get("time_multipliers")})
         side = {"per_mtok_in": "in", "per_mtok_out": "out", "per_call": "call", "per_second": "sec"}[r["unit"]]
         m[side] = eff
         if side == "out": m["nominal_out"] = r["price"]
+        if side == "in": m["nominal_in"] = r["price"]
+        if r["valid_from"] > m["as_of"]: m["as_of"] = r["valid_from"]
         m["sids"].add(r["snapshot_id"])
+    # 同一站同一模型有多个名字（claude-opus-5 / claude-opus-5-thinking / 厂商前缀版…）：代表名按固定规则选，
+    # 不再看遍历顺序——①原名就是标准名本身 ②名字最短（少前缀后缀）③更便宜。其余名字记数与价格区间，页面写明。
+    by = {}
+    for (v, mdl, raw), m in variants.items(): by.setdefault((v, mdl), []).append(m)
+    for key, lst in by.items():
+        def rank(m):
+            price = m["out"] if m["out"] is not None else (m["call"] if m["call"] is not None else (m["sec"] if m["sec"] is not None else 9e9))
+            return (0 if m["raw"].lower() == m["model"] else 1, len(m["raw"]), price)
+        lst.sort(key=rank)
+        rep = dict(lst[0])
+        outs = [x["out"] for x in lst if x["out"] is not None]
+        rep["variants"] = len(lst)
+        if len(lst) > 1:
+            rep["variant_names"] = [x["raw"] for x in lst[1:6]]
+            if len(outs) > 1: rep["variant_out_range"] = [min(outs), max(outs)]
+        rows[key] = rep
     return rows
 
 def site_gate(per_site_ratios):
@@ -272,6 +302,7 @@ def price_changes(db, days=7):
     for r in db.execute("""SELECT n.vendor, n.model, n.unit, o.price AS old_p, n.price AS new_p, n.valid_from, n.vendor_kind
                            FROM offer_norm n JOIN offer_norm o ON o.superseded_by=n.id
                            WHERE n.unit='per_mtok_out' AND abs(n.price-o.price)>1e-9 AND n.valid_from >= datetime('now','-%d days')
+                             AND json_extract(o.conditions,'$.raw_name') IS json_extract(n.conditions,'$.raw_name')   -- 同一个站方原名改价才算；换了个名字不是变价
                            ORDER BY n.valid_from DESC LIMIT 200""" % days):
         out.append({"t": r["valid_from"], "vendor": r["vendor"], "model": canonical(r["model"]), "old": r["old_p"], "new": r["new_p"], "kind": r["vendor_kind"]})
     return out
@@ -327,6 +358,7 @@ def main():
         models.append(entry); groups.setdefault(ven, []).append(m)
 
     # ---- 站点 ----
+    CORE_MODELS = {m_["id"] for m_ in models}
     sites = []
     for r in db.execute("SELECT domain, first_seen_at, first_channel, level, panel_kind, panel_version, entity_name, site_url FROM relay_candidate WHERE level>=1"):
         v = r["domain"]; rs = per_site.get(v, [])
@@ -342,13 +374,20 @@ def main():
             code, label = band(row["ratio"]) if row.get("ratio") is not None else (None, None)
             mrows.append({"model": m, "name": pretty(m), "raw": row["raw"], "in": row["in"], "out": row["out"], "call": row["call"], "sec": row["sec"],
                           "ratio": row.get("ratio"), "band": code, "floor_vendor": (row.get("floor") or {}).get("vendor"),
-                          "floor_out": (row.get("floor") or {}).get("usd"), "mtype": row["mtype"], "sids": sorted(row["sids"]), "as_of": row["as_of"][:16], "probe": PB.get((v, m)), "crowd": CR.get((v, m))})
+                          "floor_out": (row.get("floor") or {}).get("usd"), "mtype": row["mtype"], "sids": sorted(row["sids"]), "as_of": row["as_of"][:16], "probe": PB.get((v, m)), "crowd": CR.get((v, m)),
+                          # 站方面板上看到的标价（站内额度/百万 token，未按充值比例折算）——和站方页面逐条对得上
+                          "nom_in": row.get("nominal_in"), "nom_out": row.get("nominal_out"),
+                          "variants": row.get("variants", 1), "variant_names": row.get("variant_names"), "variant_out_range": row.get("variant_out_range"),
+                          "time_mult": row.get("time_mult")})
         mrows.sort(key=lambda x: (0 if x["ratio"] is not None else 1, x["ratio"] or 0))
         sf = SF.get(v) or {}
         sites.append({"domain": v, "name": sf.get("system_name") or r["entity_name"], "site_url": r["site_url"], "first_seen": r["first_seen_at"][:10],
                       "channel": r["first_channel"], "panel": r["panel_kind"], "version": sf.get("version") or r["panel_version"],
                       "cluster": cl, "median": round(med, 3) if med is not None else None, "n_models": len(mrows), "n_ratio": len(rs),
-                      "avail": AV.get(v), "facts": sf, "pricing_basis": PRICING_BASIS.get(v), "models": mrows, "register": {"state": (REG.get(v) or ("unknown", None, None))[0], "msg": (REG.get(v) or (None, None, None))[1], "checked": ((REG.get(v) or (None, None, None))[2] or "")[:10]}, "ok_count": sum(1 for x in mrows if x["band"] in ("explainable", "normal")),
+                      # 主流模型（模型账本那 40 个）的中位：全部可比模型的中位会被冷门模型的高价拉偏，并列给出免得误读（2026-10-14 起）
+                      "median_core": (lambda cr: round(st.median(cr), 3) if len(cr) >= 3 else None)([x["ratio"] for x in mrows if x.get("ratio") is not None and x["model"] in CORE_MODELS]),
+                      "n_core": sum(1 for x in mrows if x.get("ratio") is not None and x["model"] in CORE_MODELS),
+                      "avail": AV.get(v), "facts": sf, "pricing_basis": PRICING_BASIS.get(v), "models": mrows, "pricing_last_ok": (PRICING_LAST_OK.get(v) or "")[:10] or None, "register": {"state": (REG.get(v) or ("unknown", None, None))[0], "msg": (REG.get(v) or (None, None, None))[1], "checked": ((REG.get(v) or (None, None, None))[2] or "")[:10]}, "ok_count": sum(1 for x in mrows if x["band"] in ("explainable", "normal")),
                       "un_count": sum(1 for x in mrows if x["band"] == "unsustainable"),
                       "probe": {"pairs": sum(1 for x in mrows if x["probe"]), "consistent": sum(1 for x in mrows if x["probe"] and x["probe"]["status"] == "consistent"),
                                 "divergent": sum(1 for x in mrows if x["probe"] and x["probe"]["status"] == "divergent"), "ts": max([x["probe"]["ts"] for x in mrows if x["probe"]] or [""])} if any(x["probe"] for x in mrows) else None})

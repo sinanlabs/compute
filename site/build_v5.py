@@ -800,8 +800,10 @@ def build_site(s):
                     (ab.get("fetched") or "")[:16].replace("T", " "))) if ab else "面板没有公开可读的说明页（/api/about 为空或取不到）",
                 "" if ab else "t",
                 ('<div class="n"><a href="%s" rel="noopener nofollow">站方原文 ↗</a> · <a href="/snap/about/%s.txt">抓取快照</a></div>' % (esc(ab["public_url"]), esc(s["domain"]))) if ab else "")]
+    _med_txt = "全部 %d 个可比模型中位 %s" % (s.get("n_ratio") or 0, pct(s["median"])) if s.get("median") is not None else ""
+    if s.get("median_core") is not None: _med_txt += " · 其中主流 %d 个模型中位 %s" % (s["n_core"], pct(s["median_core"]))   # 冷门模型高价会把全部模型的中位拉偏
     facts = [
-        ("价格画像", cl["name"] if cl else ("套餐制" if s.get("panel") == "sub2api" else "无比对"), ("中位 %s" % pct(s["median"])) if (cl and not held and s["median"] is not None) else (cl["help"] if cl else ("按套餐售卖订阅额度，价格需登录，本站不做套餐比价" if s.get("panel") == "sub2api" else "定价接口未公开，没有能对上参考价的模型")), "t" if not (cl and not held and s["median"] is not None) else ""),
+        ("价格画像", cl["name"] if cl else ("套餐制" if s.get("panel") == "sub2api" else "无比对"), _med_txt if (cl and not held and s["median"] is not None) else (cl["help"] if cl else ("按套餐售卖订阅额度，价格需登录，本站不做套餐比价" if s.get("panel") == "sub2api" else "定价接口未公开，没有能对上参考价的模型")), "t" if not (cl and not held and s["median"] is not None) else ""),
         ("24h 可达", ("7 天未连通" if s.get("dead") else ("未测" if not av.get("n") else ("%d/%d 成功" % (round(av["uptime"] * av["n"] / 100.0), av["n"]) if av["n"] < 10 else "%.0f%%" % av["uptime"]))),
               ("连续 7 天、≥100 次探测一次都没连上；页面保留，不进任何榜" if s.get("dead") else
                ("还没有探测样本" if not av.get("n") else
@@ -834,16 +836,34 @@ def build_site(s):
             mid = '<td class="num">%s</td><td>%s</td><td>%s</td>' % (fmt(r.get("floor_out")) if r.get("floor_out") and not held else "—", '<span class="pill held">待核 · 不出比率</span>' if held else "—", '—' if held else '<span class="pill none">无参考价</span>')
         else:
             mid = '<td class="num">%s</td><td><span class="gcell">%s<span class="r %s">%s</span></span></td><td><span class="pill %s">%s</span><button class="help" data-help="%s" aria-label="解释">?</button>%s</td>' % (fmt(r["floor_out"]), gauge_html(r["ratio"], r["band"]), r["band"], pct(r["ratio"]), r["band"], LABEL[r["band"]], r["band"], probe_html(r.get("probe")))
-        rows.append('<tr><td><b>%s</b><div class="sub">%s</div></td><td class="num"><span class="big">%s</span><span class="asf">%s · 抓取 %s</span></td>%s<td class="num"><button class="evb" data-i="%d">证据 ↗</button></td></tr>' % (esc(r["name"]), esc(r["raw"]), fmt(v), u, r["as_of"][5:16].replace("T", " "), mid, i))
+        # 站方面板标价（站内额度，未折算）：读者拿去和站方页面逐条对照用
+        nom = r.get("nom_out") if r["out"] is not None else None
+        nom_html = ('<span class="asf">站方标价 $%s / 百万输出（站内额度）</span>' % fmt(nom)) if nom is not None else ""
+        notes = []
+        if (r.get("variants") or 1) > 1:
+            vr = r.get("variant_out_range")
+            notes.append("该站同一模型另有 %d 个名字（%s%s）%s" % (r["variants"] - 1, "、".join(esc(x) for x in (r.get("variant_names") or [])[:3]), " 等" if r["variants"] - 1 > 3 else "",
+                         ("，输出实付 $%s–$%s" % (fmt(vr[0]), fmt(vr[1]))) if vr and abs(vr[1] - vr[0]) > 1e-9 else "，价格相同"))
+        tmn = r.get("time_mult") or []
+        if tmn:
+            notes.append("%s %s 价格 ×%s，此处为平时价" % ("北京时间" if all(t[0] == "Asia/Shanghai" for t in tmn) else "站方时区",
+                         " / ".join("%d:00–%d:00" % (t[1], t[2]) for t in tmn), "/".join(sorted({("%g" % t[3]) for t in tmn}))))
+        sub = esc(r["raw"]) + "".join('<br><span style="color:var(--ink-3)">%s</span>' % n for n in notes)
+        # "抓取 10-03"会被读成"十天没更新"，其实是"价格自 10-03 起没变、今天刚核对过"：两件事分开写
+        lok = s.get("pricing_last_ok") or ""
+        when = ("核对 %s · 此价自 %s 起" % (lok[5:10], r["as_of"][5:10]) if lok and r["as_of"][:10] < lok else ("核对 %s" % lok[5:10] if lok else "抓取 %s" % r["as_of"][5:16].replace("T", " ")))
+        rows.append('<tr><td><b>%s</b><div class="sub">%s</div></td><td class="num"><span class="big">%s</span><span class="asf">%s · %s</span>%s</td>%s<td class="num"><button class="evb" data-i="%d">证据 ↗</button></td></tr>' % (esc(r["name"]), sub, fmt(v), u, when, nom_html, mid, i))
     notice = ('<div class="notice rise" style="--i:1;margin-bottom:14px">%s</div>' % esc(cl["help"])) if held else ""
     if (s.get("register") or {}).get("state") == "closed":
         notice += '<div class="notice rise" style="--i:1.2;margin-bottom:14px;border-color:#F04438"><b>新用户注册已关闭。</b>站方注册接口返回"管理员关闭了新用户注册"（探测于 %s）。价格数据仅供已有账号的用户参考；本站榜单不收录关闭注册的站。</div>' % esc((s.get("register") or {}).get("checked") or "")
     noq = ""
     if not s["models"]:
         noq = ('<div class="callout" style="margin-top:14px">这是一个 Sub2API 面板的订阅型中转站：按套餐（月付 / 次数）售卖 Claude Code、Codex 等订阅额度，价格要登录后才能看到，本站不做套餐比价。这里列的是能公开核实的事实：面板类型、注册是否开放、登录方式、24h 可达。</div>' if s.get("panel") == "sub2api" else
+               ('<div class="callout" style="margin-top:14px">这个站的定价接口自 %s 之后再没能读取（未公开、需要登录或接口故障），超过 7 天的旧报价已撤下，不再当作在售价格展示；恢复读取后自动重新上架。可达性与面板事实仍每小时更新。</div>' % esc(s["pricing_last_ok"])) if s.get("pricing_last_ok") else
                '<div class="callout" style="margin-top:14px">这个站的定价接口未公开或需要登录，本站暂无它的报价。可达性与面板事实仍每小时更新。</div>')
     tbl = ('<section class="card rise" style="margin-top:16px;--i:3"><div class="pad" style="padding-bottom:6px"><h2 class="sec">它卖的模型与实付价</h2><p class="lead">%s</p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">实付</th><th class="num">参考价</th><th>实付是参考价的几成</th><th>怎么看</th><th class="num">证据</th></tr></thead><tbody>%s</tbody></table></div><div class="tfoot"><span>%s</span></div></section>'
-           % ("计价方式待核：只列名义报价换算的实付，不出比率、不分档。" if held else "参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。", "".join(rows), DISCLAIMER)) if s["n_models"] else ""
+           % ("计价方式待核：只列名义报价换算的实付，不出比率、不分档。" if held else "实付 = 站方标价 × 充值比例 ÷ 汇率（%s），即真金白银每百万 token 花多少美元；站方标价是面板上显示的站内额度价，可在站方页面逐条核对（站方页面默认可能展示会员分组价，本站取 %s 分组）。参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。" % (
+                ("%s 元 / $1 · 汇率 %.2f" % (fmt((s.get("facts") or {}).get("price")), D["fx"]["rate"])) if (s.get("facts") or {}).get("price") else "按面板充值比例", _safe_snip((s.get("pricing_basis") or {}).get("group") or "default") or "站方默认"), "".join(rows), DISCLAIMER)) if s["n_models"] else ""   # 分组名是站方原文，含禁用词时不转载
     body = tpl(u"""<div class="sitehead rise" style="--i:0"><div><h1>{{domain}}<span class="nm">{{name}}</span></h1></div><div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">{{pic}}<button class="btn o watch" data-kind="site" data-key="{{domain}}">关注这个站</button><a class="btn p" href="/go/{{domain}}" target="_blank" rel="noopener nofollow">前往站点 ↗</a></div></div>
 {{notice}}<div class="facts rise" style="--i:2">{{facts}}</div><div class="repfoot rise" style="--i:2.2;margin-top:10px;padding-top:0;border:0"><button class="rep" data-kind="site" data-key="{{domain}}" data-ctx="站点 {{domain}}">这个站的信息有误？报错</button>{{planbtn}}<span class="sub">报错需登录；核实后记入修正日志并署名</span></div>{{noq}}{{tbl}}
 {{mlinks}}<div class="card pad rise" style="margin-top:16px;--i:3.8"><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><img src="/badge/{{domain}}.svg" alt="实测徽章" width="340" height="64" style="border-radius:14px"><div style="flex:1;min-width:260px"><h2 class="sec" style="font-size:15px">站长可嵌入的实测徽章</h2><p class="lead" style="margin-top:4px">只显示测量值：24h 可达率、价格画像、日期，每天自动更新，点击回到本页。不含任何评价。</p><code style="display:block;margin-top:8px;font-size:11.5px;word-break:break-all;background:var(--ground);padding:8px 10px;border-radius:8px">&lt;a href="{{base}}/s/{{domain}}"&gt;&lt;img src="{{base}}/badge/{{domain}}.svg" alt="Sinan Compute 实测" width="340" height="64"&gt;&lt;/a&gt;</code></div></div></div>
@@ -1254,6 +1274,8 @@ def build_price_index():
 {{poll}}<script id="d" type="application/json">{{data}}</script>""",
         date=PI["generated_at"][:10], n_sites=D["stats"]["confirmed"], base=PI["base_date"], cards="".join(cards), chart=chart, min_sites=PI["min_sites"], rows="".join(rows), task=task_html, method=esc(PI["method"]), embed=embed, cite=cite_block("司南 Token 价格指数", "/price-index", PI["generated_at"][:10]),
         poll=POLL_BOX, data=jsdata({"site_index": [{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]], "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+    # 口径断点（数据修正当天点位持平）：放在页首说明，读者看到折价率快照跳变时知道原因
+    if PI.get("breaks"): body = "".join('<div class="callout rise" style="margin-bottom:12px"><b>口径断点 %s</b>：%s</div>' % (esc(b["date"]), esc(b["reason"])) for b in PI["breaks"]) + body
     return shell("司南 Token 价格指数 · 每百万 Token 多少钱 · Sinan Compute", "中国模型 API 中转市场每日 Token 价格指数：各主流模型跨站中位实付价、相对官方价的折价率、链式点位，可引用可下载。", "/price-index", body, active="pindex", page="pindex", crumbs=[("Token 价格指数",)])
 
 def price_index_badge():
@@ -1461,6 +1483,8 @@ def build_report(Rp, first_issue=False, lang="zh"):
           ("主流模型变价", "%d 次" % pr["mainstream_changes"], "涨 %d · 降 %d；国产降 %d 涨 %d" % (pr["ups"], pr["downs"], (ST.get("change_dirs") or {}).get("domestic:down", 0), (ST.get("change_dirs") or {}).get("domestic:up", 0)))]
     kpis = "".join('<div class="card kpi"><div class="k">%s</div><div class="v"><span>%s</span></div><div class="n">%s</div></div>' % (k, v, n) for k, v, n in kp)
     chart = pi_chart(idx["series"], [("all", "全市场", "#07070B"), ("flagship", "旗舰", "#6E56F5"), ("mid", "中档", "#B54708"), ("flash", "快速", "#067647")]) if len(idx.get("series") or []) >= 2 else ""
+    if idx.get("breaks"):   # 口径断点：当期折价率快照的跳变来自数据修正，不是市场变化
+        chart += "".join('<div class="callout" style="margin-top:10px"><b>口径断点 %s</b>：%s</div>' % (esc(b["date"]), esc(b["reason"])) for b in idx["breaks"])
     def sec(key, num, default_title, computed=""):
         a = A.get(key) or {}
         return '<section class="card pad rise" style="--i:%d;margin-top:18px"><h2 class="sec">%s</h2>%s%s</section>' % (num + 1, esc(a.get("title") or default_title), a.get("html", ""), computed)

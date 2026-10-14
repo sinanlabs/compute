@@ -33,8 +33,13 @@ def main():
     db = D.connect()
     fxr = db.execute("SELECT rate, as_of, snapshot_id FROM fx_rate ORDER BY id DESC LIMIT 1").fetchone()
     refs = official_refs(db)
-    rows = db.execute("SELECT vendor, model, unit, price, conditions, snapshot_id, valid_from FROM offer_norm WHERE vendor_kind='relay' "
-                      "AND unit IN ('per_call','per_second') AND superseded_by IS NULL").fetchall()
+    # 定价接口超过 7 天读不到的站：旧报价不展示（与 export_data.relay_rows 同一规则，2026-10-14 起）
+    import datetime as _dt
+    cutoff = (_dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))) - _dt.timedelta(days=7)).isoformat()
+    stale = {r["source"][len("relay.pricing."):] for r in db.execute("SELECT source, max(fetched_at) t FROM source_snapshot WHERE source LIKE 'relay.pricing.%' AND http_status=200 GROUP BY source")
+             if r["t"] and r["t"].replace(" ", "T") < cutoff}
+    rows = [r for r in db.execute("SELECT vendor, model, unit, price, conditions, snapshot_id, valid_from FROM offer_norm WHERE vendor_kind='relay' "
+                      "AND unit IN ('per_call','per_second') AND superseded_by IS NULL").fetchall() if r["vendor"] not in stale]
     fam_rows = defaultdict(list); per_site = defaultdict(list)
     for r in rows:
         c = json.loads(r["conditions"] or "{}"); p = c.get("panel_price")

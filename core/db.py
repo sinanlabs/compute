@@ -37,8 +37,8 @@ def put_snapshot(db, source, url, body, http_status=200, note=None):
 
 
 def put_offer(db, vendor, vendor_kind, model, unit, price, currency, snapshot_id,
-              region=None, conditions=None, valid_from=None):
-    sku = "%s::%s::%s::%s" % (vendor, model, unit, region or "-")
+              region=None, conditions=None, valid_from=None, sku=None):
+    sku = sku or "%s::%s::%s::%s" % (vendor, model, unit, region or "-")
     cur = db.execute(
         "INSERT INTO offer_norm(sku_key,vendor,vendor_kind,model,region,currency,unit,price,"
         "conditions,valid_from,snapshot_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
