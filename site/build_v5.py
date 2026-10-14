@@ -31,6 +31,9 @@ DISCLAIMER = "此为算术比值，不构成对该渠道的任何指控，也不
 def _safe_snip(v):
     """上游自述原文的兜底：含禁用词 / 像 base64 / 带标签的片段不上页。"""
     try:
+        import sys as _sys
+        _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if _root not in _sys.path: _sys.path.insert(0, _root)   # 否则 core 导入失败、兜底静默失效（2026-10-14 8yes.cc 分组名漏网）
         from core.wording import BANNED as _B
         low = str(v).lower()
         if any(w.lower() in low for w in _B): return None
@@ -784,9 +787,11 @@ def build_site(s):
         if sv.get("trend3d") is not None: svn += " · 近 3 天可达变化 %+.1f" % sv["trend3d"]
         svn += " · 基率见站点存续页"
     pb = s.get("pricing_basis") or {}
-    pb_fact = [("计价口径", "分组 %s · 倍率 %s" % (pb.get("group") or "default", pb.get("group_ratio")),
+    # 分组名是站方自起的，含禁用词时不转述（原文在抓取快照里）
+    pb_group = (_safe_snip(pb.get("group")) or "站方自命名（名称原文见抓取快照）") if pb.get("group") else "default"
+    pb_fact = [("计价口径", "分组 %s · 倍率 %s" % (pb_group, pb.get("group_ratio")),
                 "该站用动态计价表达式（billing_mode=tiered_expr）：每百万 token 价 = 表达式系数 × 分组倍率，单位为站内额度。我们统一取 %s 分组%s；其他分组与长上下文档位价格不同，以站方面板为准。" % (
-                 pb.get("group") or "default", ("的第一档（%s）" % pb["tier"]) if pb.get("tier") else ""), "t")] if pb else []
+                 pb_group, ("的第一档（%s）" % pb["tier"]) if pb.get("tier") else ""), "t")] if pb else []
     ab = s.get("about") or None
     ab_fact = [("站方说明页",
                 ("公开可读" + ((" · 站方 %s 更新" % ab["self_updated"]) if ab.get("self_updated") else "")) if ab else "—",
