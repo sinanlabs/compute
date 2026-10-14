@@ -1,5 +1,10 @@
 {
 "html": {
+"站级价格画像（2026-10-14 起按主流模型定）": "Site-level price profile (based on mainstream models from 2026-10-14)",
+"站点页与总表里的「超低价 / 低于批量折扣 / 与公开价接近 / 高于公开价」由该站主流模型（模型账本里的 40 个模型）实付是参考价几成的中位数决定：不到 15% 为超低价，15%–40% 为低于批量折扣，40%–125% 为与公开价接近，超过 125% 为高于公开价。主流可比模型不足 3 个的站，改用该站全部可比模型的中位数并注明。全部可比模型的中位数同时列出。此前按全部可比模型定，会被冷门模型的极端定价拉偏（如 aigcbest.top 全部 205 个模型中位 267%，主流 37 个模型中位 52%），改口径后 566 个有画像的站中 70 个标签变化，见修正日志。": "The labels “ultra-low / below bulk discount / near public price / above public price” on site pages and the site list are set by the median, across the site's mainstream models (the 40 models in the model ledger), of effective price as a share of the reference price: under 15% is ultra-low, 15%–40% below bulk discount, 40%–125% near public price, over 125% above public price. Sites with fewer than 3 comparable mainstream models fall back to the median across all their comparable models, and say so. The all-model median is shown alongside. Previously the label used all comparable models and could be skewed by extreme pricing of niche models (e.g. aigcbest.top: 267% across all 205 models, 52% across 37 mainstream models); after the change, 70 of 566 profiled sites changed label; see the corrections log.",
+"主流 {n} 个模型中位 {n}%（画像依据）": "{n} mainstream models: median {n}% (basis of the profile)",
+"主流 {n} 个模型中位 {n}%（画像依据） · 全部 {n} 个可比模型中位 {n}%": "{n} mainstream models: median {n}% (basis of the profile) · all {n} comparable models: median {n}%",
+"该站主流模型的实付中位数不到公开价的 {n}%，在无补贴假设下数学上不可持续": "Median effective price of this site's mainstream models is under {n}% of public price, mathematically unsustainable with no subsidy assumed",
 "$/百万输出 · 核对 {n}-{n} · 此价自 {n}-{n} 起": "$/M output · checked {n}-{n} · unchanged since {n}-{n}",
 "$/百万输出 · 核对 {n}-{n}": "$/M output · checked {n}-{n}",
 "$/次 · 核对 {n}-{n} · 此价自 {n}-{n} 起": "$/call · checked {n}-{n} · unchanged since {n}-{n}",

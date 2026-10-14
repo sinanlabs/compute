@@ -800,8 +800,8 @@ def build_site(s):
                     (ab.get("fetched") or "")[:16].replace("T", " "))) if ab else "面板没有公开可读的说明页（/api/about 为空或取不到）",
                 "" if ab else "t",
                 ('<div class="n"><a href="%s" rel="noopener nofollow">站方原文 ↗</a> · <a href="/snap/about/%s.txt">抓取快照</a></div>' % (esc(ab["public_url"]), esc(s["domain"]))) if ab else "")]
-    _med_txt = "全部 %d 个可比模型中位 %s" % (s.get("n_ratio") or 0, pct(s["median"])) if s.get("median") is not None else ""
-    if s.get("median_core") is not None: _med_txt += " · 其中主流 %d 个模型中位 %s" % (s["n_core"], pct(s["median_core"]))   # 冷门模型高价会把全部模型的中位拉偏
+    _med_txt = ("主流 %d 个模型中位 %s（画像依据）" % (s.get("n_core") or 0, pct(s["median"]))) if s.get("median_basis") == "core" else (("全部 %d 个可比模型中位 %s" % (s.get("n_ratio") or 0, pct(s["median"]))) if s.get("median") is not None else "")
+    if s.get("median_basis") == "core" and s.get("median_all") is not None: _med_txt += " · 全部 %d 个可比模型中位 %s" % (s.get("n_ratio") or 0, pct(s["median_all"]))   # 画像按主流模型定，全部模型的中位并列给出
     facts = [
         ("价格画像", cl["name"] if cl else ("套餐制" if s.get("panel") == "sub2api" else "无比对"), _med_txt if (cl and not held and s["median"] is not None) else (cl["help"] if cl else ("按套餐售卖订阅额度，价格需登录，本站不做套餐比价" if s.get("panel") == "sub2api" else "定价接口未公开，没有能对上参考价的模型")), "t" if not (cl and not held and s["median"] is not None) else ""),
         ("24h 可达", ("7 天未连通" if s.get("dead") else ("未测" if not av.get("n") else ("%d/%d 成功" % (round(av["uptime"] * av["n"] / 100.0), av["n"]) if av["n"] < 10 else "%.0f%%" % av["uptime"]))),

@@ -20,7 +20,7 @@ VENDOR_OF = [("anthropic", r"^claude"), ("openai", r"^(gpt|o\d|codex)"), ("googl
 VENDOR_NAME = {"anthropic": "Anthropic", "openai": "OpenAI", "google": "Google", "deepseek": "DeepSeek", "moonshot": "Moonshot",
                "zhipu": "智谱", "xai": "xAI", "alibaba": "阿里", "minimax": "MiniMax"}
 # 站点画像与单条分档用同一把尺：<15% 不可持续 · 15–40% 低于批量折扣 · 40–125% 说得通/接近 · ≥125% 高于公开价
-CLUSTER = [(0.15, "ultra", "超低价", "该站可比模型的实付中位数不到公开价的 15%，在无补贴假设下数学上不可持续"),
+CLUSTER = [(0.15, "ultra", "超低价", "该站主流模型的实付中位数不到公开价的 15%，在无补贴假设下数学上不可持续"),
            (0.40, "cheap", "低于批量折扣", "实付中位数约为公开价的 15%–40%，低于常见批量采购折扣区间"),
            (1.25, "near", "与公开价接近", "实付中位数约为公开价的 40%–125%，价格本身说得通"),
            (1e9, "high", "高于公开价", "实付中位数高于公开价 1.25 倍，通常含服务溢价或倍率基数差异")]
@@ -359,10 +359,17 @@ def main():
 
     # ---- 站点 ----
     CORE_MODELS = {m_["id"] for m_ in models}
+    # 价格画像按主流模型（模型账本的 40 个）的中位定（2026-10-14 Eric 拍板）：全部可比模型的中位会被冷门模型的高价 / 低价拉偏，
+    # 如 aigcbest.top 全部 205 个中位 267%，主流 37 个中位 52%。主流可比模型不足 3 个的站退回用全部模型。
+    core_rs = {}
+    for (v_, m_), row_ in R.items():
+        if m_ in CORE_MODELS and row_.get("ratio") is not None: core_rs.setdefault(v_, []).append(row_["ratio"])
     sites = []
     for r in db.execute("SELECT domain, first_seen_at, first_channel, level, panel_kind, panel_version, entity_name, site_url FROM relay_candidate WHERE level>=1"):
         v = r["domain"]; rs = per_site.get(v, [])
-        med = st.median(rs) if rs else None
+        med_all = st.median(rs) if rs else None
+        crs = core_rs.get(v, [])
+        med, med_basis = (st.median(crs), "core") if len(crs) >= 3 else (med_all, "all")
         cl = None
         if v in HELD: cl = {"code": "held", "name": "计价方式待核", "help": "该站全线报价与公开价差距异常，常见原因是面板倍率基数与上游不同。核实前本站只列名义报价，不出比率。"}
         elif med is not None:
@@ -383,7 +390,8 @@ def main():
         sf = SF.get(v) or {}
         sites.append({"domain": v, "name": sf.get("system_name") or r["entity_name"], "site_url": r["site_url"], "first_seen": r["first_seen_at"][:10],
                       "channel": r["first_channel"], "panel": r["panel_kind"], "version": sf.get("version") or r["panel_version"],
-                      "cluster": cl, "median": round(med, 3) if med is not None else None, "n_models": len(mrows), "n_ratio": len(rs),
+                      "cluster": cl, "median": round(med, 3) if med is not None else None, "median_basis": med_basis if med is not None else None,
+                      "median_all": round(med_all, 3) if med_all is not None else None, "n_models": len(mrows), "n_ratio": len(rs),
                       # 主流模型（模型账本那 40 个）的中位：全部可比模型的中位会被冷门模型的高价拉偏，并列给出免得误读（2026-10-14 起）
                       "median_core": (lambda cr: round(st.median(cr), 3) if len(cr) >= 3 else None)([x["ratio"] for x in mrows if x.get("ratio") is not None and x["model"] in CORE_MODELS]),
                       "n_core": sum(1 for x in mrows if x.get("ratio") is not None and x["model"] in CORE_MODELS),
