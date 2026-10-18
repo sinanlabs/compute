@@ -302,7 +302,8 @@ def price_changes(db, days=7):
     for r in db.execute("""SELECT n.vendor, n.model, n.unit, o.price AS old_p, n.price AS new_p, n.valid_from, n.vendor_kind
                            FROM offer_norm n JOIN offer_norm o ON o.superseded_by=n.id
                            WHERE n.unit='per_mtok_out' AND abs(n.price-o.price)>1e-9 AND n.valid_from >= datetime('now','-%d days')
-                             AND json_extract(o.conditions,'$.raw_name') IS json_extract(n.conditions,'$.raw_name')   -- 同一个站方原名改价才算；换了个名字不是变价
+                             AND json_extract(o.conditions,'$.raw_name') IS json_extract(n.conditions,'$.raw_name')   -- 换了计价分组也不是变价（口径修正）
+                             AND json_extract(o.conditions,'$.group') IS json_extract(n.conditions,'$.group')   -- 同一个站方原名改价才算；换了个名字不是变价
                            ORDER BY n.valid_from DESC LIMIT 200""" % days):
         out.append({"t": r["valid_from"], "vendor": r["vendor"], "model": canonical(r["model"]), "old": r["old_p"], "new": r["new_p"], "kind": r["vendor_kind"]})
     return out
@@ -323,6 +324,21 @@ def main():
             row["ratio"] = row["out"] / f["usd"]; row["floor"] = f
             per_site.setdefault(v, []).append(row["ratio"])
     HELD = site_gate(per_site)
+    # 全站统一倍率：大半模型用同一个倍率、连旗舰和小模型都同价 = 面板默认值，不是实际价格（2026-10-18 起）。
+    # 例：a6api.com 是供应商市场，102 个模型里 101 个默认分组都是倍率 0.5 / 输出 1（Opus 与 Haiku 同为每百万 $1），实际价按几百个供应商分组另计、公开接口看不到。
+    HELD_WHY = {}
+    _pairs = {}
+    for r_ in db.execute("SELECT vendor, conditions FROM offer_norm WHERE vendor_kind='relay' AND superseded_by IS NULL AND unit='per_mtok_out'"):
+        c_ = json.loads(r_["conditions"] or "{}")
+        if c_.get("billing_expr") or c_.get("model_ratio") is None: continue
+        _pairs.setdefault(r_["vendor"], []).append(((c_.get("model_ratio"), c_.get("completion_ratio")), str(c_.get("raw_name") or "").lower()))
+    for v_, L_ in _pairs.items():
+        if len(L_) < 20: continue
+        from collections import Counter as _C
+        top_, n_ = _C(k for k, _ in L_).most_common(1)[0]
+        nm_ = [x for k, x in L_ if k == top_]
+        if n_ / len(L_) >= 0.6 and any(("opus" in x or "fable" in x) for x in nm_) and any(("haiku" in x or "mini" in x or "flash" in x) for x in nm_):
+            HELD.add(v_); HELD_WHY[v_] = "该站 %d 个按 token 计价的模型里有 %d 个用同一个倍率，连旗舰模型和小模型都同价，像是面板默认值；实际价格很可能按分组另计、公开接口看不到。核实前本站只列名义报价，不出比率。" % (len(L_), n_)
 
     # ---- 模型表 ----
     latest = [x["model"] for x in latest_by_family(db, per_family=2) if x["has_reference"]]
@@ -371,7 +387,7 @@ def main():
         crs = core_rs.get(v, [])
         med, med_basis = (st.median(crs), "core") if len(crs) >= 3 else (med_all, "all")
         cl = None
-        if v in HELD: cl = {"code": "held", "name": "计价方式待核", "help": "该站全线报价与公开价差距异常，常见原因是面板倍率基数与上游不同。核实前本站只列名义报价，不出比率。"}
+        if v in HELD: cl = {"code": "held", "name": "计价方式待核", "help": HELD_WHY.get(v) or "该站全线报价与公开价差距异常，常见原因是面板倍率基数与上游不同。核实前本站只列名义报价，不出比率。"}
         elif med is not None:
             for th, code, name, help_ in CLUSTER:
                 if med < th: cl = {"code": code, "name": name, "help": help_}; break
@@ -385,13 +401,15 @@ def main():
                           # 站方面板上看到的标价（站内额度/百万 token，未按充值比例折算）——和站方页面逐条对得上
                           "nom_in": row.get("nominal_in"), "nom_out": row.get("nominal_out"),
                           "variants": row.get("variants", 1), "variant_names": row.get("variant_names"), "variant_out_range": row.get("variant_out_range"),
-                          "time_mult": row.get("time_mult")})
+                          "time_mult": row.get("time_mult"), "group": row.get("group"), "group_ratio": row.get("group_ratio")})
         mrows.sort(key=lambda x: (0 if x["ratio"] is not None else 1, x["ratio"] or 0))
         sf = SF.get(v) or {}
         sites.append({"domain": v, "name": sf.get("system_name") or r["entity_name"], "site_url": r["site_url"], "first_seen": r["first_seen_at"][:10],
                       "channel": r["first_channel"], "panel": r["panel_kind"], "version": sf.get("version") or r["panel_version"],
                       "cluster": cl, "median": round(med, 3) if med is not None else None, "median_basis": med_basis if med is not None else None,
                       "median_all": round(med_all, 3) if med_all is not None else None, "n_models": len(mrows), "n_ratio": len(rs),
+                      # 本站算价用的分组（按模型数排）：没有公开 default 分组的站，每个模型取它公开分组里倍率最低的，这里列出来免得读者误以为是普通价
+                      "groups_used": [{"group": g_, "ratio": r_, "n": n_} for (g_, r_), n_ in __import__("collections").Counter((x.get("group") or "default", x.get("group_ratio")) for x in mrows if x.get("out") is not None or x.get("call") is not None or x.get("sec") is not None).most_common(3)],
                       # 主流模型（模型账本那 40 个）的中位：全部可比模型的中位会被冷门模型的高价拉偏，并列给出免得误读（2026-10-14 起）
                       "median_core": (lambda cr: round(st.median(cr), 3) if len(cr) >= 3 else None)([x["ratio"] for x in mrows if x.get("ratio") is not None and x["model"] in CORE_MODELS]),
                       "n_core": sum(1 for x in mrows if x.get("ratio") is not None and x["model"] in CORE_MODELS),
@@ -568,7 +586,19 @@ def main():
     rank["n_quotes"] = stats["quotes"]
     os.makedirs(os.path.join(HERE, "rank"), exist_ok=True)
     json.dump(rank, open(os.path.join(HERE, "rank", week_id + ".json"), "w"), ensure_ascii=False, default=str)   # 每周一期，永久链接用
-    json.dump(data, open(os.path.join(HERE, "data_v2.json"), "w"), ensure_ascii=False, default=str)
+    # 瘦身：站点页每条报价的可选字段为空 / 默认值时不写，浮点保留 4 位有效数字，紧凑分隔符。
+    # 2026-10-18 加了标价、同名多名字、分时、分组后文件到 27.6 MB，超过 Cloudflare Pages 单文件 25 MB 上限导致部署失败。
+    OPT_NONE = ("floor_vendor", "floor_out", "probe", "crowd", "mtype", "nom_in", "nom_out", "variant_names", "variant_out_range", "time_mult")
+    def _r4(v): return float("%.4g" % v) if isinstance(v, float) else v
+    for s_ in data.get("sites", []):
+        for m_ in s_.get("models", []):
+            for k_ in OPT_NONE:
+                if k_ in m_ and m_[k_] is None: del m_[k_]
+            if m_.get("variants") == 1: m_.pop("variants", None)
+            if (m_.get("group") or "default") == "default" and m_.get("group_ratio") in (None, 1, 1.0): m_.pop("group", None); m_.pop("group_ratio", None)
+            for k_ in ("in", "out", "call", "sec", "ratio", "nom_in", "nom_out", "floor_out"):
+                if k_ in m_: m_[k_] = _r4(m_[k_])
+    json.dump(data, open(os.path.join(HERE, "data_v2.json"), "w"), ensure_ascii=False, default=str, separators=(",", ":"))
     print("模型 %d · 站点 %d（有报价 %d，待核 %d）· 价格变动 %d · 新收录 %d · 快照 %d" % (
         len(models), len(sites), stats["with_quotes"], stats["held"], len(changes), len(new_sites), len(snaps)))
     print("簇：", stats["clusters"])

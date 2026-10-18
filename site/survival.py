@@ -42,7 +42,7 @@ def main():
     db.commit()
     # 价格变动 7 天
     # 只数真变价：新旧价不同（同价重写、下架退场都不算；2026-10-14 前同名覆盖造成的同价重写曾把 aigcbest.top 记成 7 天 7,308 次）
-    pc = {r[0]: r[1] for r in db.execute("SELECT o.vendor, COUNT(*) FROM offer_norm o JOIN offer_norm n ON n.id=o.superseded_by WHERE o.vendor_kind='relay' AND o.superseded_by<>o.id AND abs(o.price-n.price)>1e-9 AND json_extract(o.conditions,'$.raw_name') IS json_extract(n.conditions,'$.raw_name') AND o.valid_to >= date('now','-7 days') GROUP BY o.vendor")}
+    pc = {r[0]: r[1] for r in db.execute("SELECT o.vendor, COUNT(*) FROM offer_norm o JOIN offer_norm n ON n.id=o.superseded_by WHERE o.vendor_kind='relay' AND o.superseded_by<>o.id AND abs(o.price-n.price)>1e-9 AND json_extract(o.conditions,'$.raw_name') IS json_extract(n.conditions,'$.raw_name') AND json_extract(o.conditions,'$.group') IS json_extract(n.conditions,'$.group') AND o.valid_to >= date('now','-7 days') GROUP BY o.vendor")}
     # 每站特征
     sites = {}
     for r in db.execute("SELECT domain, first_seen_at, panel_kind, icp, register_state, status, domain_created, first_cert, died_at FROM relay_candidate WHERE level>=1"):

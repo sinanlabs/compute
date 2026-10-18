@@ -127,7 +127,7 @@ def main(month=None):
             if start.isoformat() <= c["t"][:10] <= end.isoformat(): changes.append(c)
     ups = sum(1 for c in changes if c["new"] > c["old"]); downs = len(changes) - ups
     # 全库变价行数（含非主流）
-    all_changes = q("SELECT COUNT(*) FROM offer_norm o JOIN offer_norm n ON n.id=o.superseded_by WHERE o.vendor_kind='relay' AND o.unit='per_mtok_out' AND o.superseded_by<>o.id AND abs(o.price-n.price)>1e-9 AND json_extract(o.conditions,'$.raw_name') IS json_extract(n.conditions,'$.raw_name') AND o.valid_to>=? AND o.valid_to<?", start.isoformat(), (end + dt.timedelta(days=1)).isoformat())
+    all_changes = q("SELECT COUNT(*) FROM offer_norm o JOIN offer_norm n ON n.id=o.superseded_by WHERE o.vendor_kind='relay' AND o.unit='per_mtok_out' AND o.superseded_by<>o.id AND abs(o.price-n.price)>1e-9 AND json_extract(o.conditions,'$.raw_name') IS json_extract(n.conditions,'$.raw_name') AND json_extract(o.conditions,'$.group') IS json_extract(n.conditions,'$.group') AND o.valid_to>=? AND o.valid_to<?", start.isoformat(), (end + dt.timedelta(days=1)).isoformat())
     # 指数
     PI = J(os.path.join(HERE, "price_index.json")) or {}; ser = [x for x in PI.get("series", []) if start.isoformat() <= x["date"] <= end.isoformat()]
     idx = {"first": ser[0] if ser else None, "last": ser[-1] if ser else None, "series": ser,

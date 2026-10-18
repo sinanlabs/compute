@@ -747,6 +747,137 @@ def build_model(m):
     og = "/img/og/%s.png" % m["id"] if os.path.exists(os.path.join(HERE, "img", "og", m["id"] + ".png")) else "/img/og.png"
     return shell(title, desc, "/m/" + m["id"], body, active="home", page="model", crumbs=[("模型账本", "/"), (m["name"],)], og_image=og, jsonld=ld)
 
+# ------------------------------------------------------------------ A vs B 对比页（2026-10-18）
+# 接「A 站和 B 站哪个便宜」类搜索。只对大家实际在看的站配对（站点页近 30 天浏览量，site_popularity.json），
+# 两站都要：有价格画像且非待核、未失联、24h 可达 ≥90%、注册未关闭、共同在卖的主流模型 ≥5 个。总量封顶 200 页。
+# 已经发布的对比页写进 site/vs_pairs.json 永久保留（URL 不变的铁律）；某一站暂时不满足条件时页面上注明，不删页。
+VS_CAP = 200
+VS_MIN_COMMON = 5
+VS_BY_SITE = {}      # 域名 → [(对方域名, 路径)]，站点页「和其他站对比」用
+VS_PAGES = []        # [(路径, a, b)]
+
+def groups_txt(S):
+    """站点算价用的分组，一句话：default ×1；或「Kiro-Claude-1 ×0.097 等 3 个分组（每个模型取它公开分组里倍率最低的）」。分组名是站方原文，含禁用词不转载。"""
+    gu = S.get("groups_used") or []
+    if not gu: return "—"
+    nm = lambda g: _safe_snip(g["group"]) or "站方自命名分组"
+    r = lambda g: ("×%s" % fmt(g["ratio"])) if g.get("ratio") is not None else ""
+    if len(gu) == 1 and gu[0]["group"] == "default": return "default %s" % r(gu[0])
+    if len(gu) == 1: return "%s %s（站方公开分组里没有 default）" % (nm(gu[0]), r(gu[0]))
+    return "%s %s 等 %d 个分组（每个模型取它公开分组里倍率最低的）" % (nm(gu[0]), r(gu[0]), len(gu))
+
+def _vs_eligible(s, core):
+    av = (s.get("avail") or {}).get("uptime")
+    cl = (s.get("cluster") or {}).get("code")
+    if cl in (None, "held") or s.get("dead") or av is None or av < 90 or (s.get("register") or {}).get("state") == "closed": return False
+    return sum(1 for m in s["models"] if m["model"] in core and m.get("out") is not None) >= VS_MIN_COMMON
+
+def vs_path(a, b):
+    a, b = sorted([a, b]); return "/vs/%s-vs-%s" % (a, b)
+
+def plan_vs():
+    """算出今天要生成的对比页：先保留已发布的，再按两站浏览量之和补新的，封顶 VS_CAP。"""
+    core = {m["id"] for m in D["models"]}
+    by = {s["domain"]: s for s in D["sites"]}
+    pp = os.path.join(HERE, "vs_pairs.json")
+    kept = json.load(io.open(pp, encoding="utf-8")) if os.path.exists(pp) else []
+    kept = [x for x in kept if x["a"] in by and x["b"] in by]          # 站从总表里彻底没了才去掉
+    have = {(x["a"], x["b"]) for x in kept}
+    popf = os.path.join(HERE, "site_popularity.json")
+    pv = (json.load(io.open(popf, encoding="utf-8")).get("pv") or {}) if os.path.exists(popf) else {}
+    el = [s for s in D["sites"] if _vs_eligible(s, core)]
+    el.sort(key=lambda s: (-(pv.get(s["domain"]) or 0), -sum(1 for m in s["models"] if m["model"] in core and m.get("out") is not None)))
+    pool = el[:45]
+    cand = []
+    for i, x in enumerate(pool):
+        mx = {m["model"] for m in x["models"] if m["model"] in core and m.get("out") is not None}
+        for y in pool[i + 1:]:
+            my = {m["model"] for m in y["models"] if m["model"] in core and m.get("out") is not None}
+            n = len(mx & my)
+            if n < VS_MIN_COMMON: continue
+            a, b = sorted([x["domain"], y["domain"]])
+            if (a, b) in have: continue
+            cand.append(((pv.get(a) or 0) + (pv.get(b) or 0), n, a, b))
+    cand.sort(key=lambda c: (-c[0], -c[1], c[2], c[3]))
+    for _, _, a, b in cand[:max(0, VS_CAP - len(kept))]:
+        kept.append({"a": a, "b": b, "since": GEN_DATE}); have.add((a, b))
+    io.open(pp, "w", encoding="utf-8").write(json.dumps(kept, ensure_ascii=False, indent=0))
+    for x in kept:
+        p = vs_path(x["a"], x["b"])
+        VS_PAGES.append((p, x["a"], x["b"]))
+        VS_BY_SITE.setdefault(x["a"], []).append((x["b"], p)); VS_BY_SITE.setdefault(x["b"], []).append((x["a"], p))
+    return VS_PAGES
+
+def build_vs(a, b):
+    core_order = [m["id"] for m in D["models"]]; floors = {m["id"]: m["floor"] for m in D["models"]}; names = {m["id"]: m["name"] for m in D["models"]}
+    by = {s["domain"]: s for s in D["sites"]}; A, B = by[a], by[b]
+    ma = {m["model"]: m for m in A["models"] if m.get("out") is not None}; mb = {m["model"]: m for m in B["models"] if m.get("out") is not None}
+    common = [mid for mid in core_order if mid in ma and mid in mb]
+    rows, la, lb, eq = [], [], [], []
+    for mid in common:
+        xa, xb = ma[mid], mb[mid]
+        if abs(xa["out"] - xb["out"]) <= 0.01 * max(xa["out"], xb["out"]): eq.append(mid); who = "基本相同"
+        elif xa["out"] < xb["out"]: la.append(mid); who = "%s 低 %s" % (a, pct(1 - xa["out"] / xb["out"]))
+        else: lb.append(mid); who = "%s 低 %s" % (b, pct(1 - xb["out"] / xa["out"]))
+        f = floors.get(mid) or {}
+        nom = lambda x: ('<span class="asf">标价 $%s</span>' % fmt(x["nom_out"])) if x.get("nom_out") is not None else ""
+        rows.append('<tr><td><a href="/m/%s"><b>%s</b></a></td><td class="num"><span class="big">%s</span>%s</td><td class="num"><span class="big">%s</span>%s</td><td class="num">%s</td><td>%s</td></tr>' % (
+            esc(mid), esc(names.get(mid, mid)), fmt(xa["out"]), nom(xa), fmt(xb["out"]), nom(xb), fmt(f.get("out")) if f.get("out") else "—", esc(who)))
+    med = lambda S, M: (sorted(M[m]["ratio"] for m in common if M[m].get("ratio") is not None)[len([m for m in common if M[m].get("ratio") is not None]) // 2]) if any(M[m].get("ratio") is not None for m in common) else None
+    pa, pb = med(A, ma), med(B, mb)
+    ok_now = _vs_eligible(A, set(core_order)) and _vs_eligible(B, set(core_order)) and len(common) >= VS_MIN_COMMON
+    if common:
+        concl = "截至 %s，%s 和 %s 都在卖的主流模型有 %d 个：%s 实付更低的 %d 个，%s 更低的 %d 个，基本相同的 %d 个。" % (GEN_DATE, a, b, len(common), a, len(la), b, len(lb), len(eq))
+        if pa is not None and pb is not None: concl += "按这些共同模型算，%s 的实付中位是参考价的 %s，%s 是 %s。" % (a, pct(pa), b, pct(pb))
+    else:
+        concl = "截至 %s，%s 和 %s 暂时没有都在卖的主流模型。" % (GEN_DATE, a, b)
+    notice = "" if ok_now else '<div class="notice rise" style="--i:1;margin-bottom:14px">其中一站目前不满足对比条件（24 小时可达不足 90%、注册已关闭、报价不足或读不到定价接口），下面是最近一次能比对的数字，仅供参考。</div>'
+    def side(S, k):
+        av = S.get("avail") or {}; f = S.get("facts") or {}; reg = (S.get("register") or {}).get("state")
+        return {"画像": (S.get("cluster") or {}).get("name") or "—",
+                "主流中位": (pct(S["median"]) + ("（主流 %d 个）" % (S.get("n_core") or 0) if S.get("median_basis") == "core" else "")) if S.get("median") is not None else "—",
+                "在卖": "%d 个" % S["n_models"], "充值": ("%s 元 / $1" % fmt(f["price"])) if f.get("price") is not None else "未暴露",
+                "可达": ("%.0f%%" % av["uptime"]) if av.get("uptime") is not None else "—", "延迟": ("%d 毫秒" % av["ttfb_p50"]) if av.get("ttfb_p50") else "—",
+                "注册": {"open": "开放", "closed": "已关闭"}.get(reg, "未能判定"), "面板": S.get("panel") or "—", "收录": S.get("first_seen") or "—", "分组": groups_txt(S)}[k]
+    keys = [("画像", "价格画像"), ("主流中位", "主流模型实付中位（相对参考价）"), ("在卖", "有报价的模型"), ("充值", "充值比例"), ("分组", "本站按哪个分组算价"), ("可达", "24 小时可达"), ("延迟", "首字节中位"), ("注册", "新用户注册"), ("面板", "面板"), ("收录", "首次收录")]
+    facts = "".join('<tr><td class="faint">%s</td><td>%s</td><td>%s</td></tr>' % (lbl, esc(side(A, k)), esc(side(B, k))) for k, lbl in keys)
+    exs = lambda L: "、".join(names.get(m, m) for m in L[:3])
+    qa = [("%s 和 %s 哪个便宜？" % (a, b), ("要看具体模型。两站共同在卖的 %d 个主流模型里，%s 实付更低的有 %d 个%s，%s 更低的有 %d 个%s，基本相同的 %d 个。本站只摆实付价，不做推荐。" % (
+              len(common), a, len(la), ("（如 %s）" % exs(la)) if la else "", b, len(lb), ("（如 %s）" % exs(lb)) if lb else "", len(eq))) if common else "两站暂时没有都在卖的主流模型，没法逐个比。"),
+          ("%s 和 %s 的实付价是怎么算的？" % (a, b), "实付 = 站方标价 × 分组倍率 × 充值比例 ÷ 汇率（今天 %.2f）。%s：充值比例 %s，分组 %s；%s：充值比例 %s，分组 %s。站方页面默认展示的可能是会员分组价。" % (
+              D["fx"]["rate"], a, side(A, "充值"), side(A, "分组"), b, side(B, "充值"), side(B, "分组"))),
+          ("%s 和 %s 哪个更容易连上？" % (a, b), "过去 24 小时本站探测：%s 可达 %s、首字节中位 %s，%s 可达 %s、首字节中位 %s。可达只说明能不能连上，不代表模型质量。" % (
+              a, side(A, "可达"), side(A, "延迟"), b, side(B, "可达"), side(B, "延迟"))),
+          ("两个站都还能注册吗？", "%s：%s；%s：%s。" % (a, side(A, "注册"), b, side(B, "注册"))),
+          ("这些数据多久更新？", "面板价每天抓取一次，可达性每小时探测一次；每个价格都能在两站的站点页里对到抓取快照。")]
+    faq_html = '<dl class="faq">' + "".join('<dt>%s</dt><dd>%s</dd>' % (esc(q), esc(x)) for q, x in qa) + '</dl>'
+    others = lambda d, me: "".join('<a href="%s">%s vs %s</a>' % (p, esc(me), esc(o)) for o, p in VS_BY_SITE.get(me, [])[:8] if o != d)
+    body = tpl(u"""<div class="mhead rise" style="--i:0"><div><div class="eyebrow" style="color:var(--p);opacity:1">中转站对比</div><h1>{{a}} vs {{b}}</h1><p class="lead"><b>{{concl}}</b></p><p class="lead">实付 = 站方标价按充值比例和汇率折成的真实美元价，每百万输出 token。本站不做推荐，只把两站的测量值放在一起。</p></div>
+<div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap"><a class="btn o" href="/s/{{a}}">{{a}} 站点页</a><a class="btn o" href="/s/{{b}}">{{b}} 站点页</a></div></div>
+{{notice}}<section class="card rise" style="margin-top:6px;--i:1"><div class="pad" style="padding-bottom:6px"><h2 class="sec">两站事实</h2></div><div class="tablewrap"><table><thead><tr><th></th><th>{{a}}</th><th>{{b}}</th></tr></thead><tbody>{{facts}}</tbody></table></div></section>
+<section class="card rise" style="margin-top:16px;--i:2"><div class="pad" style="padding-bottom:6px"><h2 class="sec">共同在卖的主流模型 · {{n}} 个</h2><p class="lead">$/百万输出 token；小字是站方标价（站内额度，未折算）。</p></div><div class="tablewrap"><table><thead><tr><th>模型</th><th class="num">{{a}}</th><th class="num">{{b}}</th><th class="num">参考价</th><th>实付更低的一方</th></tr></thead><tbody>{{rows}}</tbody></table></div><div class="tfoot"><span>{{disc}}</span></div></section>
+<section class="card pad rise" style="margin-top:16px;--i:3"><h2 class="sec">常见问题</h2>{{faq}}</section>
+<div class="mlinks card" style="margin-top:16px;border-top:1px solid var(--hair)"><span class="vn">更多对比</span>{{more}}<a href="/vs" style="margin-left:auto">全部对比 →</a></div>
+<script id="d" type="application/json">{{data}}</script>""",
+        a=esc(a), b=esc(b), concl=esc(concl), notice=notice, facts=facts, n=len(common), rows="".join(rows) or '<tr><td colspan="5" class="faint">暂时没有共同模型</td></tr>', disc=DISCLAIMER,
+        faq=faq_html, more=others(b, a) + others(a, b), data=jsdata({"model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+    title = "%s vs %s：%d 个主流模型实付价对比 · Sinan Compute" % (a, b, len(common))
+    desc = concl + "两站的充值比例、24 小时可达、注册状态与逐个模型的实付价。"
+    ld = [{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": x}} for q, x in qa]},
+          {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "中转站对比", "item": BASE + "/vs"}, {"@type": "ListItem", "position": 2, "name": "%s vs %s" % (a, b), "item": BASE + vs_path(a, b)}]}]
+    return shell(title, desc, vs_path(a, b), body, active="sites", page="vs", crumbs=[("中转站对比", "/vs"), ("%s vs %s" % (a, b),)], jsonld=ld)
+
+def build_vs_index():
+    by = {s["domain"]: s for s in D["sites"]}
+    groups = {}
+    for p, a, b in VS_PAGES: groups.setdefault(a, []).append((b, p)); groups.setdefault(b, []).append((a, p))
+    order = sorted(groups, key=lambda d: -len(groups[d]))
+    blocks = "".join('<div class="card pad" style="margin-top:12px"><h3 style="font-size:15px;margin:0 0 8px"><a href="/s/%s">%s</a> <span class="faint" style="font-weight:400">%s</span></h3><div class="mlinks" style="border:0;padding:0">%s</div></div>' % (
+        esc(d), esc(d), esc((by.get(d) or {}).get("name") or ""), "".join('<a href="%s">vs %s</a>' % (p, esc(o)) for o, p in sorted(groups[d]))) for d in order)
+    body = tpl(u"""<div class="rise" style="--i:0;margin-bottom:14px"><h1 style="font-size:24px">中转站对比</h1><p class="lead">{{n}} 组两两对比，只收大家常看、24 小时可达 ≥90%、注册未关闭、共同在卖的主流模型 ≥5 个的站。每组列出两站的充值比例、可达、注册状态和逐个模型的实付价。本站不做推荐。</p></div>{{blocks}}
+<script id="d" type="application/json">{{data}}</script>""", n=len(VS_PAGES), blocks=blocks, data=jsdata({"model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
+    return shell("中转站两两对比：%d 组实付价、可达与注册状态 · Sinan Compute" % len(VS_PAGES), "常看的中转站两两对比：共同在卖的主流模型逐个比实付价，附充值比例、24 小时可达与注册状态。只摆测量值，不做推荐。", "/vs", body, active="sites", page="vs", crumbs=[("中转站对比",)])
+
 def build_sites():
     st = D["stats"]; C = st["clusters"]
     rows = []
@@ -795,6 +926,7 @@ def build_site(s):
     pb = s.get("pricing_basis") or {}
     # 分组名是站方自起的，含禁用词时不转述（原文在抓取快照里）
     pb_group = (_safe_snip(pb.get("group")) or "站方自命名（名称原文见抓取快照）") if pb.get("group") else "default"
+    gu_fact = [("计价分组", groups_txt(s), "价格按这个分组的倍率算；站方页面默认展示的可能是别的分组（如会员分组）的价", "t")] if (s.get("groups_used") and not pb) else []
     pb_fact = [("计价口径", "分组 %s · 倍率 %s" % (pb_group, pb.get("group_ratio")),
                 "该站用动态计价表达式（billing_mode=tiered_expr）：每百万 token 价 = 表达式系数 × 分组倍率，单位为站内额度。我们统一取 %s 分组%s；其他分组与长上下文档位价格不同，以站方面板为准。" % (
                  pb_group, ("的第一档（%s）" % pb["tier"]) if pb.get("tier") else ""), "t")] if pb else []
@@ -815,7 +947,7 @@ def build_site(s):
                ("还没有探测样本" if not av.get("n") else
                 ("%s · %d 次探测 · 节点 %s%s" % (("延迟 p50 %dms" % av["ttfb_p50"]) if av.get("ttfb_p50") else "本站无成功样本，失败原因见下", av["n"], D["probe_node"], "；样本不足 10 次，只作参考" if av["n"] < 10 else "")))), "t" if s.get("dead") else ""),
         ("在卖模型", str(s["n_models"]) if s["n_models"] else "—", ("说得通 %d · 低于成本下限 %d" % (s["ok_count"], s["un_count"])) if (s["n_models"] and not held) else ("只列名义报价" if held else ("套餐制 · 模型清单需登录" if s.get("panel") == "sub2api" else "定价接口未公开，暂无报价")), ""),
-        *pb_fact,
+        *pb_fact, *gu_fact,
         ("充值比例", price, "面板 price 字段：每 $1 名义额度收多少元", "t"),
         ("一致性探针", ("%d / %d 一致" % (s["probe"]["consistent"], s["probe"]["pairs"])) if s.get("probe") else "—",
          ("用本站 Key 测 %d 个模型的 token 计数，与同模型其他渠道比对 · %s" % (s["probe"]["pairs"], s["probe"]["ts"])) if s.get("probe") else "尚未用 Key 探测；只有拿到该站 Key 才能测", "" if s.get("probe") else "t"),
@@ -902,12 +1034,12 @@ def build_site(s):
     body = tpl(u"""<div class="sitehead rise" style="--i:0"><div><h1>{{domain}}<span class="nm">{{name}}</span></h1>{{summary}}</div><div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">{{pic}}<button class="btn o watch" data-kind="site" data-key="{{domain}}">关注这个站</button><a class="btn p" href="/go/{{domain}}" target="_blank" rel="noopener nofollow">前往站点 ↗</a></div></div>
 {{notice}}<div class="facts rise" style="--i:2">{{facts}}</div><div class="repfoot rise" style="--i:2.2;margin-top:10px;padding-top:0;border:0"><button class="rep" data-kind="site" data-key="{{domain}}" data-ctx="站点 {{domain}}">这个站的信息有误？报错</button>{{planbtn}}<span class="sub">报错需登录；核实后记入修正日志并署名</span></div>{{noq}}{{tbl}}
 {{mlinks}}<div class="card pad rise" style="margin-top:16px;--i:3.8"><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><img src="/badge/{{domain}}.svg" alt="实测徽章" width="340" height="64" style="border-radius:14px"><div style="flex:1;min-width:260px"><h2 class="sec" style="font-size:15px">站长可嵌入的实测徽章</h2><p class="lead" style="margin-top:4px">只显示测量值：24h 可达率、价格画像、日期，每天自动更新，点击回到本页。不含任何评价。</p><code style="display:block;margin-top:8px;font-size:11.5px;word-break:break-all;background:var(--ground);padding:8px 10px;border-radius:8px">&lt;a href="{{base}}/s/{{domain}}"&gt;&lt;img src="{{base}}/badge/{{domain}}.svg" alt="Sinan Compute 实测" width="340" height="64"&gt;&lt;/a&gt;</code></div></div></div>
-{{faqsec}}{{rankbadge}}<div class="callout rise" style="margin-top:16px;--i:4"><b>想核实它给的是不是真模型？</b> 用你在该站的 Key 跑开源的协议一致性检测（本站探针脚本或 Veridrop）。本站只给价格与可达性的测量，不替你判断。出站链接不带任何推广参数，只记点击数。</div>
+{{faqsec}}{{vslinks}}{{rankbadge}}<div class="callout rise" style="margin-top:16px;--i:4"><b>想核实它给的是不是真模型？</b> 用你在该站的 Key 跑开源的协议一致性检测（本站探针脚本或 Veridrop）。本站只给价格与可达性的测量，不替你判断。出站链接不带任何推广参数，只记点击数。</div>
 <script id="d" type="application/json">{{data}}</script>""",
         mlinks=('<div class="mlinks card rise" style="margin-top:16px;--i:3.5"><span class="vn">它在卖的主推模型</span>%s</div>' % "".join('<a href="/m/%s">%s</a>' % (esc(mm["id"]), esc(mm["name"])) for mm in D["models"] if any(r["vendor"] == s["domain"] for r in mm["rows"]))) if any(any(r["vendor"] == s["domain"] for r in mm["rows"]) for mm in D["models"]) else "",
         rankbadge=('<div class="card pad rise" style="margin-top:16px;--i:3.9"><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><img src="/badge/rank/%s/%s.svg" alt="司南榜期号徽章" width="340" height="64" style="border-radius:14px"><div style="flex:1;min-width:260px"><h2 class="sec" style="font-size:15px">本期上榜：%s · %s #%02d</h2><p class="lead" style="margin-top:4px">按测量值排序的名次，带期号，永久有效；站长可嵌入，点击回到当期榜单。不构成推荐。</p><code style="display:block;margin-top:8px;font-size:11.5px;word-break:break-all;background:var(--ground);padding:8px 10px;border-radius:8px">&lt;a href="%s/rank/%s"&gt;&lt;img src="%s/badge/rank/%s/%s.svg" alt="司南榜 %s %s #%02d" width="340" height="64"&gt;&lt;/a&gt;</code></div></div></div>' % (
             esc(s["rank_badge"]["week"]), esc(s["domain"]), esc(s["rank_badge"]["week"]), esc(s["rank_badge"]["board_name"]), s["rank_badge"]["pos"], BASE, esc(s["rank_badge"]["week"]), BASE, esc(s["rank_badge"]["week"]), esc(s["domain"]), esc(s["rank_badge"]["week"]), esc(s["rank_badge"]["board_name"]), s["rank_badge"]["pos"])) if s.get("rank_badge") else "",
-        summary=summary_html, faqsec=faq_sec, base=BASE, domain=esc(s["domain"]), planbtn=(('<button class="rep" data-kind="plan" data-key="%s" data-ctx="套餐价 %s" data-tpl="套餐名：  · 价格：  元 / 月  · 每日/每周额度：  · 购买日期：  ">我买过这个站的套餐，报个价</button>' % (esc(s["domain"]), esc(s["domain"]))) if s.get("panel") == "sub2api" else ""), name=esc(s.get("name") or ""), pic=('<span class="pill %s">%s</span>' % (cl["code"], esc(cl["name"]))) if cl else '<span class="pill none">暂无报价</span>', notice=notice, facts=facts_html, noq=noq, tbl=tbl,
+        summary=summary_html, faqsec=faq_sec, vslinks=('<div class="mlinks card rise" style="margin-top:16px;--i:3.75"><span class="vn">和其他站对比</span>%s<a href="/vs" style="margin-left:auto">全部对比 →</a></div>' % "".join('<a href="%s">vs %s</a>' % (p_, esc(o_)) for o_, p_ in VS_BY_SITE.get(s["domain"], [])[:10])) if VS_BY_SITE.get(s["domain"]) else "", base=BASE, domain=esc(s["domain"]), planbtn=(('<button class="rep" data-kind="plan" data-key="%s" data-ctx="套餐价 %s" data-tpl="套餐名：  · 价格：  元 / 月  · 每日/每周额度：  · 购买日期：  ">我买过这个站的套餐，报个价</button>' % (esc(s["domain"]), esc(s["domain"]))) if s.get("panel") == "sub2api" else ""), name=esc(s.get("name") or ""), pic=('<span class="pill %s">%s</span>' % (cl["code"], esc(cl["name"]))) if cl else '<span class="pill none">暂无报价</span>', notice=notice, facts=facts_html, noq=noq, tbl=tbl,
         data=jsdata({"site": {"domain": s["domain"], "held": held, "models": [{"name": r["name"], "raw": r["raw"], "out": r["out"], "call": r["call"], "sec": r["sec"], "ratio": r["ratio"], "band": r["band"], "floor_out": r.get("floor_out"), "floor_vendor": r.get("floor_vendor"), "sids": r["sids"], "probe": r.get("probe")} for r in s["models"]]},
                      "snaps": {k: v for k, v in D["snaps"].items() if any(int(k) in r["sids"] for r in s["models"])}, "label_help": D["label_help"], "fx": D["fx"],
                      "model_index": [{"id": m["id"], "name": m["name"]} for m in D["models"]]}))
@@ -1770,7 +1902,10 @@ def main():
     W = lambda rel, s: io.open(os.path.join(DIST, rel), "w", encoding="utf-8").write(s)
     W("assets/app.css", CSS); W("assets/app.js", APP_JS); W("assets/earth.js", EARTH_JS)
     W("index.html", build_index()); W("sites.html", build_sites()); W("me.html", build_me());
-    os.makedirs(os.path.join(DIST, "m"), exist_ok=True)
+    os.makedirs(os.path.join(DIST, "m"), exist_ok=True); os.makedirs(os.path.join(DIST, "vs"), exist_ok=True)
+    plan_vs()   # 先算对比页，站点页要链过去
+    for p_, a_, b_ in VS_PAGES: W(p_.lstrip("/") + ".html", build_vs(a_, b_))
+    W("vs.html", build_vs_index())
     for m in D["models"]: W("m/%s.html" % m["id"], build_model(m))
     W("feed.xml", build_feed()); W("llms.txt", build_llms())
     if MEDIA:
@@ -1858,7 +1993,7 @@ def main():
     # 搜索框的站名索引（2034 站约 78 KB）：以前内联在每一页，现在单独一个文件，第一次点搜索框时才取（2026-10-14）
     W("assets/site_index.json", jsdata([{"d": s_["domain"], "n": s_["name"]} for s_ in D["sites"]]))
     W("robots.txt", "User-agent: *\nAllow: /\nDisallow: /snap/\nSitemap: %s/sitemap.xml\n" % BASE)
-    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily"), ("/gpu", "daily"), ("/report", "weekly"), ("/press", "monthly"), ("/verify", "monthly"), ("/api-docs", "weekly"), ("/corrections", "weekly"), ("/survival", "daily"), ("/governance", "monthly")] + [("/report/%s" % r_["month"], "weekly") for r_ in load_reports()] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]]
+    urls = [("/", "daily"), ("/sites", "daily"), ("/media", "daily"), ("/method", "weekly"), ("/weekly", "weekly"), ("/rank", "weekly"), ("/price-index", "daily"), ("/gpu", "daily"), ("/report", "weekly"), ("/press", "monthly"), ("/verify", "monthly"), ("/api-docs", "weekly"), ("/corrections", "weekly"), ("/survival", "daily"), ("/governance", "monthly")] + [("/report/%s" % r_["month"], "weekly") for r_ in load_reports()] + [("/rank/%s" % w_, "weekly") for w_ in load_rank_weeks()] + [("/m/%s" % m["id"], "daily") for m in D["models"]] + ([("/media/%s" % f["family"], "daily") for mod in ("video", "image") for f in MEDIA.get(mod, []) if f.get("n_rows")] if MEDIA else []) + [("/weekly/%s" % w["week"], "weekly") for w in load_weeks()] + [("/s/%s" % s["domain"], "daily") for s in D["sites"]] + [("/vs", "daily")] + [(p_, "daily") for p_, _, _ in VS_PAGES]
     W("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join('  <url><loc>%s%s</loc><lastmod>%s</lastmod><changefreq>%s</changefreq></url>\n' % (BASE, u, GEN_DATE, c) for u, c in urls) + "</urlset>\n")
     W("favicon.svg", FAVICON)
     W("_headers", "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/assets/*\n  Cache-Control: public, max-age=604800\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n/img/*\n  Cache-Control: public, max-age=2592000\n/badge/*\n  Cache-Control: public, max-age=900, must-revalidate\n/snap/*\n  X-Robots-Tag: noindex\n  Content-Type: text/plain; charset=utf-8\n")
