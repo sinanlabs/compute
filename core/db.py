@@ -45,3 +45,12 @@ def put_offer(db, vendor, vendor_kind, model, unit, price, currency, snapshot_id
         (sku, vendor, vendor_kind, model, region, currency, unit, price,
          json.dumps(conditions or {}, ensure_ascii=False), valid_from or now8(), snapshot_id))
     return cur.lastrowid
+
+
+def pricing_last_ok(db):
+    """站 → 最近一次完整读到定价接口的时间（adapters/base.mark_pricing_ok 记的；接口返回空或不完整不算）。
+       2026-10-24 前用快照表里 HTTP 200 的时间：接口改成要登录、返回空列表也是 200，旧价一直被写成「今天核对过」。"""
+    try:
+        return {r["vendor"]: r["last_ok"] for r in db.execute("SELECT vendor, last_ok FROM pricing_ok WHERE last_ok IS NOT NULL")}
+    except Exception:
+        return {r["source"][len("relay.pricing."):]: r["t"] for r in db.execute("SELECT source, max(fetched_at) t FROM source_snapshot WHERE source LIKE 'relay.pricing.%' AND http_status=200 GROUP BY source")}

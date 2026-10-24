@@ -25,8 +25,18 @@ REF_SOURCE = {"veo": "ai.google.dev 定价页（按秒）", "kling": "kling.ai/d
               "nano-banana": "ai.google.dev 定价页（按张等价价）", "flux": "bfl.ai/pricing（按百万像素，1 张按 1MP）", "kling-image": "kling.ai/dev/pricing（按张）",
               "sora": "platform.openai.com/docs/pricing 视频表（按秒，720p 起）", "grok-vid": "docs.x.ai 定价（按秒，480p 起）", "grok-image": "docs.x.ai 定价（按张，1K 起）", "wan-image": "阿里百炼刊例价（按张）"}
 REF_MISSING = {"sora": "OpenAI 已于 2026-09-24 下线 Videos API（含全部 Sora 模型），此后没有官方参考价", "seedance": "火山方舟价格页为前端异步渲染，未能读取", "vidu": "Vidu 开放平台定价页为前端渲染，未能读取", "wan": "阿里百炼计费页为前端渲染，未能读取",
-               "gpt-image": "OpenAI 按图像 token 计价，无官方每张价，不折算", "midjourney": "Midjourney 官方无按次 API 定价（订阅制）",
+               "gpt-image": "OpenAI 按图像输出 token 计价，每张价随质量档和尺寸变（官方计算器）；中转站按次报价不写质量档，所以只列官方各档作参照，不出比率", "midjourney": "Midjourney 官方无按次 API 定价（订阅制）",
                "seedream": "火山方舟价格页为前端异步渲染，未能读取", "qwen-image": "阿里百炼计费页为前端渲染，未能读取"}
+
+
+def _safe_group(g):
+    """分组名是站方原文：含禁用词的不转载（页面上写「站方自命名分组」）。"""
+    if g is None: return None
+    try:
+        from core.wording import BANNED
+        if any(w.lower() in str(g).lower() for w in BANNED): return "站方自命名分组"
+    except Exception: pass
+    return g
 
 
 def main():
@@ -36,8 +46,8 @@ def main():
     # 定价接口超过 7 天读不到的站：旧报价不展示（与 export_data.relay_rows 同一规则，2026-10-14 起）
     import datetime as _dt
     cutoff = (_dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))) - _dt.timedelta(days=7)).isoformat()
-    stale = {r["source"][len("relay.pricing."):] for r in db.execute("SELECT source, max(fetched_at) t FROM source_snapshot WHERE source LIKE 'relay.pricing.%' AND http_status=200 GROUP BY source")
-             if r["t"] and r["t"].replace(" ", "T") < cutoff}
+    LAST_OK = D.pricing_last_ok(db)
+    stale = {v for v, t in LAST_OK.items() if t and t.replace(" ", "T") < cutoff}
     rows = [r for r in db.execute("SELECT vendor, model, unit, price, conditions, snapshot_id, valid_from FROM offer_norm WHERE vendor_kind='relay' "
                       "AND unit IN ('per_call','per_second') AND superseded_by IS NULL").fetchall() if r["vendor"] not in stale]
     fam_rows = defaultdict(list); per_site = defaultdict(list)
@@ -49,7 +59,7 @@ def main():
         name = c.get("raw_name") or r["model"]
         res = compare({"name": name, "unit": r["unit"], "eff_usd": eff, "duration_s": c.get("duration_s")}, refs)
         if res["modality"] not in ("image", "video") or not res.get("family") or res.get("placeholder"): continue
-        row = {"site": r["vendor"], "name": name, "unit": r["unit"], "eff": round(eff, 4), "nominal": r["price"], "price_field": round(float(p), 4), "usd_direct": bool(c.get("usd_direct")), "spec": c.get("spec"), "variable_price": bool(c.get("variable_price")),
+        row = {"site": r["vendor"], "name": name, "unit": r["unit"], "eff": round(eff, 6), "nominal": r["price"], "group": _safe_group(c.get("group")), "group_ratio": c.get("group_ratio"), "price_field": round(float(p), 4), "usd_direct": bool(c.get("usd_direct")), "spec": c.get("spec"), "variable_price": bool(c.get("variable_price")),
                "sids": [r["snapshot_id"]], "as_of": r["valid_from"][:16], "tier": res.get("tier"), "version_note": res.get("version_note")}
         val, basis, secs = canonical(res["modality"], res["family"], name, r["unit"], eff, c.get("duration_s"))
         row.update({"val": round(val, 6) if val is not None else None, "val_basis": basis, "val_secs": secs,
@@ -62,6 +72,11 @@ def main():
             per_site[r["vendor"]].append(res["ratio"])
         fam_rows[(res["modality"], res["family"])].append(row)
     HELD = media_site_gate(per_site)
+    # 文本账本判为「计价方式待核」的站（充值比例 / 倍率基数可疑、全站统一倍率等），图像视频价同样待核（export_data 写的 text_held.json）
+    try:
+        TEXT_HELD = json.load(open(os.path.join(HERE, "text_held.json"), encoding="utf-8")).get("held") or {}
+    except Exception:
+        TEXT_HELD = {}
     # 行级待核：核查脚本挂起的（单位提示不一致 / 价格孤点 / 榜首差距）+ 价格随规格变的（billing_mode 为矩阵/尺寸型）
     try:
         QH = {(r["vendor"], r["raw_name"]): r["reason"] for r in db.execute("SELECT vendor, raw_name, reason FROM quality_hold WHERE cleared IS NULL")}
@@ -69,7 +84,7 @@ def main():
         QH = {}
     for lst in fam_rows.values():
         for x in lst:
-            reason = QH.get((x["site"], x["name"])) or ("variable_price" if x.get("variable_price") else None)
+            reason = QH.get((x["site"], x["name"])) or ("site_held" if x["site"] in TEXT_HELD else None) or ("variable_price" if x.get("variable_price") else None)
             if not reason and x.get("ratio") is not None and (x["ratio"] < 0.05 or x["ratio"] > 5): reason = "extreme_ratio"   # 口径 §3 极端值门：先核对再发布
             if reason: x["hold_reason"] = reason
     out = {"image": [], "video": []}
@@ -109,12 +124,26 @@ def main():
                          "bands": {k: sum(1 for x in cmp_rows if x["band"] == k) for k in rank}, "rows": lst,
                          "recent_versions": recent, "recent_labels": [version_label(fam, v) for v in recent], "n_old": sum(1 for x in lst if not x["recent"]),
                          "refs": sorted(refs_used.values(), key=lambda r: r["price"]), "ratio_min": min(ratios) if ratios else None, "ratio_max": max(ratios) if ratios else None})
+    # GPT Image：官方没有单一的每张价，按质量档列出（adapters/openai_image.py，官方指南计算器同一公式）。只作参照，不算比率
+    ot = {}
+    for r in db.execute("SELECT model, price, region, snapshot_id, conditions FROM offer_norm WHERE vendor='openai' AND vendor_kind='official' AND unit='per_call' "
+                        "AND superseded_by IS NULL AND valid_to IS NULL AND model LIKE 'gpt-image-%'"):
+        c = json.loads(r["conditions"] or "{}"); key = c.get("calculator_key")
+        if not key: continue
+        t = ot.setdefault((key, c.get("size")), {"label": {"gpt-image-2.5": "GPT Image 2.5 (Sunburst / Flare)", "gpt-image-2": "GPT Image 2"}.get(key, key), "model": key,
+                                                 "size": c.get("size"), "sid": r["snapshot_id"], "per_m": c.get("usd_per_m_output"), "q": {}})
+        t["q"][c.get("quality")] = {"price": round(r["price"], 6), "tokens": c.get("output_tokens")}
+    QO = ["low", "medium", "high", "xhigh", "max"]
+    for f in out["image"]:
+        if f["family"] == "gpt-image" and ot:
+            f["official_table"] = [dict(v, q=[dict(v["q"][q], quality=q) for q in QO if q in v["q"]]) for k, v in sorted(ot.items(), key=lambda kv: (kv[0][0] != "gpt-image-2.5", int((kv[0][1] or "0x0").split("x")[0])))]
     for mod in out:
         out[mod].sort(key=lambda f: (0 if f["ref"] else 1, -f["n_sites"]))
     snaps = {}
     for mod in out:
         for f in out[mod]:
             if f["ref"]: snaps[f["ref"]["sid"]] = 1
+            for t in f.get("official_table") or []: snaps[t["sid"]] = 1
             for x in f["rows"]:
                 for s in x["sids"]: snaps[s] = 1
     snapmeta = {}

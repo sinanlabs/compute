@@ -40,6 +40,8 @@ def vendor_of(model):
 
 def pretty(m):
     if m in PRETTY: return PRETTY[m]
+    # 归一时数字间的 - 变成了 .：gpt-image-2-2k → gpt-image-2.2k，显示出来像「2.2 版」。1k/2k/4k/8k 是分辨率（或上下文），拆回来
+    m = re.sub(r"(\d)\.([1248])k(?![a-z0-9])", r"\1-\2K", m)
     s = m.replace("-", " ").replace("claude ", "Claude ").replace("gpt ", "GPT-").replace("gemini ", "Gemini ").replace("deepseek ", "DeepSeek ")
     s = s.replace("kimi ", "Kimi ").replace("glm ", "GLM-").replace("grok ", "Grok ").replace("qwen", "Qwen ").replace("minimax ", "MiniMax ")
     s = re.sub(r"\b(v\d)", lambda x: x.group(1).upper(), s).replace("  ", " ").strip()
@@ -75,8 +77,7 @@ STALE_DAYS = 7          # 超过这么多天读不到定价接口：旧报价撤
 
 def relay_rows(db):
     rows = {}; variants = {}
-    for r in db.execute("SELECT source, max(fetched_at) t FROM source_snapshot WHERE source LIKE 'relay.pricing.%' AND http_status=200 GROUP BY source"):
-        PRICING_LAST_OK[r["source"][len("relay.pricing."):]] = r["t"]
+    PRICING_LAST_OK.update(D.pricing_last_ok(db))
     import datetime as _dt
     cutoff = (_dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))) - _dt.timedelta(days=STALE_DAYS)).isoformat()
     stale = {v for v, t in PRICING_LAST_OK.items() if t and t.replace(" ", "T") < cutoff}
@@ -103,6 +104,8 @@ def relay_rows(db):
         m[side] = eff
         if side == "out": m["nominal_out"] = r["price"]
         if side == "in": m["nominal_in"] = r["price"]
+        if side in ("call", "sec"): m["nominal_" + side] = r["price"]   # 按次 / 按秒的站方标价（含分组倍率，站内额度）：页面要能和站方页面逐条对上
+        if c.get("usd_direct"): m["usd_direct"] = True
         if r["valid_from"] > m["as_of"]: m["as_of"] = r["valid_from"]
         m["sids"].add(r["snapshot_id"])
     # 同一站同一模型有多个名字（claude-opus-5 / claude-opus-5-thinking / 厂商前缀版…）：代表名按固定规则选，
@@ -339,6 +342,10 @@ def main():
         nm_ = [x for k, x in L_ if k == top_]
         if n_ / len(L_) >= 0.6 and any(("opus" in x or "fable" in x) for x in nm_) and any(("haiku" in x or "mini" in x or "flash" in x) for x in nm_):
             HELD.add(v_); HELD_WHY[v_] = "该站 %d 个按 token 计价的模型里有 %d 个用同一个倍率，连旗舰模型和小模型都同价，像是面板默认值；实际价格很可能按分组另计、公开接口看不到。核实前本站只列名义报价，不出比率。" % (len(L_), n_)
+    # 站级待核要同样管住它的图像 / 视频报价（2026-10-24 前图像页照常列这些站的按次价，如 a6api.com 的 GPT Image 2.5）：
+    # 写一份给 export_media（每日刷新里 export_data 之后再跑一次 export_media），本轮多模态榜也直接排除
+    json.dump({"generated_at": D.now8(), "held": {v_: (HELD_WHY.get(v_) or "该站全线报价与公开价差距异常，常见原因是面板倍率基数或充值比例与实际不同。") for v_ in sorted(HELD)}},
+              open(os.path.join(HERE, "text_held.json"), "w"), ensure_ascii=False)
 
     # ---- 模型表 ----
     latest = [x["model"] for x in latest_by_family(db, per_family=2) if x["has_reference"]]
@@ -399,7 +406,7 @@ def main():
                           "ratio": row.get("ratio"), "band": code, "floor_vendor": (row.get("floor") or {}).get("vendor"),
                           "floor_out": (row.get("floor") or {}).get("usd"), "mtype": row["mtype"], "sids": sorted(row["sids"]), "as_of": row["as_of"][:16], "probe": PB.get((v, m)), "crowd": CR.get((v, m)),
                           # 站方面板上看到的标价（站内额度/百万 token，未按充值比例折算）——和站方页面逐条对得上
-                          "nom_in": row.get("nominal_in"), "nom_out": row.get("nominal_out"),
+                          "nom_in": row.get("nominal_in"), "nom_out": row.get("nominal_out"), "nom_call": row.get("nominal_call"), "nom_sec": row.get("nominal_sec"), "usd_direct": row.get("usd_direct"),
                           "variants": row.get("variants", 1), "variant_names": row.get("variant_names"), "variant_out_range": row.get("variant_out_range"),
                           "time_mult": row.get("time_mult"), "group": row.get("group"), "group_ratio": row.get("group_ratio")})
         mrows.sort(key=lambda x: (0 if x["ratio"] is not None else 1, x["ratio"] or 0))
@@ -533,7 +540,7 @@ def main():
         fam_count, site_ratios = {}, {}
         for mod in ("video", "image"):
             for f in MJ.get(mod, []):
-                rows = [r for r in f.get("rows", []) if not r.get("held") and r.get("site") not in held_media and r.get("site") not in CLOSED]
+                rows = [r for r in f.get("rows", []) if not r.get("held") and r.get("site") not in held_media and r.get("site") not in CLOSED and r.get("site") not in HELD]
                 for r in rows: fam_count.setdefault(r["site"], set()).add(f["family"])
                 inr = [r for r in rows if r.get("band") in ("explainable", "normal") and r.get("ratio") is not None]
                 for r in inr: site_ratios.setdefault(r["site"], []).append(r["ratio"])
@@ -588,7 +595,7 @@ def main():
     json.dump(rank, open(os.path.join(HERE, "rank", week_id + ".json"), "w"), ensure_ascii=False, default=str)   # 每周一期，永久链接用
     # 瘦身：站点页每条报价的可选字段为空 / 默认值时不写，浮点保留 4 位有效数字，紧凑分隔符。
     # 2026-10-18 加了标价、同名多名字、分时、分组后文件到 27.6 MB，超过 Cloudflare Pages 单文件 25 MB 上限导致部署失败。
-    OPT_NONE = ("floor_vendor", "floor_out", "probe", "crowd", "mtype", "nom_in", "nom_out", "variant_names", "variant_out_range", "time_mult")
+    OPT_NONE = ("floor_vendor", "floor_out", "probe", "crowd", "mtype", "nom_in", "nom_out", "nom_call", "nom_sec", "usd_direct", "variant_names", "variant_out_range", "time_mult")
     def _r4(v): return float("%.4g" % v) if isinstance(v, float) else v
     for s_ in data.get("sites", []):
         for m_ in s_.get("models", []):
@@ -596,7 +603,7 @@ def main():
                 if k_ in m_ and m_[k_] is None: del m_[k_]
             if m_.get("variants") == 1: m_.pop("variants", None)
             if (m_.get("group") or "default") == "default" and m_.get("group_ratio") in (None, 1, 1.0): m_.pop("group", None); m_.pop("group_ratio", None)
-            for k_ in ("in", "out", "call", "sec", "ratio", "nom_in", "nom_out", "floor_out"):
+            for k_ in ("in", "out", "call", "sec", "ratio", "nom_in", "nom_out", "nom_call", "nom_sec", "floor_out"):
                 if k_ in m_: m_[k_] = _r4(m_[k_])
     json.dump(data, open(os.path.join(HERE, "data_v2.json"), "w"), ensure_ascii=False, default=str, separators=(",", ":"))
     print("模型 %d · 站点 %d（有报价 %d，待核 %d）· 价格变动 %d · 新收录 %d · 快照 %d" % (

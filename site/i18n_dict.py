@@ -13,6 +13,25 @@ import io, os, json
 DISC = "This is an arithmetic ratio. It is not an accusation against the vendor, and a lower public source not yet indexed here may exist."
 
 HTML = {
+"实付 = 站方标价 × 充值比例 ÷ 汇率（按面板充值比例），即真金白银每百万 token（图像、视频为每次、每秒）花多少美元；站方标价是面板上显示的站内额度价，可在站方页面逐条核对（站方页面默认可能展示会员分组价，本站取 {s} 分组）。参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。": "Effective = listed price × top-up rate ÷ FX (at the panel's top-up rate), i.e. real dollars per million tokens (per call or per second for images and video); the listed price is the site-credit price shown on the panel and can be checked line by line on the site (its page may show a member-group price by default; we use the {s} group). Reference is the lowest of official and public-market prices; share = effective ÷ reference.",
+"实付 = 站方标价 × 充值比例 ÷ 汇率（{n} 元 / ${n} · 汇率 {n}），即真金白银每百万 token（图像、视频为每次、每秒）花多少美元；站方标价是面板上显示的站内额度价，可在站方页面逐条核对（站方页面默认可能展示会员分组价，本站取 {s} 分组）。参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。": "Effective = listed price × top-up rate ÷ FX ({n} CNY / ${n} · FX {n}), i.e. real dollars per million tokens (per call or per second for images and video); the listed price is the site-credit price shown on the panel and can be checked line by line on the site (its page may show a member-group price by default; we use the {s} group). Reference is the lowest of official and public-market prices; share = effective ÷ reference.",
+"站方标价 ${n} / 次（站内额度）": "Listed ${n} / call (site credits)",
+"站方标价 ${n} / 秒（站内额度）": "Listed ${n} / second (site credits)",
+"站方标价 ${n} / 次（美元直标）": "Listed ${n} / call (priced in USD)",
+"站方标价 ${n} / 秒（美元直标）": "Listed ${n} / second (priced in USD)",
+"按「{s}」分组 ×{n} 计价（站方页面若默认展示别的分组，价格会不同）": "Priced at the “{s}” group ×{n} (the site's page may show another group's price by default)",
+"· 标价 ${n}/次（站内额度）": "· listed ${n}/call (site credits)",
+"· 标价 ${n}/秒（站内额度）": "· listed ${n}/s (site credits)",
+"· 标价 ${n}/次": "· listed ${n}/call",
+"· 标价 ${n}/秒": "· listed ${n}/s",
+"官方每张（1024×1024，按质量档）": "Official per image (1024×1024, by quality)",
+"OpenAI 官方计算器，只含图像输出 token；各档见下表": "OpenAI's official calculator, image output tokens only; all tiers in the table below",
+"官方每张价（按质量档和尺寸）": "Official per-image prices (by quality and size)",
+"OpenAI 按图像输出 token 计价（每百万 ${n}），每张价 = 输出 token × 单价。下表用 OpenAI 图像生成指南里计算器的同一公式算出，只含图像输出 token，不含提示词和参考图的输入 token。中转站按次报价一般不写质量档和尺寸，所以只作参照，不算比率。": "OpenAI bills image output tokens (${n} per million), so price per image = output tokens × rate. The table uses the same formula as the calculator in OpenAI's image-generation guide and covers image output tokens only, not prompt or reference-image input tokens. Relay per-call quotes usually don't state quality or size, so these are shown for reference only, without ratios.",
+"官方模型 · 尺寸": "Official model · size",
+"来源：developers.openai.com 图像生成指南 · 抓取快照 #{n}": "Source: developers.openai.com image-generation guide · snapshot #{n}",
+"OpenAI 按图像输出 token 计价（每百万 ${n}），每张价随质量档和尺寸变。按官方图像生成指南里的计算器，1024×1024 每张：{s}。中转站按次报价一般不写质量档和尺寸，所以本站只把官方各档列出来作参照，不算比率。": "OpenAI bills image output tokens (${n} per million), so the price per image depends on quality and size. Per OpenAI's image-generation guide calculator, at 1024×1024 per image: {s}. Relay per-call quotes usually don't state quality or size, so we list the official tiers for reference only, without ratios.",
+"中转站的图像 / 视频报价，与官方按张 / 按秒价放在一起。按厂商族分组，只主推每族最新两代；按次报价折成按秒的假设写在明面上。每条都写站方标价和计价分组，可以拿去站方页面逐条对。官方没有单一每张 / 每秒价的族只列报价、不出比率（GPT Image 按 token 计价、每张价随质量档变，列出官方各档作参照）。": "Relay image / video quotes next to official per-image / per-second prices. Grouped by model family, featuring each family's latest two generations; assumptions for converting per-call quotes into per-second prices are stated openly. Every row shows the site's listed price and pricing group so it can be checked against the site's own page. Families without a single official per-image / per-second price are listed without ratios (GPT Image is billed by tokens and varies by quality; official tiers are shown for reference).",
 "站方从定价接口里删掉的模型，连续两次抓取都没出现才撤下（只缺一次可能是接口临时少返回，2026-10-24 起）；此前会一直留在页面上。接口返回的模型数不到在库的 40% 时视为接口不完整，不做下架。下架不计入变价次数。": "A model the site removes from its pricing endpoint is withdrawn only after it is missing from two consecutive fetches (a single miss may be a temporary partial response; from 2026-10-24); before this it stayed on the page indefinitely. If the endpoint returns fewer than 40% of the models on record, it is treated as incomplete and nothing is delisted. Delistings do not count as price changes.",
 "24 小时可达": "24-hour reachability",
 "这些数据多久更新？": "How often is this data updated?",
@@ -778,6 +797,17 @@ HTML = {
 
 # app.js 字面量子串（按长度降序替换；短词放最后兜底）
 JS = {
+"官方每张（1024×1024，按质量档，只含图像输出 token）": "Official per image (1024×1024, by quality, image output tokens only)",
+"<th>官方</th>": "<th>Official</th>",
+"站 · 模型 · 站方标价": "Site · model · listed price",
+"' 等 '": "' (+'",
+"' 个名字'": "' names)'",
+"' · 标价 $'": "' · listed $'",
+"\"/秒\":\"/次\"": "\"/s\":\"/call\"",
+"\"（站内额度）\"": "\" (site credits)\"",
+"'\">看全部</a> · 实付 = 站方标价 × 充值比例 ÷ 汇率</div>'": "'\">see all</a> · effective = listed price × top-up rate ÷ FX</div>'",
+"'<div class=\"sub\">实付 = 站方标价 × 充值比例 ÷ 汇率</div>'": "'<div class=\"sub\">Effective = listed price × top-up rate ÷ FX</div>'",
+"GPT Image 2.5 (Sunburst / Flare)": "GPT Image 2.5 (Sunburst / Flare)",
 "Nano Banana（初代）": "Nano Banana (original)",
 "各版本 / 档位分别比": "each version / tier compared separately", " 族": " families", "\" 族\"": "\" families\"",
     "待核对（当晚处理）": "Pending (checked tonight)", "已确认收录": "Confirmed and listed", "已在总表": "Already listed", "可达但不是可确认的中转面板": "Reachable but not a recognisable relay panel", "连不上": "Unreachable",
@@ -849,6 +879,7 @@ JS.update({
 })
 
 DATA = {
+"OpenAI 按图像输出 token 计价，每张价随质量档和尺寸变（官方计算器）；中转站按次报价不写质量档，所以只列官方各档作参照，不出比率": "OpenAI bills image output tokens, so the price per image varies with quality and size (official calculator); relay per-call quotes don't state quality, so official tiers are listed for reference only, without ratios",
 "与公开价接近": "Near public price", "低于批量折扣": "Below bulk discount", "计价方式待核": "Pricing basis unverified", "超低价": "Ultra-low", "高于公开价": "Above public price",
 "实付中位数约为公开价的 {n}%–{n}%，低于常见批量采购折扣区间": "Median effective price is about {n}%–{n}% of public price, below the common bulk-discount band",
 "实付中位数约为公开价的 {n}%–{n}%，价格本身说得通": "Median effective price is about {n}%–{n}% of public price; the price itself is within range",

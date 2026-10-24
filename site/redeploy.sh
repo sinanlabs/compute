@@ -8,7 +8,7 @@ ts() { date "+%Y-%m-%d %H:%M:%S"; }
 {
   echo "===== $(ts) 开始 ===== 手动补部署"
   /usr/bin/python3 site/about_pages.py 24 | tail -1
-  /usr/bin/python3 site/export_media.py | tail -1 && /usr/bin/python3 site/export_data.py | tail -1
+  /usr/bin/python3 site/export_media.py | tail -1 && /usr/bin/python3 site/export_data.py | tail -1 && /usr/bin/python3 site/export_media.py | tail -1   # 第二遍读 text_held.json（文本待核站的图像视频价同样待核）
   /usr/bin/python3 site/pull_reports.py | tail -1
   /usr/bin/python3 site/build_v5.py > data/logs/.build_out 2>&1; rc=$?; tail -30 data/logs/.build_out
   [ $rc -eq 0 ] || { echo "构建失败，放弃部署"; echo "===== $(ts) 结束 ====="; exit 1; }
