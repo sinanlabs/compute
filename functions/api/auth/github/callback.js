@@ -1,12 +1,10 @@
-import { sha256, createSession, bump, safeReturn } from "../../_lib.js";
+import { sha256, createSession, bump, safeReturn, readState } from "../../_lib.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code"), state = url.searchParams.get("state");
   if (!code || !state) return new Response("缺少参数", { status: 400 });
-  const raw = await env.KV.get(`oauth:state:${state}`); if (!raw) return new Response("登录已过期，请重试。", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
-  await env.KV.delete(`oauth:state:${state}`);
-  const st = JSON.parse(raw);
+  const st = await readState(env, request, state); if (!st) return new Response("登录已过期，请重试。", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 
   const tok = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json", "User-Agent": "sinanlab" },

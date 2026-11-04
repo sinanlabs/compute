@@ -1,11 +1,20 @@
 // POST /api/hit?r=<referrer host> —— 外部来源计数（只记来源域名与次数，不记用户）。写入 events(day,'ref',host)。
 import { bump, withCors, preflight, sha256, json } from "./_lib.js";
-import { rateLimit } from "./auth/_otp.js";
 export async function onRequestOptions({ request }) { return preflight(request); }
+// 限频放在实例内存里，不写 KV：2026-10-14 起每次访问都往 KV 写一次计数，访问量上来后每天 1,000 次免费写入
+// 很快用光，登录（要写 KV）跟着报 1101，后台进不去（2026-11-04）。内存计数按实例算，挡单一来源刷量足够。
+const SEEN = new Map(); let DAY = "";
+function allow(src, limit) {
+  const d = new Date().toISOString().slice(0, 10);
+  if (d !== DAY) { SEEN.clear(); DAY = d; }
+  const n = (SEEN.get(src) || 0) + 1; SEEN.set(src, n);
+  if (SEEN.size > 50000) SEEN.clear();   // 防内存涨爆
+  return n <= limit;
+}
 export async function onRequestPost({ request, env }) {
   // 限频：同一来源每天最多 600 次计数。计数只用于站内统计，被刷会污染数据并烧掉数据库额度。
   const src = (await sha256((request.headers.get("CF-Connecting-IP") || "") + "|" + (request.headers.get("User-Agent") || ""))).slice(0, 24);
-  if (!(await rateLimit(env, "hit:" + src, 600, 86400))) return withCors(request, json({ ok: false, error: "too_many" }, 429));
+  if (!allow(src, 600)) return withCors(request, json({ ok: false, error: "too_many" }, 429));
   const u = new URL(request.url); let r = (u.searchParams.get("r") || "").toLowerCase().slice(0, 120);
   // 没有 referrer 时前端会退而上报 utm_source（AI 产品常只带 utm_source=chatgpt.com / perplexity）。不带域名后缀的常见来源名映射成域名（2026-10-14）
   const UTM = { chatgpt: "chatgpt.com", openai: "chatgpt.com", perplexity: "perplexity.ai", copilot: "copilot.microsoft.com", bing: "www.bing.com", claude: "claude.ai", gemini: "gemini.google.com", kimi: "kimi.com", deepseek: "chat.deepseek.com", doubao: "doubao.com", yuanbao: "yuanbao.tencent.com", metaso: "metaso.cn", phind: "phind.com", you: "you.com", poe: "poe.com", grok: "grok.com" };

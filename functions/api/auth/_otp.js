@@ -6,8 +6,9 @@ export function code6() { const b = new Uint32Array(1); crypto.getRandomValues(b
 export function ip(req) { return req.headers.get("CF-Connecting-IP") || "0.0.0.0"; }
 
 export async function rateLimit(env, key, limit, ttl) {
-  const k = `rl:${key}`; const n = parseInt((await env.KV.get(k)) || "0", 10) + 1;
-  await env.KV.put(k, String(n), { expirationTtl: ttl });
+  const k = `rl:${key}`; const n = parseInt((await env.KV.get(k).catch(() => null)) || "0", 10) + 1;
+  // KV 当天写入额度用完时 put 会抛错：限频计数写不进就放行（订阅 / 报错 / 提交本身另有登录或数据库约束），不让整个请求 1101
+  try { await env.KV.put(k, String(n), { expirationTtl: ttl }); } catch (e) {}
   return n <= limit;
 }
 

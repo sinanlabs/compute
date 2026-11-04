@@ -1,12 +1,10 @@
-import { sha256, createSession, bump, safeReturn } from "../../_lib.js";
+import { sha256, createSession, bump, safeReturn, readState } from "../../_lib.js";
 const txt = (s, status) => new Response(s, { status, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code"), state = url.searchParams.get("state");
   if (!code || !state) return txt("缺少参数", 400);
-  const raw = await env.KV.get(`oauth:state:${state}`); if (!raw) return txt("登录已过期，请重试。", 400);
-  await env.KV.delete(`oauth:state:${state}`);
-  const st = JSON.parse(raw);
+  const st = await readState(env, request, state); if (!st) return txt("登录已过期，请重试。", 400);
   const tok = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: `${env.SITE_ORIGIN}/api/auth/google/callback`, grant_type: "authorization_code" }),

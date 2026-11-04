@@ -29,6 +29,26 @@ export async function hmac(secret, msg) {
   return [...new Uint8Array(s)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
+// ---- OAuth state：签名后放在 state 参数里，不再写 KV ----
+// 2026-11-04：KV 免费额度每天 1,000 次写入被访问计数用光，登录写不进 state 就 1101，后台进不去。
+// state = base64url(JSON{r 回跳, w 关注, p 来源, n 随机数, e 过期秒}) + "." + hmac；同时下发 oas=<n> cookie，回调时比对，绑定发起登录的浏览器。
+const b64u = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+export async function makeState(env, payload, ttl = 600) {
+  const n = randHex(12);
+  const body = b64u(enc.encode(JSON.stringify({ ...payload, n, e: Math.floor(Date.now() / 1000) + ttl })));
+  return { state: body + "." + (await hmac(env.SESSION_SECRET, "oauth-state|" + body)), cookie: `oas=${n}; Path=/api/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=${ttl}` };
+}
+/** 校验 state：签名对、没过期、和本浏览器的 oas cookie 一致。返回 payload 或 null。 */
+export async function readState(env, req, state) {
+  const [body, sig] = String(state || "").split(".");
+  if (!body || !sig || (await hmac(env.SESSION_SECRET, "oauth-state|" + body)) !== sig) return null;
+  let st; try { st = JSON.parse(new TextDecoder().decode(unb64u(body))); } catch (e) { return null; }
+  if (!st || !st.e || st.e < Math.floor(Date.now() / 1000)) return null;
+  if (parseCookies(req).oas !== st.n) return null;
+  return { return_to: st.return_to, watch: st.watch || "", provider: st.provider };
+}
+
 export function parseCookies(req) {
   const out = {}; const c = req.headers.get("Cookie") || "";
   c.split(";").forEach((p) => { const i = p.indexOf("="); if (i > 0) out[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim()); });
