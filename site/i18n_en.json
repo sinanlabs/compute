@@ -705,7 +705,7 @@
 "我们做什么": "What we do",
 "持续采集官方定价、公开市场价与各渠道的实付价，用统一口径比对；对渠道做可用性与一致性测量；对具身智能的开源模型做可审计的索引。全部结论带证据链，全部方法公开。": "Continuously collect official pricing, public market prices and each channel's effective price, and compare them on one basis; measure channel availability and consistency; build an auditable index of open embodied-AI models. Every conclusion has an evidence chain; every method is public.",
 "我们不做什么": "What we don't do",
-"不卖算力，不做中转，不做付费认证，不推荐。不收任何被测渠道的钱。": "We don't sell compute, don't run relays, don't do paid certification, don't recommend. No money from any measured vendor.",
+"不做付费认证，不推荐。不收任何被测渠道的钱。": "We don't do paid certification, don't recommend. No money from any measured vendor.",
 "怎么运作": "How it runs",
 "一人 + AI 的小团队，采集、计算、生成、部署全流程每天自动跑。数据与代码本身即是资产。目前完全免费、不注册也看全部。": "A one-person-plus-AI team; collection, computation, generation and deployment run automatically every day. The data and code are the asset. Currently fully free, everything visible without an account.",
 "联系": "Contact",
