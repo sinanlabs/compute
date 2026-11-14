@@ -342,6 +342,12 @@ def main():
         nm_ = [x for k, x in L_ if k == top_]
         if n_ / len(L_) >= 0.6 and any(("opus" in x or "fable" in x) for x in nm_) and any(("haiku" in x or "mini" in x or "flash" in x) for x in nm_):
             HELD.add(v_); HELD_WHY[v_] = "该站 %d 个按 token 计价的模型里有 %d 个用同一个倍率，连旗舰模型和小模型都同价，像是面板默认值；实际价格很可能按分组另计、公开接口看不到。核实前本站只列名义报价，不出比率。" % (len(L_), n_)
+    # 人工站级待核：data/site_holds.json {域名: 原因}（值班核实站长来信时用 inbox_duty.py holdsite / unholdsite 维护，2026-11-14 起）。
+    # 例：apiniuma.com 充值是美元，我们按人民币充值折算，全站实付被除了一次汇率；按次视频价页面另有前端倍率，公开接口看不到。
+    try:
+        for v_, why_ in json.load(open(os.path.join(ROOT, "data", "site_holds.json"))).items():
+            if not v_.startswith("_"): HELD.add(v_); HELD_WHY[v_] = why_
+    except FileNotFoundError: pass
     # 站级待核要同样管住它的图像 / 视频报价（2026-10-24 前图像页照常列这些站的按次价，如 a6api.com 的 GPT Image 2.5）：
     # 写一份给 export_media（每日刷新里 export_data 之后再跑一次 export_media），本轮多模态榜也直接排除
     json.dump({"generated_at": D.now8(), "held": {v_: (HELD_WHY.get(v_) or "该站全线报价与公开价差距异常，常见原因是面板倍率基数或充值比例与实际不同。") for v_ in sorted(HELD)}},

@@ -27,7 +27,7 @@ KNOWN_FIELDS = {"model_name", "quota_type", "model_ratio", "model_price", "owner
                 "icon", "sort", "status", "prompt", "completion", "context", "max_tokens", "note", "cache_creation_ratio", "cache_read_ratio", "web_search_price", "file_search_price", "search_ratio",
                 "billing_mode", "billing_expr", "sort_order", "official_price", "available", "cover_image", "usage_count", "cache_creation_5m_ratio", "cache_creation_1h_ratio", "step_ratios", "billing_unit", "video_resolution_ratios", "billing_usage_schema", "billing_usage_examples", "translations", "context_length", "max_output_tokens", "release_date"}
 KNOWN_OTHER_INFO = {"group_units", "default_discount"}
-SEC_HINT = re.compile(r"(?<![a-z0-9-])(/\s*s(ec|econd|econds)?(?![a-z])|per[\s_-]?sec(ond)?(?![a-z])|每秒|/秒(?!内)|按秒|(?<![\d ])秒计[费价]|(?<![\d-])seconds?\b(?!\s*(of|video|clip|long)))", re.I)
+SEC_HINT = re.compile(r"(?<![a-z0-9-])(/\s*s(ec|econd|econds)?(?![a-z])|per[\s_-]?sec(ond)?(?![a-z])|每秒|/秒(?!内)|按秒|(?<![\d ])秒计[费价]|(?<![\d-])(?<!\d\s)seconds?\b(?!\s*(of|video|clip|long)))", re.I)
 
 def ensure(db):
     db.execute("""CREATE TABLE IF NOT EXISTS quality_hold (id INTEGER PRIMARY KEY, vendor TEXT, model TEXT, raw_name TEXT, unit TEXT, reason TEXT, detail TEXT,
@@ -42,6 +42,8 @@ def hold(db, vendor, model, raw_name, unit, reason, detail):
     """幂等：同 站×原名×原因 未放行的只留一条。返回是否新增。"""
     r = db.execute("SELECT id FROM quality_hold WHERE vendor=? AND raw_name=? AND reason=? AND cleared IS NULL", (vendor, raw_name, reason)).fetchone()
     if r: return False
+    # 人工放行过的（同 站×原名×原因×单位）不再重开：2026-09-06 infai.cc 放行一分钟后被下一轮核查重新关进待核
+    if db.execute("SELECT 1 FROM quality_hold WHERE vendor=? AND raw_name=? AND reason=? AND unit IS ? AND cleared IS NOT NULL", (vendor, raw_name, reason, unit)).fetchone(): return False
     db.execute("INSERT INTO quality_hold(vendor, model, raw_name, unit, reason, detail, created) VALUES (?,?,?,?,?,?,?)", (vendor, model, raw_name, unit, reason, detail[:300], D.now8()))
     return True
 
