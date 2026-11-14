@@ -345,7 +345,7 @@ def main():
     # 人工站级待核：data/site_holds.json {域名: 原因}（值班核实站长来信时用 inbox_duty.py holdsite / unholdsite 维护，2026-11-14 起）。
     # 例：apiniuma.com 充值是美元，我们按人民币充值折算，全站实付被除了一次汇率；按次视频价页面另有前端倍率，公开接口看不到。
     try:
-        for v_, why_ in json.load(open(os.path.join(ROOT, "data", "site_holds.json"))).items():
+        for v_, why_ in json.load(open(os.path.join(os.path.dirname(HERE), "data", "site_holds.json"))).items():
             if not v_.startswith("_"): HELD.add(v_); HELD_WHY[v_] = why_
     except FileNotFoundError: pass
     # 站级待核要同样管住它的图像 / 视频报价（2026-10-24 前图像页照常列这些站的按次价，如 a6api.com 的 GPT Image 2.5）：
