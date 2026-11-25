@@ -23,6 +23,7 @@ Eric 的要求：用户发来的邮件不再转发到他的邮箱，而是在 Cl
   python3 site/inbox_duty.py models <域名>              用 keys.env 里的 Key 列对方 /v1/models（验证来信给的 Key 能不能用；不打印 Key）
   python3 site/inbox_duty.py addsite <域名>             来信提交新站：探一次面板，是中转站面板就收进候选池（与站上 /sites 表单同一流程）
   python3 site/inbox_duty.py release <待核编号> "<依据>"   放行一条待核（核实站长说法属实后；依据写清来信编号和核对过的原文），当晚数据更新生效
+  python3 site/inbox_duty.py addjsonsite <域名> <价格文件网址>  自研系统站按司南格式（adapters/sinan_json.py 文件头）放了公开价格 JSON：校验格式、登记、收进候选池、当场读一次
   python3 site/inbox_duty.py holdsite <域名> "<原因>"    整站标「计价方式待核」（页面上的原因就是这句，写给读者看的大白话）：不出比率、不进榜，当晚生效
   python3 site/inbox_duty.py unholdsite <域名> "<依据>"  撤掉人工整站待核（站长说明核实无误后）
 
@@ -327,6 +328,25 @@ def unholdsite(domain, why):
     print("%s 的人工整站待核已撤销" % domain)
 
 
+def addjsonsite(domain, url):
+    domain = domain.strip().lower()
+    sys.path.insert(0, ROOT)
+    from adapters.sinan_json import SinanJsonPricing
+    r = _get(url)
+    try: rows = SinanJsonPricing(domain, url).parse(r.content)
+    except Exception as e: raise SystemExit("价格文件格式不对，没有登记：%s（HTTP %s）" % (str(e)[:200], r.status_code))
+    p = os.path.join(ROOT, "data", "json_pricing_sites.json")
+    d = json.load(io.open(p, encoding="utf-8")) if os.path.exists(p) else {"_note": "自研系统站的公开价格文件（司南格式）登记表：域名 → {url, added}。adapters/sinan_json.py 每天读。"}
+    d[domain] = {"url": url, "added": dt.datetime.now(BJ).strftime("%Y-%m-%d")}
+    json.dump(d, io.open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    c = _db(); now = dt.datetime.now(BJ).isoformat(timespec="seconds")
+    c.execute("INSERT OR IGNORE INTO relay_candidate(domain, first_seen_at, first_channel, level, panel_kind, site_url, last_checked) VALUES (?,?,?,?,?,?,?)",
+              (domain, now, "submission", 1, "self-built", "https://" + domain, now)); c.commit()
+    res = SinanJsonPricing(domain, url).run(verbose=False)
+    log("自研站价格文件登记 %s（%s）：%d 行" % (domain, url, len(rows)))
+    print("%s 已登记并收进候选池：价格文件 %d 条报价，当场读取 %s；当晚数据更新后出现在站上" % (domain, len(rows), "成功" if res.get("ok") else "失败：" + str(res.get("error"))[:100]))
+
+
 def main():
     a = sys.argv[1:]
     if not a or a[0] == "show": return show()
@@ -342,6 +362,7 @@ def main():
     if a[0] == "models" and len(a) >= 2: return models(a[1])
     if a[0] == "addsite" and len(a) >= 2: return addsite(a[1])
     if a[0] == "release" and len(a) >= 3: return release(a[1], a[2])
+    if a[0] == "addjsonsite" and len(a) >= 3: return addjsonsite(a[1], a[2])
     if a[0] == "holdsite" and len(a) >= 3: return holdsite(a[1], a[2])
     if a[0] == "unholdsite" and len(a) >= 3: return unholdsite(a[1], a[2])
     if a[0] == "log":

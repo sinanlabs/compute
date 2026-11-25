@@ -47,13 +47,15 @@ def main():
     import datetime as _dt
     cutoff = (_dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))) - _dt.timedelta(days=7)).isoformat()
     LAST_OK = D.pricing_last_ok(db)
+    UT = D.usd_topup(db)   # 美元充值站：实付 = 标价 × 每 $1 实付美元（2026-11-25 起）
     stale = {v for v, t in LAST_OK.items() if t and t.replace(" ", "T") < cutoff}
     rows = [r for r in db.execute("SELECT vendor, model, unit, price, conditions, snapshot_id, valid_from FROM offer_norm WHERE vendor_kind='relay' "
                       "AND unit IN ('per_call','per_second') AND superseded_by IS NULL").fetchall() if r["vendor"] not in stale]
     fam_rows = defaultdict(list); per_site = defaultdict(list)
     for r in rows:
-        c = json.loads(r["conditions"] or "{}"); p = c.get("panel_price")
+        c = json.loads(r["conditions"] or "{}"); p = c.get("panel_price"); ut = UT.get(r["vendor"])
         if c.get("usd_direct"): eff = r["price"]; p = fxr["rate"]
+        elif ut: eff = r["price"] * ut[0]; p = ut[0] * fxr["rate"]
         elif p is None: continue
         else: eff = r["price"] * float(p) / fxr["rate"]
         name = c.get("raw_name") or r["model"]
@@ -82,6 +84,15 @@ def main():
         QH = {(r["vendor"], r["raw_name"]): r["reason"] for r in db.execute("SELECT vendor, raw_name, reason FROM quality_hold WHERE cleared IS NULL")}
     except Exception:
         QH = {}
+    # 美元充值那一类面板（currency_type=USD、支付符号 $；apiniuma.com 等 25 站同一套）的视频价：站方页面对部分视频模型另有前端换算
+    # （按秒计价、按积分折算），公开定价接口里看不到，按接口读出来的单位和数值都可能不对（apiniuma.com 站长 2026-11-16 来信）→ 视频行待核
+    try:
+        FRONT = {r["vendor"] for r in db.execute("SELECT vendor FROM panel_currency WHERE upper(coalesce(currency_type,''))='USD' AND payment_symbol='$'")}
+    except Exception:
+        FRONT = set()
+    for (mod_, fam_), lst in fam_rows.items():
+        for x in lst:
+            if mod_ == "video" and x["site"] in FRONT and not QH.get((x["site"], x["name"])): QH[(x["site"], x["name"])] = "frontend_unit"
     for lst in fam_rows.values():
         for x in lst:
             reason = QH.get((x["site"], x["name"])) or ("site_held" if x["site"] in TEXT_HELD else None) or ("variable_price" if x.get("variable_price") else None)

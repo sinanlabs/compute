@@ -118,11 +118,12 @@ def check_unit_suspect(db):
 
 def check_lone_outliers(db):
     """同族里价格孤点：< 全族中位 35% 且比第二便宜的站低一半以上。"""
-    fxr = db.execute("SELECT rate FROM fx_rate ORDER BY id DESC LIMIT 1").fetchone(); refs = official_refs(db)
+    fxr = db.execute("SELECT rate FROM fx_rate ORDER BY id DESC LIMIT 1").fetchone(); refs = official_refs(db); UT = D.usd_topup(db)
     fam_best = defaultdict(dict)   # (mod, fam) -> site -> (value, name, unit)
     for r in db.execute("SELECT vendor, model, unit, price, conditions FROM offer_norm WHERE vendor_kind='relay' AND unit IN ('per_call','per_second') AND superseded_by IS NULL"):
-        c = json.loads(r["conditions"] or "{}"); p = c.get("panel_price")
+        c = json.loads(r["conditions"] or "{}"); p = c.get("panel_price"); ut = UT.get(r["vendor"])
         if c.get("usd_direct"): eff = r["price"]
+        elif ut: eff = r["price"] * ut[0]   # 美元充值站（core/db.usd_topup）
         elif p is None: continue
         else: eff = r["price"] * float(p) / fxr["rate"]
         name = c.get("raw_name") or r["model"]

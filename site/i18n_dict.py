@@ -13,6 +13,9 @@ import io, os, json
 DISC = "This is an arithmetic ratio. It is not an accusation against the vendor, and a lower public source not yet indexed here may exist."
 
 HTML = {
+"实付 = 站方标价 × 充值比例 ÷ 汇率（人民币直接标价，站长来信确认：站方标价就是人民币价，{n} 元余额 = {n} 元 · 汇率 {n}），即真金白银每百万 token（图像、视频为每次、每秒）花多少美元；站方标价是面板上显示的站内额度价，可在站方页面逐条核对（站方页面默认可能展示会员分组价，本站取 {s} 分组）。参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。": "Effective = listed price × top-up rate ÷ FX (priced directly in CNY, confirmed by the site owner by email: the listed price is in CNY, ¥{n} of balance = ¥{n} · FX {n}), i.e. real dollars per million tokens (per call or per second for images and video); the listed price is the site-credit price shown on the panel and can be checked line by line on the site (its page may show a member-group price by default; we use the {s} group). Reference is the lowest of official and public-market prices; share = effective ÷ reference.",
+"实付 = 站方标价 × 充值比例 ÷ 汇率（美元充值，面板公开设置：${n} 额度售价 ${n}，折合 {n} 元 / ${n} · 汇率 {n}），即真金白银每百万 token（图像、视频为每次、每秒）花多少美元；站方标价是面板上显示的站内额度价，可在站方页面逐条核对（站方页面默认可能展示会员分组价，本站取 {s} 分组）。参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。": "Effective = listed price × top-up rate ÷ FX (USD top-up, per the panel's public settings: ${n} of credit costs ${n}, i.e. {n} CNY / ${n} · FX {n}), i.e. real dollars per million tokens (per call or per second for images and video); the listed price is the site-credit price shown on the panel and can be checked line by line on the site (its page may show a member-group price by default; we use the {s} group). Reference is the lowest of official and public-market prices; share = effective ÷ reference.",
+"实付 = 站方标价 × 充值比例 ÷ 汇率（美元充值，站长来信确认：${n} 额度售价 ${n}，折合 {n} 元 / ${n} · 汇率 {n}），即真金白银每百万 token（图像、视频为每次、每秒）花多少美元；站方标价是面板上显示的站内额度价，可在站方页面逐条核对（站方页面默认可能展示会员分组价，本站取 {s} 分组）。参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。": "Effective = listed price × top-up rate ÷ FX (USD top-up, confirmed by the site owner by email: ${n} of credit costs ${n}, i.e. {n} CNY / ${n} · FX {n}), i.e. real dollars per million tokens (per call or per second for images and video); the listed price is the site-credit price shown on the panel and can be checked line by line on the site (its page may show a member-group price by default; we use the {s} group). Reference is the lowest of official and public-market prices; share = effective ÷ reference.",
 "实付 = 站方标价 × 充值比例 ÷ 汇率（按面板充值比例），即真金白银每百万 token（图像、视频为每次、每秒）花多少美元；站方标价是面板上显示的站内额度价，可在站方页面逐条核对（站方页面默认可能展示会员分组价，本站取 {s} 分组）。参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。": "Effective = listed price × top-up rate ÷ FX (at the panel's top-up rate), i.e. real dollars per million tokens (per call or per second for images and video); the listed price is the site-credit price shown on the panel and can be checked line by line on the site (its page may show a member-group price by default; we use the {s} group). Reference is the lowest of official and public-market prices; share = effective ÷ reference.",
 "实付 = 站方标价 × 充值比例 ÷ 汇率（{n} 元 / ${n} · 汇率 {n}），即真金白银每百万 token（图像、视频为每次、每秒）花多少美元；站方标价是面板上显示的站内额度价，可在站方页面逐条核对（站方页面默认可能展示会员分组价，本站取 {s} 分组）。参考价取官方与公开市场最低；几成 = 实付 ÷ 参考价。": "Effective = listed price × top-up rate ÷ FX ({n} CNY / ${n} · FX {n}), i.e. real dollars per million tokens (per call or per second for images and video); the listed price is the site-credit price shown on the panel and can be checked line by line on the site (its page may show a member-group price by default; we use the {s} group). Reference is the lowest of official and public-market prices; share = effective ÷ reference.",
 "站方标价 ${n} / 次（站内额度）": "Listed ${n} / call (site credits)",
@@ -797,6 +800,16 @@ HTML = {
 
 # app.js 字面量子串（按长度降序替换；短词放最后兜底）
 JS = {
+"换算链</div><dl class=\"kv\"><dt>'+(row.cny_direct?'站方标价<small>人民币 / 百万 token</small></dt><dd>'": "Conversion chain</div><dl class=\"kv\"><dt>'+(row.cny_direct?'Listed price<small>CNY / M tokens</small></dt><dd>'",
+"'面板名义价<small>倍率 × $2 / 百万 token</small></dt><dd>'": "'Panel nominal price<small>multiplier × $2 / M tokens</small></dt><dd>'",
+"× 充值比例<small>'+(row.cny_direct": "× top-up rate<small>'+(row.cny_direct",
+"'人民币直接标价 · 1 元余额 = 1 元'": "'priced in CNY · ¥1 of balance = ¥1'",
+"'1 元/1 元'": "'¥1 per ¥1'",
+"' 元/$1')+'</dd><dt>÷ 汇率<small>": "' CNY/$1')+'</dd><dt>÷ FX rate<small>",
+"× 充值比例<small>'+(row.usd_topup": "× top-up rate<small>'+(row.usd_topup",
+"'美元充值 · $1 额度售价 $'": "'USD top-up · $1 of credit costs $'",
+"'，按汇率折合成元'": "', shown in CNY at the FX rate'",
+"'面板 price 字段 · 每 $1 名义额度收多少元'": "'panel price field · CNY charged per $1 of nominal credit'",
 "官方每张（1024×1024，按质量档，只含图像输出 token）": "Official per image (1024×1024, by quality, image output tokens only)",
 "<th>官方</th>": "<th>Official</th>",
 "站 · 模型 · 站方标价": "Site · model · listed price",

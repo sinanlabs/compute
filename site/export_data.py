@@ -73,11 +73,14 @@ PRICING_BASIS = {}
 
 
 PRICING_LAST_OK = {}   # 站 → 最近一次成功读到定价接口的时间
+CNY_DIRECT = set()     # 人民币直接标价的站（站方标价就是人民币，1 元余额 = 1 元）
+USD_TOPUP = {}         # 美元充值的站 → (每 $1 额度实付美元, 依据, auto|owner)（core/db.usd_topup，2026-11-25 起）
 STALE_DAYS = 7          # 超过这么多天读不到定价接口：旧报价撤下不展示（2026-10-14 起；此前会一直显示几周前的价）
 
 def relay_rows(db):
     rows = {}; variants = {}
     PRICING_LAST_OK.update(D.pricing_last_ok(db))
+    USD_TOPUP.update(D.usd_topup(db))
     import datetime as _dt
     cutoff = (_dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))) - _dt.timedelta(days=STALE_DAYS)).isoformat()
     stale = {v for v, t in PRICING_LAST_OK.items() if t and t.replace(" ", "T") < cutoff}
@@ -89,8 +92,9 @@ def relay_rows(db):
         if c.get("billing_expr"):   # 动态计价：记下我们用的是哪个分组、哪个上下文档，页面要标出来
             PRICING_BASIS[r["vendor"]] = {"mode": "tiered_expr", "group": c.get("group") or "default", "group_ratio": c.get("group_ratio"),
                                           "tier": c.get("tier"), "multi_tier": bool(c.get("multi_tier")), "unit": "站内额度"}
-        p = c.get("panel_price")
+        p = c.get("panel_price"); ut = USD_TOPUP.get(r["vendor"])
         if c.get("usd_direct"): eff = r["price"]; p = FX[0]        # 直接美元标价（kie.ai）：等价 price=汇率
+        elif ut: eff = r["price"] * ut[0]; p = ut[0] * FX[0]          # 美元充值：每 $1 额度实付 ut 美元，不除汇率；p 折合成「元 / $1」便于和人民币充值站并排看
         elif p is None: continue
         else: eff = r["price"] * float(p) / FX[0]
         # 先按"站 × 站方原名"聚：输入价、输出价必须出自同一个名字（以前按标准名直接覆盖，输入输出可能来自两个名字）
@@ -106,6 +110,7 @@ def relay_rows(db):
         if side == "in": m["nominal_in"] = r["price"]
         if side in ("call", "sec"): m["nominal_" + side] = r["price"]   # 按次 / 按秒的站方标价（含分组倍率，站内额度）：页面要能和站方页面逐条对上
         if c.get("usd_direct"): m["usd_direct"] = True
+        if c.get("cny_direct"): m["cny"] = True; CNY_DIRECT.add(r["vendor"])   # 人民币直接标价（lumdatech.com 等自研站）
         if r["valid_from"] > m["as_of"]: m["as_of"] = r["valid_from"]
         m["sids"].add(r["snapshot_id"])
     # 同一站同一模型有多个名字（claude-opus-5 / claude-opus-5-thinking / 厂商前缀版…）：代表名按固定规则选，
@@ -376,7 +381,7 @@ def main():
             code, label = band(row["ratio"])
             rows.append({"vendor": v, "out": round(row["out"], 3), "in": round(row["in"], 3) if row["in"] is not None else None,
                          "ratio": round(row["ratio"], 4), "band": code, "held": v in HELD, "as_of": row["as_of"][:16],
-                         "nominal_out": row["nominal_out"], "price_field": row["price_field"], "stripe": row["stripe"], "sids": sorted(row["sids"]),
+                         "nominal_out": row["nominal_out"], "price_field": row["price_field"], "stripe": row["stripe"], "usd_topup": (USD_TOPUP.get(v) or (None,))[0], "cny_direct": bool(row.get("cny")), "sids": sorted(row["sids"]),
                          "uptime": (AV.get(v) or {}).get("uptime"), "name": (SF.get(v) or {}).get("system_name"), "probe": PB.get((v, m)), "reg": (REG.get(v) or ("unknown",))[0]})
         if not rows: continue
         rank = {"explainable": 0, "normal": 1, "premium": 2, "below_bulk": 3, "unsustainable": 4, "far_above": 5}
@@ -426,7 +431,7 @@ def main():
                       # 主流模型（模型账本那 40 个）的中位：全部可比模型的中位会被冷门模型的高价拉偏，并列给出免得误读（2026-10-14 起）
                       "median_core": (lambda cr: round(st.median(cr), 3) if len(cr) >= 3 else None)([x["ratio"] for x in mrows if x.get("ratio") is not None and x["model"] in CORE_MODELS]),
                       "n_core": sum(1 for x in mrows if x.get("ratio") is not None and x["model"] in CORE_MODELS),
-                      "avail": AV.get(v), "facts": sf, "pricing_basis": PRICING_BASIS.get(v), "models": mrows, "pricing_last_ok": (PRICING_LAST_OK.get(v) or "")[:10] or None, "register": {"state": (REG.get(v) or ("unknown", None, None))[0], "msg": (REG.get(v) or (None, None, None))[1], "checked": ((REG.get(v) or (None, None, None))[2] or "")[:10]}, "ok_count": sum(1 for x in mrows if x["band"] in ("explainable", "normal")),
+                      "avail": AV.get(v), "facts": sf, "pricing_basis": PRICING_BASIS.get(v), "models": mrows, "pricing_last_ok": (PRICING_LAST_OK.get(v) or "")[:10] or None, "usd_topup": ({"usd": USD_TOPUP[v][0], "source": USD_TOPUP[v][1], "by": USD_TOPUP[v][2]} if v in USD_TOPUP else None), "cny_direct": v in CNY_DIRECT, "register": {"state": (REG.get(v) or ("unknown", None, None))[0], "msg": (REG.get(v) or (None, None, None))[1], "checked": ((REG.get(v) or (None, None, None))[2] or "")[:10]}, "ok_count": sum(1 for x in mrows if x["band"] in ("explainable", "normal")),
                       "un_count": sum(1 for x in mrows if x["band"] == "unsustainable"),
                       "probe": {"pairs": sum(1 for x in mrows if x["probe"]), "consistent": sum(1 for x in mrows if x["probe"] and x["probe"]["status"] == "consistent"),
                                 "divergent": sum(1 for x in mrows if x["probe"] and x["probe"]["status"] == "divergent"), "ts": max([x["probe"]["ts"] for x in mrows if x["probe"]] or [""])} if any(x["probe"] for x in mrows) else None})
